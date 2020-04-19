@@ -16,6 +16,6 @@ find_package(FairLogger REQUIRED)
 find_package(FairRoot REQUIRED)
 find_package(AliceO2 REQUIRED)
 
-include("${ROOT_DIR}/modules/RootNewMacros.cmake")
+include("${ROOT_DIR}/RootMacros.cmake")
 
 add_subdirectory(src)
