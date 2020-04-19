@@ -2,10 +2,14 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(SOURCES
   VertexFitter.cc
+  TrackSmearer.cc
+  TrackUtils.cc
   )
 
 set(HEADERS
   VertexFitter.hh
+  TrackSmearer.hh
+  TrackUtils.hh
   )
 
 get_target_property(DELPHES_INCLUDE_DIRECTORIES
@@ -44,3 +48,8 @@ target_link_libraries(DelphesO2
   )
 
 install(TARGETS DelphesO2 DESTINATION lib)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/libDelphesO2_rdict.pcm
+  ${CMAKE_CURRENT_BINARY_DIR}/libDelphesO2.rootmap
+  DESTINATION lib)
