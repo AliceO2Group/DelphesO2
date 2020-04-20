@@ -7,9 +7,10 @@
 #include "ReconstructionDataFormats/Track.h"
 #include "classes/DelphesClasses.h"
 #include "lutCovm.hh"
+#include <map>
 
 using O2Track = o2::track::TrackParCov;
-  
+
 namespace o2
 {
 namespace delphes
@@ -22,16 +23,28 @@ public:
   ~TrackSmearer() = default;
 
   /** LUT methods **/
-  void loadTable(const char *filename);
-  lutEntry_t &getLUTEntry(float nch, float radius, float eta, float pt);
+  void loadTable(int pdg, const char *filename);
+  lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
 
-  void smearTrack(O2Track &o2track, lutEntry_t &lutEntry);
-  void smearTrack(Track &track, bool atDCA = true);
+  void smearTrack(O2Track &o2track, lutEntry_t *lutEntry);
+  bool smearTrack(O2Track &o2track, int pid);
+  bool smearTrack(Track &track, bool atDCA = true);
+
+  int getIndexPDG(int pdg) {
+    switch(abs(pdg)) {
+    case 11: return 0;
+    case 13: return 1;
+    case 211: return 2;
+    case 321: return 3;
+    case 2212: return 4;
+    default: return 2;
+    };
+  };
   
 protected:
 
-  lutHeader_t mLUTHeader;
-  lutEntry_t mLUTEntry[1][1][100][100];
+  lutHeader_t *mLUTHeader[5] = {nullptr};
+  lutEntry_t *mLUTEntry[5][1][1][100][100] = {nullptr};
   
 };
   

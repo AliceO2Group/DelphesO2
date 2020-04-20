@@ -26,6 +26,7 @@ public:
   ~VertexFitter() = default;
 
   void setup(float bz, bool useAbsDCA = true, bool propagateToVtx = true);
+  bool fitVertex(O2Track &o2track1, O2Track &o2track2, Vertex &vertex);
   bool fitVertex(Track &track1, Track &track2, Vertex &vertex);
 
 protected:

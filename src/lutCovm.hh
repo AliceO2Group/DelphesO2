@@ -1,3 +1,6 @@
+/// @author: Roberto Preghenella
+/// @email: preghenella@bo.infn.it
+
 struct map_t {
   int nbins = 1;
   float min = 0.;
@@ -22,7 +25,7 @@ struct map_t {
 };
 
 struct lutHeader_t {
-  int   pdg = 0.;
+  int   pdg = 0;
   float mass = 0.;
   float field = 0.;
   map_t nchmap;
@@ -40,13 +43,13 @@ struct lutHeader_t {
 };
 
 struct lutEntry_t {
-  float eta;
-  float pt;
-  bool valid;
-  float covm[15];
-  float eigval[5];
-  float eigvec[5][5];
-  float eiginv[5][5];
+  float eta = 0.;
+  float pt = 0.;
+  bool valid = false;
+  float covm[15] = {0.};
+  float eigval[5] = {0.};
+  float eigvec[5][5] = {0.};
+  float eiginv[5][5] = {0.};
   void print() {
     printf(" --- lutEntry: pt = %f, eta = %f (%s)\n", pt, eta, valid ? "valid" : "not valid");
     printf("     covMatix: ");

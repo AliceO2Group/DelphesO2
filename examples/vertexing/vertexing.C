@@ -1,9 +1,12 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
+double Bfield = 0.5;
+
+int eventOfInterest = -1;
+
 void
 vertexing(const char *inputFile = "delphes.root",
-	  const char *lutFile = "lutCovm.dat",
 	  const char *outputfile = "vertexing.root")
 {
 
@@ -23,12 +26,27 @@ vertexing(const char *inputFile = "delphes.root",
   // vertex finder
   o2::delphes::Vertex vertex;
   o2::delphes::VertexFitter vertexer;
-  vertexer.setup(0.5, true, true);
+  vertexer.setup(Bfield, true, true);
 
   // smearer
   o2::delphes::TrackSmearer smearer;
-  smearer.loadTable(lutFile);
-  
+  if (Bfield == 0.2) {
+    smearer.loadTable(11, "lutCovm.el.2kG.dat");
+    smearer.loadTable(13, "lutCovm.mu.2kG.dat");
+    smearer.loadTable(211, "lutCovm.pi.2kG.dat");
+    smearer.loadTable(321, "lutCovm.ka.2kG.dat");
+    smearer.loadTable(2212, "lutCovm.pr.2kG.dat");
+  } else if (Bfield == 0.5) {
+    smearer.loadTable(11, "lutCovm.el.5kG.dat");
+    smearer.loadTable(13, "lutCovm.mu.5kG.dat");
+    smearer.loadTable(211, "lutCovm.pi.5kG.dat");
+    smearer.loadTable(321, "lutCovm.ka.5kG.dat");
+    smearer.loadTable(2212, "lutCovm.pr.5kG.dat");
+  } else {
+    std::cout << " --- invalid B field: " << Bfield << std::endl;
+    return;
+  }
+    
   // histograms
   auto hR = new TH2F("hR", ";R_{gen} (mm);R_{rec} (mm)", 1000, 0., 1000., 1000, 0., 1000.);
   auto hZ = new TH2F("hZ", ";z_{gen} (mm);z_{rec} (mm)", 1000, -1000., 1000., 1000, -1000., 1000.);
@@ -54,13 +72,21 @@ vertexing(const char *inputFile = "delphes.root",
   hPhi_rec->Sumw2();
   
   auto hdR = new TH1F("hdR", ";#DeltaR (mm)", 500, -2.5, 2.5);
+  auto hdX = new TH1F("hdX", ";#Deltax (mm)", 500, -2.5, 2.5);
+  auto hdXX = new TH2F("hdXX", ";log_{10}(x_{gen}/mm);#Deltax (mm)", 400, -2., 2., 500, -2.5, 2.5);
+  auto hdY = new TH1F("hdY", ";#Deltay (mm)", 500, -2.5, 2.5);
   auto hdZ = new TH1F("hdZ", ";#Deltaz (mm)", 500, -2.5, 2.5);
-  auto hdPhi = new TH1F("hdPhi", ";#Delta#varphi (mrad)", 500, -2.5, 2.5);
-  auto hdMass = new TH1F("hdMass", ";#Deltam (MeV)", 200, -1., 1.);
+  auto hdPhi = new TH1F("hdPhi", ";#Delta#varphi (mrad)", 500, -250., 250.);
+  auto hdMass = new TH1F("hdMass", ";#Deltam (MeV)", 200, -1000., 1000.);
 
+  auto hdXY = new TH2D("hdXY", ";#Deltax (mm);#Deltay (mm)", 500, -2.5, 2.5, 500, -2.5, 2.5);
+  
   auto hdRR = new TH2F("hdRR", ";log_{10}(R_{gen}/mm);#DeltaR (mm)", 400, -2., 2., 500, -2.5, 2.5);
+  auto hdRR_p = new TProfile("hdRR_p", ";log_{10}(R_{gen}/mm);#DeltaR (mm)", 400, -2., 2., "S");
   auto hdPhiR = new TH2F("hdPhiR", ";log_{10}(R_{gen}/mm);#Delta#varphi (mrad)", 400, -2., 2., 500, -250., 250.);
-  auto hdZZ = new TH2F("hdZZ", ";log_{10}(z_{gen}/mm);#Deltaz (mm)", 400, -2., 2., 500, -2.5, 2.5);
+  auto hdPhiR_p = new TProfile("hdPhiR_p", ";log_{10}(R_{gen}/mm);#Delta#varphi (mrad)", 400, -2., 2., "S");
+  auto hdZR = new TH2F("hdZR", ";log_{10}(R_{gen}/mm);#Deltaz (mm)", 400, -2., 2., 500, -2.5, 2.5);
+  auto hdZR_p = new TProfile("hdZR_p", ";log_{10}(R_{gen}/mm);#Deltaz (mm)", 400, -2., 2., "S");
 
   // output tree
   int n;
@@ -96,14 +122,15 @@ vertexing(const char *inputFile = "delphes.root",
     
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
+    //    treeReader->ReadEntry(100);
     std::map<GenParticle *, std::vector<Track *>> decays;
 
     // loop over tracks
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
       auto track = (Track *)tracks->At(itrack);
-      
+
       // skip primary tracks
-      if (track->X == 0. && track->Y == 0. && track->Z == 0.) continue;
+      //      if (track->X == 0. && track->Y == 0. && track->Z == 0.) continue;
 
       // get corresponding particle
       auto particle = (GenParticle *)track->Particle.GetObject();
@@ -115,9 +142,9 @@ vertexing(const char *inputFile = "delphes.root",
 	std::cout << "why is that? PDG=" << particle->PID << "(" << itrack << "), mother=" << particle->M1 << std::endl;
 	continue;
       }
-      
-      if (true  && abs(mother->PID) == 3122) decays[mother].push_back(track); // Lambda0
-      if (true  && abs(mother->PID) ==  310) decays[mother].push_back(track); // K0s
+
+      if (false && abs(mother->PID) == 3122) decays[mother].push_back(track); // Lambda0
+      if (false && abs(mother->PID) ==  310) decays[mother].push_back(track); // K0s
       if (true  && abs(mother->PID) ==  421) decays[mother].push_back(track); // D0
 
     }
@@ -126,19 +153,23 @@ vertexing(const char *inputFile = "delphes.root",
     for (auto &decay : decays) {
       auto mother = decay.first;
       auto tracks = decay.second;
+
       if (tracks.size() != 2) continue;
 
       // smear tracks
-      for (auto &track : tracks)
-	smearer.smearTrack(*track);
+      auto smearedTracks = tracks;      
+      for (auto &smearedTrack : smearedTracks)
+       	smearer.smearTrack(*smearedTrack);
       
-      auto t1 = tracks[0];
-      auto t2 = tracks[1];
+      auto t1 = smearedTracks[0];
+      auto t2 = smearedTracks[1];
       auto p1 = (GenParticle *)t1->Particle.GetObject();
       auto p2 = (GenParticle *)t2->Particle.GetObject();
 
       // generated values
       auto R_gen = hypot(p1->X, p1->Y);
+      auto X_gen = p1->X;
+      auto Y_gen = p1->Y;
       auto Z_gen = p1->Z;
       auto Phi_gen = atan2(p1->Y, p1->X);
       hR_gen->Fill(R_gen);
@@ -204,6 +235,8 @@ vertexing(const char *inputFile = "delphes.root",
 
       // fill histograms
       auto R_rec = hypot(vertex.x, vertex.y);
+      auto X_rec = vertex.x;
+      auto Y_rec = vertex.y;
       auto Z_rec = vertex.z;
       auto Phi_rec = atan2(vertex.y, vertex.x);
       hR->Fill(R_gen, R_rec);
@@ -217,10 +250,17 @@ vertexing(const char *inputFile = "delphes.root",
 
       hdR->Fill(R_rec - R_gen);
       hdRR->Fill(log10(R_gen), R_rec - R_gen);
+      hdRR_p->Fill(log10(R_gen), R_rec - R_gen);
+      hdX->Fill(X_rec - X_gen);
+      hdXX->Fill(log10(X_gen), X_rec - X_gen);
+      hdY->Fill(Y_rec - Y_gen);
       hdZ->Fill(Z_rec - Z_gen);
-      hdZZ->Fill(log10(Z_gen), Z_rec - Z_gen);
+      hdXY->Fill(X_rec - X_gen, Y_rec - Y_gen);
+      hdZR->Fill(log10(R_gen), Z_rec - Z_gen);
+      hdZR_p->Fill(log10(R_gen), Z_rec - Z_gen);
       hdPhi->Fill(1.e3 * atan2(sin(Phi_rec - Phi_gen), cos(Phi_rec - Phi_gen)));
       hdPhiR->Fill(log10(R_gen), 1.e3 * atan2(sin(Phi_rec - Phi_gen), cos(Phi_rec - Phi_gen)));
+      hdPhiR_p->Fill(log10(R_gen), 1.e3 * atan2(sin(Phi_rec - Phi_gen), cos(Phi_rec - Phi_gen)));
       hdMass->Fill(1.e3 * (LV.Mag() - mother->Mass));
 
       
@@ -278,10 +318,17 @@ vertexing(const char *inputFile = "delphes.root",
   auto ffout = TFile::Open(outputfile, "RECREATE");
   hdR->Write();
   hdRR->Write();
+  hdRR_p->Write();
+  hdX->Write();
+  hdXX->Write();
+  hdY->Write();
   hdZ->Write();
-  hdZZ->Write();
+  hdXY->Write();
+  hdZR->Write();
+  hdZR_p->Write();
   hdPhi->Write();
   hdPhiR->Write();
+  hdPhiR_p->Write();
   hMass->Write();
   ffout->Close();
   
