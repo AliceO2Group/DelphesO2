@@ -64,13 +64,39 @@ DelphesPythia8 propagate.2kG.tcl pythia8_inel.cfg delphes.root
 ```
 where `delphes.root` is the Delphes output file. Please notice that if this file already exists the command will fail and you will need to remove the file to continue.
 
+Notice that the Delphes output file might become big with a large number of events.
+We will try to find a solution for that, if possible.
+A way out is to start multiple Delphes-analysis runs and remove the Delphes output when the analysis is completed before starting another run. Care must be taken with the Pythia8 random seed to avoid to have identical runs. An example of doing that is given below.
+
 ## Track smearing
 
 Discussing the details of track smearing is a long business.
 We will only give the directions to try it out.
 This is done in a Delphes analysis.
+
 An example analysis that makes use of smearing is shown in `examples/smearing/dca.C`.
 The smearing class makes use of look-up tables (LUT) which can be found in `examples/smearing/luts`.
-Please adapt the `dca.C` macro to pick the correct files.
+Please adapt the `dca.C` macro to pick the correct files or put the files in the currect directory.
+
 The analysis loops over the Delphes tracks and smears them.
 It selects only pions and fills histograms of their DCAxy (D0) distribution, split according to their origin (primary, secondary, ...).
+
+This is just a ROOT analysis and you can run it with
+```
+root -b -q -l "dca.C(\"delphes.root\", \"dca.root\")"
+```
+
+## Secondary vertices
+
+An example analysis that makes use of both smearing and secondary-vertex reconstruction is shown in `examples/vertexing/K0s.C`. 
+
+The analysis loops over the Delphes tracks and smears them.
+It then selectes pions assuming perfect PID and cutting on the recontstructed DCA to reject primary particles. The cut is defined in terms of a 3-sigma rejection cut. The tracks that pass the cuts are then separated by their charge.
+
+For each event, a double loop over positive-negative pion pairs combines them in the vertex fitter. For the cases where the vertex fitter is successfull the invariant mass is reconstructed as well as other topological variables.
+
+## Multiple Delphes-analysis runs
+
+To overcome the limitation that the large Delphes output might give on the statistical sample, one can run multiple times the same Delphes-analysis job, taking care of changing the Pythia8 random seed.
+
+An example of a script sending multiple jobs one after another and properly taking care of the Pythia8 seed can be found in `examples/scripts/dca.sh`. Please, get inspiration from that and adapt it to your needs.
