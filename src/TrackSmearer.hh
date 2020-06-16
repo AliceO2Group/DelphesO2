@@ -23,7 +23,7 @@ public:
   ~TrackSmearer() = default;
 
   /** LUT methods **/
-  void loadTable(int pdg, const char *filename);
+  bool loadTable(int pdg, const char *filename);
   lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
 
   void smearTrack(O2Track &o2track, lutEntry_t *lutEntry);

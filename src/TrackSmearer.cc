@@ -14,14 +14,22 @@ namespace delphes
 
 /*****************************************************************/
 
-void
+bool
 TrackSmearer::loadTable(int pdg, const char *filename)
 {
   auto ipdg = getIndexPDG(pdg);
   mLUTHeader[ipdg] = new lutHeader_t;
   
   std::ifstream lutFile(filename, std::ifstream::binary);
+  if (!lutFile.is_open()) {
+    std::cout << " --- cannot open covariance matrix file for PDG " << pdg << ": " << filename << std::endl;
+    return false;
+  }
   lutFile.read(reinterpret_cast<char *>(mLUTHeader[ipdg]), sizeof(lutHeader_t));
+  if (lutFile.gcount() != sizeof(lutHeader_t)) {
+    std::cout << " --- troubles reading covariance matrix header for PDG " << pdg << ": " << filename << std::endl;
+    return false;
+  }
   const int nnch = mLUTHeader[ipdg]->nchmap.nbins;
   const int nrad = mLUTHeader[ipdg]->radmap.nbins;
   const int neta = mLUTHeader[ipdg]->etamap.nbins;
@@ -32,10 +40,15 @@ TrackSmearer::loadTable(int pdg, const char *filename)
 	for (int ipt = 0; ipt < npt; ++ipt) {
 	  mLUTEntry[ipdg][inch][irad][ieta][ipt] = new lutEntry_t;
 	  lutFile.read(reinterpret_cast<char *>(mLUTEntry[ipdg][inch][irad][ieta][ipt]), sizeof(lutEntry_t));
+	  if (lutFile.gcount() != sizeof(lutEntry_t)) {
+	    std::cout << " --- troubles reading covariance matrix entry for PDG " << pdg << ": " << filename << std::endl;
+	    return false;
+	  }
 	}}}}
   std::cout << " --- read covariance matrix table for PDG " << pdg << ": " << filename << std::endl;
   mLUTHeader[ipdg]->print();
   lutFile.close();
+  return true;
 }
 
 /*****************************************************************/
