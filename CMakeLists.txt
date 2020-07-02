@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+find_package(fmt REQUIRED)
 find_package(ROOT REQUIRED)
 find_package(Delphes REQUIRED)
 find_package(FairLogger REQUIRED)
