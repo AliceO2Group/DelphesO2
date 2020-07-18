@@ -10,6 +10,7 @@
 #pragma link C++ class o2::delphes::VertexFitter+;
 #pragma link C++ class o2::delphes::TrackSmearer+;
 #pragma link C++ class o2::delphes::TrackUtils+;
+#pragma link C++ class o2::delphes::TOFLayer+;
 #pragma link C++ struct o2::delphes::Vertex+;
 
 #endif
