@@ -2,7 +2,6 @@ R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
 bool smear = true;
-bool nsigma = true;
 double Bz = 0.2;
 
 bool hasStrangeAncestor(GenParticle *particle, TClonesArray *particles)
@@ -55,7 +54,8 @@ bool hasHeavyAncestor(GenParticle *particle, TClonesArray *particles)
 
 void
 dca(const char *inputFile = "delphes.root",
-    const char *outputFile = "dca.root")
+    const char *outputFile = "dca.root",
+    bool nsigma = true)
 {
   
   // Create chain of root trees
@@ -72,7 +72,7 @@ dca(const char *inputFile = "delphes.root",
   auto particles = treeReader->UseBranch("Particle");
   
   // smearer
-  o2::delphes::TrackSmearer smearer;
+  o2::delphes::TrackSmearer smearer;  
   if (Bz == 0.2) {
     smearer.loadTable(11, "lutCovm.el.2kG.dat");
     smearer.loadTable(13, "lutCovm.mu.2kG.dat");
@@ -93,11 +93,11 @@ dca(const char *inputFile = "delphes.root",
   // histograms
   std::string title = ";log_{10} (#it{p}_{T} / GeV);d_{0} (mm)";
   if (nsigma) title = ";log_{10} (#it{p}_{T} / GeV);n#sigma_{d_{0}}";
-  auto hDCAxy = new TH2F("hDCAxy", title.c_str(), 40, -2., 2., 1000, -100., 100.);
-  auto hDCAxy_primary = new TH2F("hDCAxy_primary", title.c_str(), 40, -2., 2., 1000, -100., 100.);
-  auto hDCAxy_secondary = new TH2F("hDCAxy_secondary", title.c_str(), 40, -2., 2., 1000, -100., 100.);
-  auto hDCAxy_secondary_strange = new TH2F("hDCAxy_secondary_strange", title.c_str(), 40, -2., 2., 1000, -100., 100.);
-  auto hDCAxy_secondary_heavy = new TH2F("hDCAxy_secondary_heavy", title.c_str(), 40, -2., 2., 1000, -100., 100.);
+  auto hDCAxy = new TH2F("hDCAxy", title.c_str(), 40, -2., 2., 1000, nsigma ? -100. : -10. , nsigma ? 100. : 10.);
+  auto hDCAxy_primary = new TH2F("hDCAxy_primary", title.c_str(), 40, -2., 2., 1000, nsigma ? -100. : -10., nsigma ? 100. : 10.);
+  auto hDCAxy_secondary = new TH2F("hDCAxy_secondary", title.c_str(), 40, -2., 2., 1000, nsigma ? -100. : -10., nsigma ? 100. : 10.);
+  auto hDCAxy_secondary_strange = new TH2F("hDCAxy_secondary_strange", title.c_str(), 40, -2., 2., 1000, nsigma ? -100. : -10., nsigma ? 100. : 10.);
+  auto hDCAxy_secondary_heavy = new TH2F("hDCAxy_secondary_heavy", title.c_str(), 40, -2., 2., 1000, nsigma ? -100. : -10., nsigma ? 100. : 10.);
 
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
@@ -117,7 +117,6 @@ dca(const char *inputFile = "delphes.root",
       if (smear)
 	if (!smearer.smearTrack(*track)) continue;
 	  
-
       // look only at pions
       if (abs(particle->PID) != 211) continue;
 

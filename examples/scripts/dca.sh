@@ -10,8 +10,10 @@ for I in $(seq 1 $NRUNS); do
     echo "Random:seed = $I" >> pythia8.cfg
     
     DelphesPythia8 propagate.2kG.tcl pythia8.cfg delphes.root &&
-	root -b -q -l "dca.C(\"delphes.root\", \"dca.$I.root\")" &&
+	root -b -q -l "dca.C(\"delphes.root\", \"dca.nsigma.$I.root\", true)" &&
+	root -b -q -l "dca.C(\"delphes.root\", \"dca.mm.$I.root\", false)" &&
 	rm -rf delphes.root
 done
 
-hadd -f dca.root dca.*.root && rm -rf dca.*.root
+hadd -f dca.nsigma.root dca.nsigma.*.root && rm -rf dca.nsigma.*.root
+hadd -f dca.mm.root dca.mm.*.root && rm -rf dca.mm.*.root
