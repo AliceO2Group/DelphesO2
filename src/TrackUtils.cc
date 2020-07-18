@@ -48,7 +48,10 @@ TrackUtils::convertO2TrackToTrack(const O2Track& o2track, Track& track, bool atD
     track.Y = 10. * xyz.Y();
     track.Z = 10. * xyz.Z(); 
   }
+  track.P = o2track.getP();
+  track.ErrorP = std::sqrt( o2track.getSigma1Pt2() ) * o2track.getPt(); // this is wrong, needs to add pz contribution
   track.PT = o2track.getPt();
+  track.ErrorPT = std::sqrt( o2track.getSigma1Pt2() ) * o2track.getPt(); // needs to be checked
   track.Eta = o2track.getEta();
   track.Phi = o2track.getPhi();
   track.D0 = 10. * o2track.getY();
