@@ -3,6 +3,8 @@ R__LOAD_LIBRARY(libDelphesO2)
 
 double Bz = 0.2;
 
+double d0_cut = 3.;
+double dz_cut = 3.;
 double cosPA_cut = 0.99;
 double dca_cut = 5.;
 
@@ -54,6 +56,8 @@ K0s(const char *inputFile = "delphes.root",
   auto hMassPt_true = new TH2F("hMassPt_true", ";log_{10}(#it{p}_{T} / GeV);m_{#pi#pi} (GeV)", 40, -2., 2., 1000, 0., 2.);
   auto hCosPAPt_rec = new TH2F("hCosPAPt_rec", ";log_{10}(#it{p}_{T} / GeV);1 - cos #vartheta_{pointing}", 40, -2., 2., 1000, 0., 1.);
   auto hCosPAPt_true = new TH2F("hCosPAPt_true", ";log_{10}(#it{p}_{T} / GeV);1 - cos #vartheta_{pointing}", 40, -2., 2., 1000, 0., 1.);
+  auto hPAPt_rec = new TH2F("hPAPt_rec", ";log_{10}(#it{p}_{T} / GeV);#vartheta_{pointing}", 40, -2., 2., 1000, -M_PI, M_PI);
+  auto hPAPt_true = new TH2F("hPAPt_true", ";log_{10}(#it{p}_{T} / GeV);#vartheta_{pointing}", 40, -2., 2., 1000, -M_PI, M_PI);
   auto hDCAPt_rec = new TH2F("hDCAPt_rec", ";log_{10}(#it{p}_{T} / GeV);d_{tracks} (mm)", 40, -2., 2., 1000, 0., 100.);
   auto hDCAPt_true = new TH2F("hDCAPt_true", ";log_{10}(#it{p}_{T} / GeV);d_{tracks} (mm)", 40, -2., 2., 1000, 0., 100.);
   
@@ -85,8 +89,8 @@ K0s(const char *inputFile = "delphes.root",
       if (abs(particle->PID) != 211) continue;
       
       // reject primaries based on 3 sigma DCA cuts
-      if (fabs(track->D0 / track->ErrorD0) < 3.) continue;
-      if (fabs(track->DZ / track->ErrorDZ) < 3.) continue;
+      if (fabs(track->D0 / track->ErrorD0) < d0_cut) continue;
+      if (fabs(track->DZ / track->ErrorDZ) < dz_cut) continue;
       
       // fill positive/negative track vectors
       if (track->Charge > 0.)
@@ -121,11 +125,13 @@ K0s(const char *inputFile = "delphes.root",
 	// compute cosine of pointing angle
 	auto vtxV = TVector3(vertex.x, vertex.y, vertex.z).Unit();
 	auto dirV = LV.Vect().Unit();
-	auto cosPA = std::cos(vtxV.Angle(dirV));
+	auto PA = vtxV.Angle(dirV);
+	auto cosPA = std::cos(PA);
 
 	// compute distance between tracks at secondary vertex
 	auto dca = sqrt( (t1.X - t2.X) * (t1.X - t2.X) + (t1.Y - t2.Y) * (t1.Y - t2.Y) + (t1.Z - t2.Z) * (t1.Z - t2.Z) );
 
+	hPAPt_rec->Fill(log10(pt), PA);
 	hCosPAPt_rec->Fill(log10(pt), 1. - cosPA);
 	hDCAPt_rec->Fill(log10(pt), dca);
 	  
@@ -142,6 +148,7 @@ K0s(const char *inputFile = "delphes.root",
 
 	hMassPt_true->Fill(log10(pt), mass);
 	hCosPAPt_true->Fill(log10(pt), 1. - cosPA);
+	hPAPt_true->Fill(log10(pt), PA);
 	hDCAPt_true->Fill(log10(pt), dca);
 
 
@@ -153,10 +160,35 @@ K0s(const char *inputFile = "delphes.root",
   hMassPt_gen->Write();
   hMassPt_rec->Write();
   hMassPt_true->Write();
+  hPAPt_rec->Write();
+  hPAPt_true->Write();
   hCosPAPt_rec->Write();
   hCosPAPt_true->Write();
   hDCAPt_rec->Write();
   hDCAPt_true->Write();
   fout->Close();
+  
+}
+
+void
+run()
+{
+
+  d0_cut = 0.;
+  dz_cut = 0.;
+  cosPA_cut = 0.;
+  dca_cut = 1.e6;
+  K0s("delphes.root", "K0s.open.root");
+
+  d0_cut = 3.;
+  dz_cut = 3.;
+  K0s("delphes.root", "K0s.dca.root");
+
+  cosPA_cut = 0.99;
+  K0s("delphes.root", "K0s.cosPA.root");
+
+  dca_cut = 5.;
+  K0s("delphes.root", "K0s.dist.root");
+  
   
 }
