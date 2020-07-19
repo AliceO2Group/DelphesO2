@@ -1420,6 +1420,8 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   double etaTr = ts.fEta;
   double mass = ts.fMass;
   double charge = ts.fCharge;
+  double phiTr = ts.fPhi;
+  double radiusTr = ts.fRadius;
   
   if (ptTr<0) { 
     printf("Input track is not initialized");
@@ -1472,6 +1474,8 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   trPars[kSnp] = 0;                       //            track along X axis at the vertex
   trPars[kTgl] = TMath::Tan(lambda);      //            dip
   trPars[kPtI] = charge/pt;               //            q/pt      
+  //
+  probTr.SetParamOnly(radiusTr, phiTr, trPars);
   //
   // put tiny errors to propagate to the outer radius
   trCov[kY2] = trCov[kZ2] = trCov[kSnp2] = trCov[kTgl2] = trCov[kPtI2] = 1e-9;
@@ -1533,7 +1537,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
     TString name(layer->GetName());
     Bool_t isVertex = name.Contains("vertex");
     //
-    if (!PropagateToR(&probTr,layer->radius,bGauss,-1)) return kFALSE; // exit(1);
+    if (!PropagateToR(&probTr,layer->radius,bGauss,-1)) continue; // return kFALSE; // exit(1);
     //	if (!probTr.PropagateTo(last->radius,bGauss)) exit(1);	//
     // rotate to frame with X axis normal to the surface
     if (!isVertex) {
@@ -1555,7 +1559,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
       printf("SaveInw %d (%f)  ",j,layer->radius); probTr.Print();
     }    
     //
-    if (!isVertex && !layer->isDead) {
+    if (!isVertex && !layer->isDead && layer->radius >= radiusTr) {
       //
       // create fake measurement with the errors assigned to the layer
       // account for the measurement there 
@@ -1618,7 +1622,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
     layer = (CylLayerK*)fLayers.At(j);
     TString name(layer->GetName());
     Bool_t isVertex = name.Contains("vertex");
-    if (!PropagateToR(&probTr, layer->radius,bGauss,1)) exit(1);
+    if (!PropagateToR(&probTr, layer->radius,bGauss,1)) continue; // exit(1);
     //
     if (!isVertex) {
       // rotate to frame with X axis normal to the surface

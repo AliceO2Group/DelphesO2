@@ -54,8 +54,8 @@ class TrackSol: public TObject
  public:
   enum {kInw,kOut,kCmb};
   //
- TrackSol(int nL, double pt, double eta, int q, double m=0.140) 
-   : fPt(nL>0 ? pt : -1), fEta(eta), fMass(m), fCharge(q),  
+  TrackSol(int nL, double pt, double eta, int q, double m=0.140, double phi = 0., double radius = 0.) 
+    : fPt(nL>0 ? pt : -1), fEta(eta), fMass(m), fCharge(q), fPhi(phi), fRadius(radius), 
     fTrackInw("AliExternalTrackParam",nL),
     fTrackOutB("AliExternalTrackParam",nL),
     fTrackOutA("AliExternalTrackParam",nL),
@@ -77,6 +77,8 @@ class TrackSol: public TObject
   Double_t        fEta;
   Double_t        fMass;
   Int_t           fCharge;
+  Double_t        fPhi;
+  Double_t        fRadius;
   Double_t        fProb[3][2]; // corr/fake prob for inw,out and cmb tracking
   TClonesArray fTrackInw;
   TClonesArray fTrackOutB; // outward before update
