@@ -62,7 +62,7 @@ float fwdRes(float pt, float eta, float mass)
     }
     double meas[2] = {trc.GetY(), trc.GetZ()};
     double err[3] = {Res[i]*Res[i], 0, Res[i]*Res[i]};                                                  
-    if (!trc.Update(meas, err) || !trc.CorrectForMeanMaterial(X2X0[i],0., mass)) {
+    if (!trc.Update(meas, err) || !trc.CorrectForMeanMaterial(X2X0[i],0., mass,true)) {
       return -1;
     }
     //    trc.Print();
