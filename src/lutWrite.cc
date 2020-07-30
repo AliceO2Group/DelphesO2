@@ -2,6 +2,7 @@
 /// @email: preghenella@bo.infn.it
 
 #include "lutCovm.hh"
+#include "fwdRes/fwdRes.C"
 
 DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
@@ -56,6 +57,13 @@ fatSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
   return true;
 }
 
+bool
+fwdSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
+{
+  if (fwdRes(covm, pt, eta, mass) < 0) return false;
+  return true;
+}
+
 void
 lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
 {
@@ -84,9 +92,9 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
   lutHeader.radmap.max   = 100.;
   // eta
   lutHeader.etamap.log   = false;
-  lutHeader.etamap.nbins = 1;
-  lutHeader.etamap.min   = -1.e6;
-  lutHeader.etamap.max   =  1.e6;
+  lutHeader.etamap.nbins = 80;
+  lutHeader.etamap.min   = -4.;
+  lutHeader.etamap.max   =  4.;
   // pt
   lutHeader.ptmap.log    = true;
   lutHeader.ptmap.nbins  = 100;
@@ -110,12 +118,23 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
 	for (int ipt = 0; ipt < npt; ++ipt) {
 	  lutEntry.pt = lutHeader.ptmap.eval(ipt);
 	  lutEntry.valid = true;
-	  //	  printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	  if (!fatSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
-	    printf(" --- fatSolve: error \n");
-	    lutEntry.valid = false;
-	    for (int i = 0; i < 15; ++i)
-	      lutEntry.covm[i] = 0.;
+	  if (fabs(eta) < 2.) {
+	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    if (!fatSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
+	      printf(" --- fatSolve: error \n");
+	      lutEntry.valid = false;
+	      for (int i = 0; i < 15; ++i)
+		lutEntry.covm[i] = 0.;
+	    }
+	  }
+	  else {
+	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    if (!fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
+	      printf(" --- fwdSolve: error \n");
+	      lutEntry.valid = false;
+	      for (int i = 0; i < 15; ++i)
+		lutEntry.covm[i] = 0.;
+	    }
 	  }
 	  diagonalise(lutEntry);
 	  lutFile.write(reinterpret_cast<char *>(&lutEntry), sizeof(lutEntry_t));

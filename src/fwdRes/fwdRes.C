@@ -9,7 +9,7 @@ float Res[NPlanes]    = {5e-4, 5e-4, 5e-4, 5e-4, 5e-4, 5e-4, 5e-4, 5e-4, 5e-4};
 float Bz = 5.;
 
 bool propagateToZ(AliExternalTrackParam& tr, float z, float bz);
-float fwdRes(float pt, float eta, float mass=0.14);
+float fwdRes(float *covm, float pt, float eta, float mass=0.14);
 
 TH2F* hptres = 0;
 
@@ -25,7 +25,7 @@ void fwdRes() {
     float eta = hptres->GetXaxis()->GetBinCenter(ieta+1);
     for (int ipt=0;ipt<nPtBin;ipt++) {
       float pt = hptres->GetYaxis()->GetBinCenter(ipt+1);
-      float ptres = fwdRes(pt, eta);
+      float ptres = fwdRes(nullptr, pt, eta);
       if (ptres>0) {
         hptres->SetBinContent(ieta+1, ipt+1, ptres);
       }
@@ -33,7 +33,7 @@ void fwdRes() {
   }
 }
 
-float fwdRes(float pt, float eta, float mass)
+float fwdRes(float *covm, float pt, float eta, float mass)
 {
   if (TMath::Abs(eta)<1e-6 || pt<1e-3) {
     return -1;
@@ -71,6 +71,11 @@ float fwdRes(float pt, float eta, float mass)
   if (!propagateToZ(trc, 0., Bz)) {
     return -1;
   }
+
+  if (covm) for (int i = 0; i < 15; ++i)
+    covm[i] = trc.GetCovariance()[i];
+  
+  
   return TMath::Sqrt(trc.GetSigma1Pt2())*pt;
 }
 
