@@ -61,8 +61,9 @@ float fwdRes(float pt, float eta, float mass)
       return -1;
     }
     double meas[2] = {trc.GetY(), trc.GetZ()};
-    double err[3] = {Res[i]*Res[i], 0, Res[i]*Res[i]};                                                  
-    if (!trc.Update(meas, err) || !trc.CorrectForMeanMaterial(X2X0[i],0., mass,true)) {
+    double zres = Res[i]*trc.GetTgl();
+    double err[3] = {Res[i]*Res[i], 0, zres*zres};                                                  
+    if (!trc.Update(meas, err) || !trc.CorrectForMeanMaterial(X2X0[i],0., mass, true)) {
       return -1;
     }
     //    trc.Print();
@@ -91,4 +92,3 @@ bool propagateToZ(AliExternalTrackParam& tr, float z, float bz)
   }
   return tr.PropagateTo(trc.GetX(), bz);
 }
-
