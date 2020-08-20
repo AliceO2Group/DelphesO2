@@ -1,6 +1,7 @@
 set ExecutionPath {
     ParticlePropagator
     Merger
+    TimeSmearing
     TreeWriter
 }
 
@@ -24,9 +25,15 @@ module Merger Merger {
     set OutputArray tracks
 }
 
+module TimeSmearing TimeSmearing {
+    add InputArray Merger/tracks
+    add OutputArray tracks
+    set TimeResolution 0.020e-9
+}
+
 module TreeWriter TreeWriter {
     # add Branch InputArray BranchName BranchClass
     add Branch Delphes/allParticles Particle GenParticle
-    add Branch Merger/tracks Track Track
+    add Branch TimeSmearing/tracks Track Track
 }
 
