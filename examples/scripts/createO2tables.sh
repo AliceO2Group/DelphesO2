@@ -7,7 +7,7 @@ NEVENTS=1000
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl .
 cp $DELPHESO2_ROOT/examples/smearing/luts/lutCovm.* .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_ccbar.cfg .
-# cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
+cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
 
 ### loop over runs
 for I in $(seq 1 $NRUNS); do
@@ -28,4 +28,4 @@ done
 hadd -f AODRun5Tot.root AODRun5.*.root && rm -rf AODRun5.*.root
 
 ### clean
-# rm *.tcl *.cfg *.dat *.C
+rm *.tcl *.cfg *.dat *.C
