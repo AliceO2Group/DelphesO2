@@ -259,6 +259,8 @@ createO2tables(const char *inputFile = "delphes.root",
       mytracks.fITSClusterMap = 3;
       mytracks.fFlags = 4;
 
+      mytracks.fLength = track->L * 0.1; // [cm]
+      mytracks.fTOFSignal = track->TOuter * 1.e9; // [ns]
 
       fTracks->Fill();
       // fill histograms
