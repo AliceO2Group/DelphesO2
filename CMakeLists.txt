@@ -1,3 +1,6 @@
+### @author: Roberto Preghenella
+### @email: preghenella@bo.infn.it
+
 project(DelphesO2)
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
@@ -20,3 +23,4 @@ find_package(AliceO2 REQUIRED)
 include("${ROOT_DIR}/RootMacros.cmake")
 
 add_subdirectory(src)
+add_subdirectory(examples)
