@@ -21,12 +21,16 @@ public:
   bool hasTOF(const Track &track);
   float getBeta(const Track &track);
   void makePID(const Track &track, std::array<float, 5> &deltat, std::array<float, 5> &nsigma);
+  bool eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero);
   
 protected:
 
   float mRadius = 100.; // [cm]
   float mLength = 200.; // [cm]
   float mSigmaT = 0.02; // [ns]
+
+  float mTime0 = 0.; // [ns]
+  float mSigma0 = 0.; // [ns]
   
 };
   
