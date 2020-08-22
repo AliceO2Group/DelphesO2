@@ -7,6 +7,7 @@ NEVENTS=1000
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl .
 cp $DELPHESO2_ROOT/examples/smearing/luts/lutCovm.* .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_ccbar.cfg .
+cp $DELPHESO2_ROOT/examples/pythia8/decays/force_hadronic_D.cfg .
 cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
 
 ### loop over runs
@@ -17,6 +18,9 @@ for I in $(seq 1 $NRUNS); do
     echo "Main:numberOfEvents $NEVENTS" >> pythia8.cfg
     echo "Random:seed = $I" >> pythia8.cfg
 
+    ### force hadronic D decays
+    cat force_hadronic_D.cfg >> pythia8.cfg
+    
     ### run Delphes and analysis
     DelphesPythia8 propagate.2kG.tcl pythia8.cfg delphes.root &&
 	root -b -q -l "createO2tables.C(\"delphes.root\", \"AODRun5.$I.root\")" &&
