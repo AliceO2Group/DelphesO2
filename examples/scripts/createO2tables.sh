@@ -3,12 +3,24 @@
 NRUNS=1
 NEVENTS=10000
 DOANALYSIS=1
+
+BFIELD=5.    # [kG]
+SIGMAT=0.020 # [ns]
+
 ### copy relevant files in the working directory
-cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl .
+cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
 cp $DELPHESO2_ROOT/examples/smearing/luts/lutCovm.* .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_ccbar.cfg .
 cp $DELPHESO2_ROOT/examples/pythia8/decays/force_hadronic_D.cfg .
 cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
+cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
+
+### set magnetic field
+sed -i -e "s/set Bz .*$/set Bz ${BFIELD}e\-1/" propagate.tcl
+sed -i -e "s/double Bz = .*$/double Bz = ${BFIELD}e\-1\;/" createO2tables.C
+sed -i -e "s/\"d_bz\": .*$/\"d_bz\": \"${BFIELD}\"\,/" dpl-config_std.json
+### set time resolution
+sed -i -e "s/set TimeResolution .*$/set TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 
 ### loop over runs
 for I in $(seq 1 $NRUNS); do
@@ -22,7 +34,7 @@ for I in $(seq 1 $NRUNS); do
     cat force_hadronic_D.cfg >> pythia8.cfg
     
     ### run Delphes and analysis
-    DelphesPythia8 propagate.2kG.tcl pythia8.cfg delphes.root &&
+    DelphesPythia8 propagate.tcl pythia8.cfg delphes.root &&
 	root -b -q -l "createO2tables.C(\"delphes.root\", \"AODRun5.$I.root\")" &&
 	rm -rf delphes.root
 
