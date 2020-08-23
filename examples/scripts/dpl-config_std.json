@@ -8,14 +8,14 @@
     },
     "produce-sel-track": {
         "dovalplots": "true",
-        "ptmintrack": "0.",
+        "ptmintrack": "0.3",
         "d_tpcnclsfound": "-9999",
         "dcatoprimxymin": 0.03
     },
     "vertexerhf-hftrackindexskimscreator": {
         "dovalplots": "true",
         "triggerindex": "-1",
-        "do3prong": "1",
+        "do3prong": "0",
         "d_bz": "5",
         "b_propdca": "true",
         "d_maxr": "200",
