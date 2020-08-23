@@ -19,6 +19,7 @@ file(GLOB LUTS
 
 file(GLOB SCRIPTS
   scripts/*.sh
+  scripts/*.json
   )
 
 file(GLOB SMEARING
