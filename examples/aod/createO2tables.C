@@ -3,7 +3,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 
 bool smear = true;
 bool nsigma = true;
-double Bz = 0.2;
+double Bz = 0.5;
 
 void
 createO2tables(const char *inputFile = "delphes.root",
@@ -59,6 +59,8 @@ createO2tables(const char *inputFile = "delphes.root",
     // Int_t   fTOFclsIndex;     /// The index of the associated TOF cluster
     // Int_t   fNTOFcls;         /// The number of TOF clusters
     
+    
+
     // Coordinate system parameters
     Float_t fX = -999.f;     /// X coordinate for the point of parametrisation
     Float_t fAlpha = -999.f; /// Local <--> global coor.system rotation angle
@@ -70,22 +72,25 @@ createO2tables(const char *inputFile = "delphes.root",
     Float_t fTgl = -999.f;        /// fP[3] tangent of the track momentum dip angle
     Float_t fSigned1Pt = -999.f;  /// fP[4] 1/pt (1/(GeV/c))
 
-    // Covariance matrix
-    Float_t fCYY = -999.f;       /// fC[0]
-    Float_t fCZY = -999.f;       /// fC[1]
-    Float_t fCZZ = -999.f;       /// fC[2]
-    Float_t fCSnpY = -999.f;     /// fC[3]
-    Float_t fCSnpZ = -999.f;     /// fC[4]
-    Float_t fCSnpSnp = -999.f;   /// fC[5]
-    Float_t fCTglY = -999.f;     /// fC[6]
-    Float_t fCTglZ = -999.f;     /// fC[7]
-    Float_t fCTglSnp = -999.f;   /// fC[8]
-    Float_t fCTglTgl = -999.f;   /// fC[9]
-    Float_t fC1PtY = -999.f;     /// fC[10]
-    Float_t fC1PtZ = -999.f;     /// fC[11]
-    Float_t fC1PtSnp = -999.f;   /// fC[12]
-    Float_t fC1PtTgl = -999.f;   /// fC[13]
-    Float_t fC1Pt21Pt2 = -999.f; /// fC[14]
+    // "Covariance matrix"
+    // The diagonal elements represent the errors = Sqrt(C[i,i])
+    // The off-diagonal elements are the correlations = C[i,j]/Sqrt(C[i,i])/Sqrt(C[j,j])
+    // The off-diagonal elements are multiplied by 128 (7bits) and packed in Char_t
+    Float_t fSigmaY      = -999.f; /// Sqrt(fC[0])
+    Float_t fSigmaZ      = -999.f; /// Sqrt(fC[2])
+    Float_t fSigmaSnp    = -999.f; /// Sqrt(fC[5])
+    Float_t fSigmaTgl    = -999.f; /// Sqrt(fC[9])
+    Float_t fSigma1Pt    = -999.f; /// Sqrt(fC[14])
+    Char_t fRhoZY        = 0;      /// 128*fC[1]/SigmaZ/SigmaY
+    Char_t fRhoSnpY      = 0;      /// 128*fC[3]/SigmaSnp/SigmaY
+    Char_t fRhoSnpZ      = 0;      /// 128*fC[4]/SigmaSnp/SigmaZ
+    Char_t fRhoTglY      = 0;      /// 128*fC[6]/SigmaTgl/SigmaY
+    Char_t fRhoTglZ      = 0;      /// 128*fC[7]/SigmaTgl/SigmaZ
+    Char_t fRhoTglSnp    = 0;      /// 128*fC[8]/SigmaTgl/SigmaSnp
+    Char_t fRho1PtY      = 0;      /// 128*fC[10]/Sigma1Pt/SigmaY
+    Char_t fRho1PtZ      = 0;      /// 128*fC[11]/Sigma1Pt/SigmaZ
+    Char_t fRho1PtSnp    = 0;      /// 128*fC[12]/Sigma1Pt/SigmaSnp
+    Char_t fRho1PtTgl    = 0;      /// 128*fC[13]/Sigma1Pt/SigmaTgl
 
     // Additional track parameters
     Float_t fTPCinnerP = -999.f; /// Full momentum at the inner wall of TPC for dE/dx PID
@@ -99,7 +104,7 @@ createO2tables(const char *inputFile = "delphes.root",
     Char_t fTPCNClsFindableMinusFound = 0;       /// difference between foundable and found clusters
     Char_t fTPCNClsFindableMinusCrossedRows = 0; ///  difference between foundable clsuters and crossed rows
     UChar_t fTPCNClsShared = 0u;   /// Number of shared clusters
-    UChar_t fTRDTOFPattern = 0u;   /// Bit 0-5 if TRD layers used. Bit 6 for TOF
+    UChar_t fTRDPattern = 0u;   /// Bit 0-5 if tracklet from TRD layer used for this track
 
     // Chi2
     Float_t fITSChi2NCl = -999.f; /// chi2/Ncl ITS
@@ -112,26 +117,35 @@ createO2tables(const char *inputFile = "delphes.root",
     Float_t fTRDSignal = -999.f; /// dE/dX TRD
     Float_t fTOFSignal = -999.f; /// TOFsignal
     Float_t fLength = -999.f;    /// Int.Lenght @ TOF
+    Float_t fTOFExpMom = -999.f; /// TOF Expected momentum based on the expected time of pions
   } mytracks;                      //! structure to keep track information
 
   struct {
+    // Event data
     Int_t fBCsID = 0u;       /// Index to BC table
+    // Primary vertex position
     Float_t  fPosX = -999.f;       /// Primary vertex x coordinate
     Float_t  fPosY = -999.f;       /// Primary vertex y coordinate
     Float_t  fPosZ = -999.f;       /// Primary vertex z coordinate
+    // Primary vertex covariance matrix
     Float_t  fCovXX = 999.f;    /// cov[0]
     Float_t  fCovXY = 0.f;      /// cov[1]
     Float_t  fCovXZ = 0.f;      /// cov[2]
     Float_t  fCovYY = 999.f;    /// cov[3]
     Float_t  fCovYZ = 0.f;      /// cov[4]
     Float_t  fCovZZ = 999.f;    /// cov[5]
+    // Quality parameters
     Float_t  fChi2 = 999.f;             /// Chi2 of the vertex
     UInt_t   fN = 0u;                /// Number of contributors
+
+    // The calculation of event time certainly will be modified in Run3
+    // The prototype below can be switched on request
     Float_t fCollisionTime = -999.f;    /// Event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
     Float_t fCollisionTimeRes = -999.f; /// Resolution on the event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
     UChar_t fCollisionTimeMask = 0u;    /// Mask with the method used to compute the event time (0x1=T0-TOF,0x2=T0A,0x3=TOC) for each momentum bins
 
   } collision; //! structure to keep the primary vertex (avoid name conflicts)
+  
 
   auto fout = TFile::Open(outputFile, "RECREATE");
    
@@ -152,21 +166,23 @@ createO2tables(const char *inputFile = "delphes.root",
   fTracks->Branch("fSnp", &mytracks.fSnp, "fSnp/F");
   fTracks->Branch("fTgl", &mytracks.fTgl, "fTgl/F");
   fTracks->Branch("fSigned1Pt", &mytracks.fSigned1Pt, "fSigned1Pt/F");
-  fTracks->Branch("fCYY", &mytracks.fCYY, "fCYY/F");
-  fTracks->Branch("fCZY", &mytracks.fCZY, "fCZY/F");
-  fTracks->Branch("fCZZ", &mytracks.fCZZ, "fCZZ/F");
-  fTracks->Branch("fCSnpY", &mytracks.fCSnpY, "fCSnpY/F");
-  fTracks->Branch("fCSnpZ", &mytracks.fCSnpZ, "fCSnpZ/F");
-  fTracks->Branch("fCSnpSnp", &mytracks.fCSnpSnp, "fCSnpSnp/F");
-  fTracks->Branch("fCTglY", &mytracks.fCTglY, "fCTglY/F");
-  fTracks->Branch("fCTglZ", &mytracks.fCTglZ, "fCTglZ/F");
-  fTracks->Branch("fCTglSnp", &mytracks.fCTglSnp, "fCTglSnp/F");
-  fTracks->Branch("fCTglTgl", &mytracks.fCTglTgl, "fCTglTgl/F");
-  fTracks->Branch("fC1PtY", &mytracks.fC1PtY, "fC1PtY/F");
-  fTracks->Branch("fC1PtZ", &mytracks.fC1PtZ, "fC1PtZ/F");
-  fTracks->Branch("fC1PtSnp", &mytracks.fC1PtSnp, "fC1PtSnp/F");
-  fTracks->Branch("fC1PtTgl", &mytracks.fC1PtTgl, "fC1PtTgl/F");
-  fTracks->Branch("fC1Pt21Pt2", &mytracks.fC1Pt21Pt2, "fC1Pt21Pt2/F");
+  // Modified covariance matrix
+  fTracks->Branch("fSigmaY", &mytracks.fSigmaY, "fSigmaY/F");
+  fTracks->Branch("fSigmaZ", &mytracks.fSigmaZ, "fSigmaZ/F");
+  fTracks->Branch("fSigmaSnp", &mytracks.fSigmaSnp, "fSigmaSnp/F");
+  fTracks->Branch("fSigmaTgl", &mytracks.fSigmaTgl, "fSigmaTgl/F");
+  fTracks->Branch("fSigma1Pt", &mytracks.fSigma1Pt, "fSigma1Pt/F");
+  fTracks->Branch("fRhoZY", &mytracks.fRhoZY, "fRhoZY/B");
+  fTracks->Branch("fRhoSnpY", &mytracks.fRhoSnpY, "fRhoSnpY/B");
+  fTracks->Branch("fRhoSnpZ", &mytracks.fRhoSnpZ, "fRhoSnpZ/B");
+  fTracks->Branch("fRhoTglY", &mytracks.fRhoTglY, "fRhoTglY/B");
+  fTracks->Branch("fRhoTglZ", &mytracks.fRhoTglZ, "fRhoTglZ/B");
+  fTracks->Branch("fRhoTglSnp", &mytracks.fRhoTglSnp, "fRhoTglSnp/B");
+  fTracks->Branch("fRho1PtY", &mytracks.fRho1PtY, "fRho1PtY/B");
+  fTracks->Branch("fRho1PtZ", &mytracks.fRho1PtZ, "fRho1PtZ/B");
+  fTracks->Branch("fRho1PtSnp", &mytracks.fRho1PtSnp, "fRho1PtSnp/B");
+  fTracks->Branch("fRho1PtTgl", &mytracks.fRho1PtTgl, "fRho1PtTgl/B");
+  //
   fTracks->Branch("fTPCInnerParam", &mytracks.fTPCinnerP, "fTPCInnerParam/F");
   fTracks->Branch("fFlags", &mytracks.fFlags, "fFlags/l");
   fTracks->Branch("fITSClusterMap", &mytracks.fITSClusterMap, "fITSClusterMap/b");
@@ -174,7 +190,7 @@ createO2tables(const char *inputFile = "delphes.root",
   fTracks->Branch("fTPCNClsFindableMinusFound",&mytracks.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
   fTracks->Branch("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
   fTracks->Branch("fTPCNClsShared", &mytracks.fTPCNClsShared, "fTPCNClsShared/b");
-  fTracks->Branch("fTRDTOFPattern", &mytracks.fTRDTOFPattern, "fTRDTOFPattern/b");
+  fTracks->Branch("fTRDPattern", &mytracks.fTRDPattern, "fTRDPattern/b");
   fTracks->Branch("fITSChi2NCl", &mytracks.fITSChi2NCl, "fITSChi2NCl/F");
   fTracks->Branch("fTPCChi2NCl", &mytracks.fTPCChi2NCl, "fTPCChi2NCl/F");
   fTracks->Branch("fTRDChi2", &mytracks.fTRDChi2, "fTRDChi2/F");
@@ -183,6 +199,7 @@ createO2tables(const char *inputFile = "delphes.root",
   fTracks->Branch("fTRDSignal", &mytracks.fTRDSignal, "fTRDSignal/F");
   fTracks->Branch("fTOFSignal", &mytracks.fTOFSignal, "fTOFSignal/F");
   fTracks->Branch("fLength", &mytracks.fLength, "fLength/F");
+  fTracks->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
 
   TTree* tEvents = new TTree("O2collision", "Collision tree");
   tEvents->Branch("fBCsID", &collision.fBCsID, "fBCsID/I");
@@ -200,6 +217,15 @@ createO2tables(const char *inputFile = "delphes.root",
   tEvents->Branch("fCollisionTime", &collision.fCollisionTime, "fCollisionTime/F");
   tEvents->Branch("fCollisionTimeRes", &collision.fCollisionTimeRes, "fCollisionTimeRes/F");
   tEvents->Branch("fCollisionTimeMask", &collision.fCollisionTimeMask, "fCollisionTimeMask/b");
+
+  UInt_t mTrackX =  0xFFFFFFFF;
+  UInt_t mTrackAlpha = 0xFFFFFFFF;
+  UInt_t mtrackSnp = 0xFFFFFFFF;
+  UInt_t mTrackTgl = 0xFFFFFFFF;
+  UInt_t mTrack1Pt = 0xFFFFFFFF; // Including the momentun at the inner wall of TPC
+  UInt_t mTrackCovDiag = 0xFFFFFFFF; // Including the chi2
+  UInt_t mTrackCovOffDiag = 0xFFFFFFFF;
+  UInt_t mTrackSignal = 0xFFFFFFFF; // PID signals and track length
 
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
@@ -239,26 +265,30 @@ createO2tables(const char *inputFile = "delphes.root",
       mytracks.fZ = o2track.getZ();
       mytracks.fSnp = o2track.getSnp();
       mytracks.fTgl = o2track.getTgl();
-      mytracks.fSigned1Pt = o2track.getQ2Pt(); //is this correct
+      mytracks.fSigned1Pt = o2track.getQ2Pt();
+      
+      // Modified covariance matrix
+      // First sigmas on the diagonal
+      mytracks.fSigmaY = TMath::Sqrt(o2track.getSigmaY2());
+      mytracks.fSigmaZ = TMath::Sqrt(o2track.getSigmaZ2());
+      mytracks.fSigmaSnp = TMath::Sqrt(o2track.getSigmaSnp2());
+      mytracks.fSigmaTgl = TMath::Sqrt(o2track.getSigmaTgl2());
+      mytracks.fSigma1Pt = TMath::Sqrt(o2track.getSigma1Pt2());
 
-      mytracks.fCYY= o2track.getSigmaY2();
-      mytracks.fCZY = o2track.getSigmaZY();
-      mytracks.fCZZ = o2track.getSigmaZ2();
-      mytracks.fCSnpY = o2track.getSigmaSnpY();
-      mytracks.fCSnpZ = o2track.getSigmaSnpZ();
-      mytracks.fCSnpSnp = o2track.getSigmaSnp2();
-      mytracks.fCTglY = o2track.getSigmaTglY();
-      mytracks.fCTglZ = o2track.getSigmaTglZ();
-      mytracks.fCTglSnp = o2track.getSigmaTglSnp();
-      mytracks.fCTglTgl = o2track.getSigmaTgl2();
-      mytracks.fC1PtY = o2track.getSigma1PtY();
-      mytracks.fC1PtZ = o2track.getSigma1PtZ();
-      mytracks.fC1PtSnp = o2track.getSigma1PtSnp();
-      mytracks.fC1PtTgl = o2track.getSigma1PtTgl();
-      mytracks.fC1Pt21Pt2 = o2track.getSigma1Pt2();
+      mytracks.fRhoZY = (Char_t)(128.*o2track.getSigmaZY()/mytracks.fSigmaZ/mytracks.fSigmaY);
+      mytracks.fRhoSnpY = (Char_t)(128.*o2track.getSigmaSnpY()/mytracks.fSigmaSnp/mytracks.fSigmaY);
+      mytracks.fRhoSnpZ = (Char_t)(128.*o2track.getSigmaSnpZ()/mytracks.fSigmaSnp/mytracks.fSigmaZ);
+      mytracks.fRhoTglY = (Char_t)(128.*o2track.getSigmaTglY()/mytracks.fSigmaTgl/mytracks.fSigmaY);
+      mytracks.fRhoTglZ = (Char_t)(128.*o2track.getSigmaTglZ()/mytracks.fSigmaTgl/mytracks.fSigmaZ);
+      mytracks.fRhoTglSnp = (Char_t)(128.*o2track.getSigmaTglSnp()/mytracks.fSigmaTgl/mytracks.fSigmaSnp);
+      mytracks.fRho1PtY = (Char_t)(128.*o2track.getSigma1PtY()/mytracks.fSigma1Pt/mytracks.fSigmaY);
+      mytracks.fRho1PtZ = (Char_t)(128.*o2track.getSigma1PtZ()/mytracks.fSigma1Pt/mytracks.fSigmaZ);
+      mytracks.fRho1PtSnp = (Char_t)(128.*o2track.getSigma1PtSnp()/mytracks.fSigma1Pt/mytracks.fSigmaSnp);
+      mytracks.fRho1PtTgl = (Char_t)(128.*o2track.getSigma1PtTgl()/mytracks.fSigma1Pt/mytracks.fSigmaTgl);
+
+      //FIXME this needs to be fixed
       mytracks.fITSClusterMap = 3;
       mytracks.fFlags = 4;
-
       mytracks.fLength = track->L * 0.1; // [cm]
       mytracks.fTOFSignal = track->TOuter * 1.e9; // [ns]
 
