@@ -27,7 +27,7 @@
     },
     "vertexerhf-hfcandcreator2prong": {
         "dovalplots": "true",
-        "d_bz": "5",
+        "d_bz": "2",
         "b_propdca": "true",
         "d_maxr": "200",
         "d_maxdzini": "4",
