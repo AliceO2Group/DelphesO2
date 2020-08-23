@@ -3,7 +3,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 
 bool smear = true;
 bool nsigma = true;
-double Bz = 0.5;
+double Bz = 0.2;
 
 void
 createO2tables(const char *inputFile = "delphes.root",
