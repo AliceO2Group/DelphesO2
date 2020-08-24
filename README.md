@@ -114,6 +114,7 @@ alienv enter DelphesO2/latest-master-o2, O2/latest-dev-o2
 ```
 
 Later on you can just use the following steering bash script https://github.com/preghenella/DelphesO2/blob/master/examples/scripts/createO2tables.sh
+
 You can change the number of generated events with the following setter: 
 
 ```
