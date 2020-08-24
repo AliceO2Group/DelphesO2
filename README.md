@@ -100,3 +100,27 @@ For each event, a double loop over positive-negative pion pairs combines them in
 To overcome the limitation that the large Delphes output might give on the statistical sample, one can run multiple times the same Delphes-analysis job, taking care of changing the Pythia8 random seed.
 
 An example of a script sending multiple jobs one after another and properly taking care of the Pythia8 seed can be found in `examples/scripts/dca.sh`. Please, get inspiration from that and adapt it to your needs.
+
+## Running O2 analyses on simulated data
+
+Simulated data generated with this software package can be analysed with the O2 framework developed for ALICE Run3. 
+A steering macro and some utility code was included in this repository for this purpose.
+To perform a simple D0 analysis you will have to load O2 and DelphesO2 and then run a simple steering macro that will perform 
+the full chain (data simulation, conversion to O2 data format and O2 analysis). 
+
+You will first have to enter DelphesO2 and O2 environmnet. For example:
+```
+alienv enter DelphesO2/latest-master-o2, O2/latest-dev-o2
+```
+
+Later on you can just use the following steering bash script https://github.com/preghenella/DelphesO2/blob/master/examples/scripts/createO2tables.sh
+
+You can change the number of generated events with the following setter: 
+
+```
+NEVENTS=10000
+```
+To run it, just source it inside the environment you have previously loaded.
+```
+./createO2tables.sh
+```
