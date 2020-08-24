@@ -122,5 +122,5 @@ NEVENTS=10000
 ```
 To run it, just source it inside the environment you have previously loaded.
 ```
-source createO2tables.sh
+./createO2tables.sh
 ```
