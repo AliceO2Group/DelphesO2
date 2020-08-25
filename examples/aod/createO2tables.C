@@ -1,9 +1,10 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
-bool smear = true;
-bool nsigma = true;
 double Bz = 0.2;
+double tof_radius = 100.; // [cm]
+double tof_length = 200.; // [cm]
+double tof_sigmat = 0.02; // [ns]
 
 void
 createO2tables(const char *inputFile = "delphes.root",
@@ -41,7 +42,11 @@ createO2tables(const char *inputFile = "delphes.root",
     std::cout << " --- invalid Bz field: " << Bz << std::endl;
     return;
   }
- 
+
+  // TOF layer
+  o2::delphes::TOFLayer toflayer;
+  toflayer.setup(tof_radius, tof_length, tof_sigmat);
+  
   struct {
     int fRunNumber = -1;         /// Run number
     ULong64_t fGlobalBC = 0u;    /// Unique bunch crossing id. Contains period, orbit and bunch crossing numbers
@@ -231,33 +236,21 @@ createO2tables(const char *inputFile = "delphes.root",
     
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
-    collision.fBCsID = ientry;
-    bc.fGlobalBC = ientry;
-    collision.fPosX = 0.;
-    collision.fPosY = 0.;
-    collision.fPosZ = 0.;
-    collision.fCovXX = 0.01;
-    collision.fCovXY = 0.01;
-    collision.fCovXZ = 0.01;
-    collision.fCovYY = 0.01;
-    collision.fCovYZ = 0.01;
-    collision.fCovZZ = 0.01;
-    collision.fChi2 = 0.01;
-    tEvents->Fill();
-    tBC->Fill();
+
     // loop over tracks
+    std::vector<Track *> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
 
       // get track and corresponding particle
       auto track = (Track *)tracks->At(itrack);
       auto particle = (GenParticle *)track->Particle.GetObject();
-      // smear track if requested
-      //if (smear)
-      //	if (!smearer.smearTrack(*track)) continue;
       
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
       smearer.smearTrack(o2track, track->PID);     
+      o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
+      
+      // set track information
       mytracks.fCollisionsID = ientry;
       mytracks.fX = o2track.getX();
       mytracks.fAlpha = o2track.getAlpha();
@@ -289,13 +282,48 @@ createO2tables(const char *inputFile = "delphes.root",
       //FIXME this needs to be fixed
       mytracks.fITSClusterMap = 3;
       mytracks.fFlags = 4;
-      mytracks.fLength = track->L * 0.1; // [cm]
-      mytracks.fTOFSignal = track->TOuter * 1.e9; // [ns]
 
+      // check if has hit the TOF
+      if (toflayer.hasTOF(*track)) {
+	tof_tracks.push_back(track);
+	mytracks.fLength = track->L * 0.1; // [cm]
+	mytracks.fTOFSignal = track->TOuter * 1.e12; // [ps]
+	mytracks.fTOFExpMom = track->P * 0.029979246;
+      }
+      else {
+	mytracks.fLength = -999.f;
+	mytracks.fTOFSignal = -999.f;
+	mytracks.fTOFExpMom = -999.f;
+      }
+	
       fTracks->Fill();
       // fill histograms
     }
+
+    // compute the event time
+    std::array<float, 2> tzero;
+    toflayer.eventTime(tof_tracks, tzero);
+
+    // fill collision information
+    collision.fBCsID = ientry;
+    bc.fGlobalBC = ientry;
+    collision.fPosX = 0.;
+    collision.fPosY = 0.;
+    collision.fPosZ = 0.;
+    collision.fCovXX = 0.01;
+    collision.fCovXY = 0.01;
+    collision.fCovXZ = 0.01;
+    collision.fCovYY = 0.01;
+    collision.fCovYZ = 0.01;
+    collision.fCovZZ = 0.01;
+    collision.fChi2 = 0.01;
+    collision.fCollisionTime = tzero[0] * 1.e3; // [ps]
+    collision.fCollisionTimeRes = tzero[1] * 1.e3; // [ps]
+    tEvents->Fill();
+    tBC->Fill();
+    
   }
+  
   fTracks->Write();
   tEvents->Write();
   tBC->Write();
