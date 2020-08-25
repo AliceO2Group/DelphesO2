@@ -9,8 +9,25 @@ DOANALYSIS=0   # run O2 analysis
 ### detector configuration
 BFIELD=5.      # magnetic field  [kG]
 SIGMAT=0.020   # time resolution [ns]
-TOFRAD=100.    # TOF radius      [cm]
-TOFLEN=200.    # TOF half length [cm]
+RADIUS=100.    # radius      [cm]
+LENGTH=200.    # half length [cm]
+ETAMAX=1.443   # max pseudorapidity
+
+### calculate max eta from geometry
+ETAMAX=`awk -v a=$RADIUS -v b=$LENGTH 'BEGIN {th=atan2(a,b)*0.5; sth=sin(th); cth=cos(th); print -log(sth/cth)}'`
+
+### verbose
+echo " --- running createO2tables.sh "
+echo "  nJobs   = $NJOBS "
+echo "  nRuns   = $NRUNS "
+echo "  nEvents = $NEVENTS "
+echo " --- with detector configuration "
+echo "  bField  = $BFIELD [kG] "
+echo "  sigmaT  = $SIGMAT [ns] "
+echo "  radius  = $RADIUS [cm] "
+echo "  length  = $LENGTH [cm] "
+echo "  etaMax  = $ETAMAX      "
+echo " --- start processing the runs "
 
 ### copy relevant files in the working directory
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
@@ -24,13 +41,15 @@ cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 sed -i -e "s/set barrel_Bz .*$/set barrel_Bz ${BFIELD}e\-1/" propagate.tcl
 sed -i -e "s/double Bz = .*$/double Bz = ${BFIELD}e\-1\;/" createO2tables.C
 sed -i -e "s/\"d_bz\": .*$/\"d_bz\": \"${BFIELD}\"\,/" dpl-config_std.json
-### set TOF radius
-sed -i -e "s/set barrel_Radius .*$/set barrel_Radius ${TOFRAD}e\-2/" propagate.tcl
-sed -i -e "s/double tof_radius = .*$/double tof_radius = ${TOFRAD}\;/" createO2tables.C
-### set TOF length
-sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${TOFLEN}e\-2/" propagate.tcl
-sed -i -e "s/double tof_length = .*$/double tof_length = ${TOFLEN}\;/" createO2tables.C
-### set TOF time resolution
+### set radius
+sed -i -e "s/set barrel_Radius .*$/set barrel_Radius ${RADIUS}e\-2/" propagate.tcl
+sed -i -e "s/double tof_radius = .*$/double tof_radius = ${RADIUS}\;/" createO2tables.C
+### set length
+sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${LENGTH}e\-2/" propagate.tcl
+sed -i -e "s/double tof_length = .*$/double tof_length = ${LENGTH}\;/" createO2tables.C
+### set TOF acceptance
+sed -i -e "s/set barrel_EtaMax .*$/set barrel_EtaMax ${ETAMAX}/" propagate.tcl
+### set time resolution
 sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" createO2tables.C
 
@@ -73,6 +92,7 @@ done
 
 ### merge runs when all done
 wait
+echo " --- all runs are processed, merging "
 hadd -f AODRun5Tot.root AODRun5.*.root && rm -rf AODRun5.*.root
 
 FILEOUTO2="AnalysisResults.root"

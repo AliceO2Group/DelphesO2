@@ -8,6 +8,11 @@ BFIELD=5.      # magnetic field  [kG]
 SIGMAT=0.020   # time resolution [ns]
 TOFRAD=100.    # TOF radius      [cm]
 TOFLEN=200.    # TOF half length [cm]
+TOFETA=1.443   # TOF max pseudorapidity
+
+### calculate max eta from geometry
+TOFETA=`awk -v a=$TOFRAD -v b=$TOFLEN 'BEGIN {th=atan2(a,b)*0.5; sth=sin(th); cth=cos(th); print -log(sth/cth)}'`
+echo "maxEta = $TOFETA"
 
 ### copy relevant files in the working directory
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
@@ -24,6 +29,8 @@ sed -i -e "s/double tof_radius = .*$/double tof_radius = ${TOFRAD}\;/" tof.C
 ### set TOF length
 sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${TOFLEN}e\-2/" propagate.tcl
 sed -i -e "s/double tof_length = .*$/double tof_length = ${TOFLEN}\;/" tof.C
+### set TOF acceptance
+sed -i -e "s/set barrel_EtaMax .*$/set barrel_EtaMax ${TOFETA}/" propagate.tcl
 ### set TOF time resolution
 sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" tof.C
