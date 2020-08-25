@@ -21,17 +21,17 @@ cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
 cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 
 ### set magnetic field
-sed -i -e "s/set Bz .*$/set Bz ${BFIELD}e\-1/" propagate.tcl
+sed -i -e "s/set barrel_Bz .*$/set barrel_Bz ${BFIELD}e\-1/" propagate.tcl
 sed -i -e "s/double Bz = .*$/double Bz = ${BFIELD}e\-1\;/" createO2tables.C
 sed -i -e "s/\"d_bz\": .*$/\"d_bz\": \"${BFIELD}\"\,/" dpl-config_std.json
 ### set TOF radius
-sed -i -e "s/set Radius .*$/set Radius ${TOFRAD}e\-2/" propagate.tcl
+sed -i -e "s/set barrel_Radius .*$/set barrel_Radius ${TOFRAD}e\-2/" propagate.tcl
 sed -i -e "s/double tof_radius = .*$/double tof_radius = ${TOFRAD}\;/" createO2tables.C
 ### set TOF length
-sed -i -e "s/set HalfLength .*$/set HalfLength ${TOFLEN}e\-2/" propagate.tcl
+sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${TOFLEN}e\-2/" propagate.tcl
 sed -i -e "s/double tof_length = .*$/double tof_length = ${TOFLEN}\;/" createO2tables.C
 ### set TOF time resolution
-sed -i -e "s/set TimeResolution .*$/set TimeResolution ${SIGMAT}e\-9/" propagate.tcl
+sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" createO2tables.C
 
 ### make sure we are clean to run

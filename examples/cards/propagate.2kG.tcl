@@ -1,3 +1,8 @@
+set barrel_Bz 0.2
+set barrel_Radius 100.e-2
+set barrel_HalfLength 200.e-2
+set barrel_TimeResolution 0.020e-9
+
 set ExecutionPath {
     ParticlePropagator
     Merger
@@ -13,9 +18,9 @@ module ParticlePropagator ParticlePropagator {
     set ElectronOutputArray electrons
     set MuonOutputArray muons
 
-    set Radius 100.e-2
-    set HalfLength 200.e-2
-    set Bz 0.2
+    set Bz $barrel_Bz
+    set Radius $barrel_Radius
+    set HalfLength $barrel_HalfLength
 }
 
 module Merger Merger {
@@ -28,7 +33,7 @@ module Merger Merger {
 module TimeSmearing TimeSmearing {
     add InputArray Merger/tracks
     add OutputArray tracks
-    set TimeResolution 0.020e-9
+    set TimeResolution $barrel_TimeResolution
 }
 
 module TreeWriter TreeWriter {

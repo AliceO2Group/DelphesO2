@@ -16,16 +16,16 @@ cp $DELPHESO2_ROOT/examples/pythia8/pythia8_inel.cfg .
 cp $DELPHESO2_ROOT/examples/smearing/tof.C .
 
 ### set magnetic field
-sed -i -e "s/set Bz .*$/set Bz ${BFIELD}e\-1/" propagate.tcl
+sed -i -e "s/set barrel_Bz .*$/set barrel_Bz ${BFIELD}e\-1/" propagate.tcl
 sed -i -e "s/double Bz = .*$/double Bz = ${BFIELD}e\-1\;/" tof.C
 ### set TOF radius
-sed -i -e "s/set Radius .*$/set Radius ${TOFRAD}e\-2/" propagate.tcl
+sed -i -e "s/set barrel_Radius .*$/set barrel_Radius ${TOFRAD}e\-2/" propagate.tcl
 sed -i -e "s/double tof_radius = .*$/double tof_radius = ${TOFRAD}\;/" tof.C
 ### set TOF length
-sed -i -e "s/set HalfLength .*$/set HalfLength ${TOFLEN}e\-2/" propagate.tcl
+sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${TOFLEN}e\-2/" propagate.tcl
 sed -i -e "s/double tof_length = .*$/double tof_length = ${TOFLEN}\;/" tof.C
 ### set TOF time resolution
-sed -i -e "s/set TimeResolution .*$/set TimeResolution ${SIGMAT}e\-9/" propagate.tcl
+sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" tof.C
 
 ### loop over runs
