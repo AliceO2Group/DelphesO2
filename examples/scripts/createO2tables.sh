@@ -38,7 +38,7 @@ sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" createO2t
 rm -rf .running* delphes*.root *.log
 
 ### loop over runs
-for I in $(seq 1 $NRUNS); do
+for I in $(seq 0 $(($NRUNS - 1))); do
 
     ### wait for a free slot
     while [ $(ls .running.* 2> /dev/null | wc -l) -ge $NJOBS ]; do
@@ -64,7 +64,7 @@ for I in $(seq 1 $NRUNS); do
     
     ### run Delphes and analysis
     DelphesPythia8 propagate.tcl pythia8.$I.cfg delphes.$I.root &> delphes.$I.log && \
-	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\")" &> createO2tables.$I.log && \
+	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\", $(($I*$NEVENTS)))" &> createO2tables.$I.log && \
 	rm -rf delphes.root && \
 	rm -rf .running.$I && \
 	echo " --- complete run $I" &

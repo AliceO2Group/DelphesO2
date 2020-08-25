@@ -8,7 +8,8 @@ double tof_sigmat = 0.02; // [ns]
 
 void
 createO2tables(const char *inputFile = "delphes.root",
-    const char *outputFile = "AODRun5.root")
+	       const char *outputFile = "AODRun5.root",
+	       int eventOffset = 0)
 {
   
   // Create chain of root trees
@@ -251,7 +252,7 @@ createO2tables(const char *inputFile = "delphes.root",
       o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
       
       // set track information
-      mytracks.fCollisionsID = ientry;
+      mytracks.fCollisionsID = ientry + eventOffset;
       mytracks.fX = o2track.getX();
       mytracks.fAlpha = o2track.getAlpha();
       mytracks.fY = o2track.getY();
@@ -305,8 +306,8 @@ createO2tables(const char *inputFile = "delphes.root",
     toflayer.eventTime(tof_tracks, tzero);
 
     // fill collision information
-    collision.fBCsID = ientry;
-    bc.fGlobalBC = ientry;
+    collision.fBCsID = ientry + eventOffset;
+    bc.fGlobalBC = ientry + eventOffset;
     collision.fPosX = 0.;
     collision.fPosY = 0.;
     collision.fPosZ = 0.;
