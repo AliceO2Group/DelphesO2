@@ -30,7 +30,7 @@ sed -i -e "s/double tof_radius = .*$/double tof_radius = ${TOFRAD}\;/" tof.C
 sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${TOFLEN}e\-2/" propagate.tcl
 sed -i -e "s/double tof_length = .*$/double tof_length = ${TOFLEN}\;/" tof.C
 ### set TOF acceptance
-sed -i -e "s/set barrel_EtaMax .*$/set barrel_EtaMax ${TOFETA}/" propagate.tcl
+sed -i -e "s/set barrel_Acceptance .*$/set barrel_Acceptance \{ 0.0 + 1.0 * fabs(eta) < ${TOFETA} \}/" propagate.tcl
 ### set TOF time resolution
 sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" tof.C

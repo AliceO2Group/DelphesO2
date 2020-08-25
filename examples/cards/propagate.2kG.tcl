@@ -2,7 +2,7 @@ set barrel_Bz 0.2
 set barrel_Radius 100.e-2
 set barrel_HalfLength 200.e-2
 set barrel_TimeResolution 0.020e-9
-set barrel_EtaMax 1.443
+set barrel_Acceptance { 0.0 + 1.0 * fabs(eta) < 1.443 }
 
 set ExecutionPath {
     ParticlePropagator
@@ -35,7 +35,7 @@ module Merger Merger {
 module Efficiency Acceptance {
     add InputArray Merger/tracks
     add OutputArray tracks
-    set EfficiencyFormula { 0.0 + 1.0 * fabs(eta) < [$barrel_EtaMax] }
+    set EfficiencyFormula $barrel_Acceptance
 }
 
 module TimeSmearing TimeSmearing {
