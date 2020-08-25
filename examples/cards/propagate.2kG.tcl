@@ -33,9 +33,9 @@ module Merger Merger {
 }
 
 module Efficiency Acceptance {
-    add InputArray TrackMerger/tracks
+    add InputArray Merger/tracks
     add OutputArray tracks
-    set EfficiencyFormula { 0.0 + 1.0 * fabs(eta) < $barrel_EtaMax }
+    set EfficiencyFormula { 0.0 + 1.0 * fabs(eta) < [$barrel_EtaMax] }
 }
 
 module TimeSmearing TimeSmearing {
