@@ -1,9 +1,9 @@
 #! /usr/bin/env bash
 
 ### run configuration
-NJOBS=4        # number of max parallel runs
-NRUNS=10       # number of runs
-NEVENTS=10000  # number of events in a run
+NJOBS=1        # number of max parallel runs
+NRUNS=1       # number of runs
+NEVENTS=1000  # number of events in a run
 DOANALYSIS=0   # run O2 analysis
 
 ### detector configuration
@@ -34,6 +34,7 @@ cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
 cp $DELPHESO2_ROOT/examples/smearing/luts/lutCovm.* .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_ccbar.cfg .
 cp $DELPHESO2_ROOT/examples/pythia8/decays/force_hadronic_D.cfg .
+cp $DELPHESO2_ROOT/examples/aod/createO2tables.h .
 cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
 cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 
@@ -91,6 +92,7 @@ for I in $(seq 0 $(($NRUNS - 1))); do
 done
 
 ### merge runs when all done
+echo " --- waiting for runs to be completed "
 wait
 echo " --- all runs are processed, merging "
 hadd -f AODRun5Tot.root AODRun5.*.root && rm -rf AODRun5.*.root

@@ -28,6 +28,7 @@ file(GLOB SMEARING
 
 file(GLOB AOD
   aod/*.C
+  aod/*.h
   )
 
 install(FILES ${PYTHIA8} DESTINATION examples/pythia8)
