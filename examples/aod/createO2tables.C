@@ -224,6 +224,65 @@ createO2tables(const char *inputFile = "delphes.root",
   tEvents->Branch("fCollisionTimeRes", &collision.fCollisionTimeRes, "fCollisionTimeRes/F");
   tEvents->Branch("fCollisionTimeMask", &collision.fCollisionTimeMask, "fCollisionTimeMask/b");
 
+  struct {
+    // MC particle
+    
+    Int_t   fMcCollisionsID = -1;    /// The index of the MC collision vertex
+    
+    // MC information (modified version of TParticle
+    Int_t fPdgCode    = -99999; /// PDG code of the particle
+    Int_t fStatusCode = -99999; /// generation status code
+    uint8_t fFlags    = 0;     /// See enum MCParticleFlags
+    Int_t fMother0    = 0; /// Indices of the mother particles
+    Int_t fMother1    = 0;
+    Int_t fDaughter0  = 0; /// Indices of the daughter particles
+    Int_t fDaughter1  = 0;
+    Float_t fWeight   = 1;     /// particle weight from the generator or ML
+
+    Float_t fPx = -999.f; /// x component of momentum
+    Float_t fPy = -999.f; /// y component of momentum
+    Float_t fPz = -999.f; /// z component of momentum
+    Float_t fE  = -999.f; /// Energy (covers the case of resonances, no need for calculated mass)
+
+    Float_t fVx = -999.f; /// x of production vertex
+    Float_t fVy = -999.f; /// y of production vertex
+    Float_t fVz = -999.f; /// z of production vertex
+    Float_t fVt = -999.f; /// t of production vertex
+    // We do not use the polarisation so far
+  } mcparticle;  //! MC particles from the kinematics tree
+  
+  TTree* tKinematics = new TTree("O2mcparticle", "Kinematics");
+  tKinematics->Branch("fMcCollisionsID", &mcparticle.fMcCollisionsID, "fMcCollisionsID/I");
+  tKinematics->Branch("fPdgCode", &mcparticle.fPdgCode, "fPdgCode/I");
+  tKinematics->Branch("fStatusCode", &mcparticle.fStatusCode, "fStatusCode/I");
+  tKinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");  
+  tKinematics->Branch("fMother0", &mcparticle.fMother0, "fMother0/I");
+  tKinematics->Branch("fMother1", &mcparticle.fMother1, "fMother1/I");
+  tKinematics->Branch("fDaughter0", &mcparticle.fDaughter0, "fDaughter0/I");
+  tKinematics->Branch("fDaughter1", &mcparticle.fDaughter1, "fDaughter1/I");
+  tKinematics->Branch("fWeight", &mcparticle.fWeight, "fWeight/F");  
+  tKinematics->Branch("fPx", &mcparticle.fPx, "fPx/F");
+  tKinematics->Branch("fPy", &mcparticle.fPy, "fPy/F");
+  tKinematics->Branch("fPz", &mcparticle.fPz, "fPz/F");
+  tKinematics->Branch("fE", &mcparticle.fE, "fE/F");  
+  tKinematics->Branch("fVx", &mcparticle.fVx, "fVx/F");
+  tKinematics->Branch("fVy", &mcparticle.fVy, "fVy/F");
+  tKinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
+  tKinematics->Branch("fVt", &mcparticle.fVt, "fVt/F");
+
+  struct {
+    // Track label to find the corresponding MC particle
+    UInt_t fLabel = 0;       /// Track label
+    UShort_t fLabelMask = 0; /// Bit mask to indicate detector mismatches (bit ON means mismatch)
+                           /// Bit 0-6: mismatch at ITS layer
+                           /// Bit 7-9: # of TPC mismatches in the ranges 0, 1, 2-3, 4-7, 8-15, 16-31, 32-63, >64
+                           /// Bit 10: TRD, bit 11: TOF, bit 15: negative label sign
+  } mctracklabel; //! Track labels
+  
+  TTree* tLabels = new TTree("O2mctracklabel", "MC track labels");
+  tLabels->Branch("fLabel", &mctracklabel.fLabel, "fLabel/i");
+  tLabels->Branch("fLabelMask", &mctracklabel.fLabelMask, "fLabelMask/s");
+
   UInt_t mTrackX =  0xFFFFFFFF;
   UInt_t mTrackAlpha = 0xFFFFFFFF;
   UInt_t mtrackSnp = 0xFFFFFFFF;
@@ -232,12 +291,48 @@ createO2tables(const char *inputFile = "delphes.root",
   UInt_t mTrackCovDiag = 0xFFFFFFFF; // Including the chi2
   UInt_t mTrackCovOffDiag = 0xFFFFFFFF;
   UInt_t mTrackSignal = 0xFFFFFFFF; // PID signals and track length
-
+  
+  int fOffsetLabel = 0;
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
 
+    // loop over particles
+    for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) {
+      auto particle = (GenParticle *)particles->At(iparticle);
+      
+      particle->SetUniqueID(iparticle + fOffsetLabel); // not sure this is needed, to be sure
+      
+      mcparticle.fMcCollisionsID = ientry + eventOffset;
+      mcparticle.fPdgCode = particle->PID;
+      mcparticle.fStatusCode = particle->Status;
+      mcparticle.fFlags = 0;
+      mcparticle.fMother0 = particle->M1;
+      if (mcparticle.fMother0 > -1) mcparticle.fMother0 += fOffsetLabel;
+      mcparticle.fMother1 = particle->M2;
+      if (mcparticle.fMother1 > -1) mcparticle.fMother1 += fOffsetLabel;
+      mcparticle.fDaughter0 = particle->D1;
+      if (mcparticle.fDaughter0 > -1) mcparticle.fDaughter0 += fOffsetLabel;
+      mcparticle.fDaughter1 = particle->D2;
+      if (mcparticle.fDaughter1 > -1) mcparticle.fDaughter1 += fOffsetLabel;
+      mcparticle.fWeight = 1.;
+
+      mcparticle.fPx = particle->Px;
+      mcparticle.fPy = particle->Py;
+      mcparticle.fPz = particle->Pz;
+      mcparticle.fE  = particle->E;
+
+      mcparticle.fVx = particle->X;
+      mcparticle.fVy = particle->Y;
+      mcparticle.fVz = particle->Z;
+      mcparticle.fVt = particle->T;
+      
+      tKinematics->Fill();
+
+    }
+    fOffsetLabel += particles->GetEntries();
+    
     // loop over tracks
     std::vector<Track *> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
@@ -245,6 +340,12 @@ createO2tables(const char *inputFile = "delphes.root",
       // get track and corresponding particle
       auto track = (Track *)tracks->At(itrack);
       auto particle = (GenParticle *)track->Particle.GetObject();
+
+      // fill the label tree
+      Int_t alabel = particle->GetUniqueID();
+      mctracklabel.fLabel = TMath::Abs(alabel);
+      mctracklabel.fLabelMask = 0;
+      tLabels->Fill();
       
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
@@ -328,6 +429,8 @@ createO2tables(const char *inputFile = "delphes.root",
   fTracks->Write();
   tEvents->Write();
   tBC->Write();
+  tKinematics->Write();
+  tLabels->Write();
   fout->Close();
   
 }
