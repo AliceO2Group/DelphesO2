@@ -54,8 +54,11 @@ createO2tables(const char *inputFile = "delphes.root",
   auto fout = TFile::Open(outputFile, "RECREATE");
   TTree* tBC = MakeTreeO2bc();
   TTree* fTracks = MakeTreeO2track();
-  TTree* tKinematics = MaketreeO2mcparticle();
+  TTree* tEvents = MakeTreeO2collision();
+  TTree* tMCvtx = MakeTreeO2mccollision();
+  TTree* tKinematics = MakeTreeO2mcparticle();
   TTree* tLabels = MakeTreeO2mctracklabel();
+  TTree* tCollisionLabels = MakeTreeO2mccollisionlabel();
 
   UInt_t mTrackX =  0xFFFFFFFF;
   UInt_t mTrackAlpha = 0xFFFFFFFF;
@@ -198,13 +201,28 @@ createO2tables(const char *inputFile = "delphes.root",
     tEvents->Fill();
     tBC->Fill();
     
+    mccollision.fBCsID = ientry + eventOffset;
+    mccollision.fGeneratorsID = 0;
+    mccollision.fPosX = 0.;
+    mccollision.fPosY = 0.;
+    mccollision.fPosZ = 0.;
+    mccollision.fT = 0.;
+    mccollision.fWeight = 0.;
+    mccollision.fImpactParameter = 0.;
+    tMCvtx->Fill();
+
+    mccollisionlabel.fLabel = ientry + eventOffset;
+    mccollisionlabel.fLabelMask = 0;
+    tCollisionLabels->Fill();
   }
   
   fTracks->Write();
   tEvents->Write();
+  tMCvtx->Write();
   tBC->Write();
   tKinematics->Write();
   tLabels->Write();
+  tCollisionLabels->Write();
   fout->Close();
   
 }
