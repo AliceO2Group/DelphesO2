@@ -12,7 +12,7 @@ if [ $DOQA -eq 1 ]; then
   echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
   rm -f $FILEOUTQA
   O2ARGS="--shm-segment-size 16000000000 --configuration json://$PWD/dpl-config_std.json --aod-file @listfiles.txt"
-  O2EXEC="o2-analysis-qatask --pipeline o2-analysis-qatask:100 $O2ARGS -b"
+  O2EXEC="o2-analysis-qatask $O2ARGS -b"
   TMPSCRIPT="tmpscript.sh"
   cat << EOF > $TMPSCRIPT # Create a temporary script with the full O2 commands.
 #!/bin/bash
