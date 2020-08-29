@@ -5,7 +5,8 @@ DOANALYSIS=0
 
 cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 
-### perform QA analysis
+### perform O2 analysis
+
 if [ $DOQA -eq 1 ]; then
   LOGFILE="log_qa.log"
   echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
@@ -22,7 +23,6 @@ EOF
   mv AnalysisResults.root $FILEOUTQA
 fi
 
-### perform O2 analysis
 if [ $DOANALYSIS -eq 1 ]; then
   LOGFILE="log_o2.log"
   echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
