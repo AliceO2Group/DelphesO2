@@ -1,6 +1,8 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
+#include "createO2tables.h"
+
 double Bz = 0.2;
 double tof_radius = 100.; // [cm]
 double tof_length = 200.; // [cm]
@@ -48,181 +50,15 @@ createO2tables(const char *inputFile = "delphes.root",
   o2::delphes::TOFLayer toflayer;
   toflayer.setup(tof_radius, tof_length, tof_sigmat);
   
-  struct {
-    int fRunNumber = -1;         /// Run number
-    ULong64_t fGlobalBC = 0u;    /// Unique bunch crossing id. Contains period, orbit and bunch crossing numbers
-    ULong64_t fTriggerMask = 0u; /// Trigger class mask
-  } bc; //! structure to keep trigger-related info
- 
-  struct {
-    // Track data
-
-    Int_t   fCollisionsID = -1;    /// The index of the collision vertex in the TF, to which the track is attached
-    
-    uint8_t fTrackType = 0;       // Type of track: global, ITS standalone, tracklet, ...
-    
-    // In case we need connection to TOF clusters, activate next lines
-    // Int_t   fTOFclsIndex;     /// The index of the associated TOF cluster
-    // Int_t   fNTOFcls;         /// The number of TOF clusters
-    
-    
-
-    // Coordinate system parameters
-    Float_t fX = -999.f;     /// X coordinate for the point of parametrisation
-    Float_t fAlpha = -999.f; /// Local <--> global coor.system rotation angle
-
-    // Track parameters
-    Float_t fY = -999.f;          /// fP[0] local Y-coordinate of a track (cm)
-    Float_t fZ = -999.f;          /// fP[1] local Z-coordinate of a track (cm)
-    Float_t fSnp = -999.f;        /// fP[2] local sine of the track momentum azimuthal angle
-    Float_t fTgl = -999.f;        /// fP[3] tangent of the track momentum dip angle
-    Float_t fSigned1Pt = -999.f;  /// fP[4] 1/pt (1/(GeV/c))
-
-    // "Covariance matrix"
-    // The diagonal elements represent the errors = Sqrt(C[i,i])
-    // The off-diagonal elements are the correlations = C[i,j]/Sqrt(C[i,i])/Sqrt(C[j,j])
-    // The off-diagonal elements are multiplied by 128 (7bits) and packed in Char_t
-    Float_t fSigmaY      = -999.f; /// Sqrt(fC[0])
-    Float_t fSigmaZ      = -999.f; /// Sqrt(fC[2])
-    Float_t fSigmaSnp    = -999.f; /// Sqrt(fC[5])
-    Float_t fSigmaTgl    = -999.f; /// Sqrt(fC[9])
-    Float_t fSigma1Pt    = -999.f; /// Sqrt(fC[14])
-    Char_t fRhoZY        = 0;      /// 128*fC[1]/SigmaZ/SigmaY
-    Char_t fRhoSnpY      = 0;      /// 128*fC[3]/SigmaSnp/SigmaY
-    Char_t fRhoSnpZ      = 0;      /// 128*fC[4]/SigmaSnp/SigmaZ
-    Char_t fRhoTglY      = 0;      /// 128*fC[6]/SigmaTgl/SigmaY
-    Char_t fRhoTglZ      = 0;      /// 128*fC[7]/SigmaTgl/SigmaZ
-    Char_t fRhoTglSnp    = 0;      /// 128*fC[8]/SigmaTgl/SigmaSnp
-    Char_t fRho1PtY      = 0;      /// 128*fC[10]/Sigma1Pt/SigmaY
-    Char_t fRho1PtZ      = 0;      /// 128*fC[11]/Sigma1Pt/SigmaZ
-    Char_t fRho1PtSnp    = 0;      /// 128*fC[12]/Sigma1Pt/SigmaSnp
-    Char_t fRho1PtTgl    = 0;      /// 128*fC[13]/Sigma1Pt/SigmaTgl
-
-    // Additional track parameters
-    Float_t fTPCinnerP = -999.f; /// Full momentum at the inner wall of TPC for dE/dx PID
-
-    // Track quality parameters
-    ULong64_t fFlags = 0u;       /// Reconstruction status flags
-
-    // Clusters and tracklets
-    UChar_t fITSClusterMap = 0u;   /// ITS map of clusters, one bit per a layer
-    UChar_t fTPCNClsFindable = 0u; /// number of clusters that could be assigned in the TPC
-    Char_t fTPCNClsFindableMinusFound = 0;       /// difference between foundable and found clusters
-    Char_t fTPCNClsFindableMinusCrossedRows = 0; ///  difference between foundable clsuters and crossed rows
-    UChar_t fTPCNClsShared = 0u;   /// Number of shared clusters
-    UChar_t fTRDPattern = 0u;   /// Bit 0-5 if tracklet from TRD layer used for this track
-
-    // Chi2
-    Float_t fITSChi2NCl = -999.f; /// chi2/Ncl ITS
-    Float_t fTPCChi2NCl = -999.f; /// chi2/Ncl TPC
-    Float_t fTRDChi2 = -999.f;    /// chi2 TRD match (?)
-    Float_t fTOFChi2 = -999.f;    /// chi2 TOF match (?)
-
-    // PID
-    Float_t fTPCSignal = -999.f; /// dE/dX TPC
-    Float_t fTRDSignal = -999.f; /// dE/dX TRD
-    Float_t fTOFSignal = -999.f; /// TOFsignal
-    Float_t fLength = -999.f;    /// Int.Lenght @ TOF
-    Float_t fTOFExpMom = -999.f; /// TOF Expected momentum based on the expected time of pions
-  } mytracks;                      //! structure to keep track information
-
-  struct {
-    // Event data
-    Int_t fBCsID = 0u;       /// Index to BC table
-    // Primary vertex position
-    Float_t  fPosX = -999.f;       /// Primary vertex x coordinate
-    Float_t  fPosY = -999.f;       /// Primary vertex y coordinate
-    Float_t  fPosZ = -999.f;       /// Primary vertex z coordinate
-    // Primary vertex covariance matrix
-    Float_t  fCovXX = 999.f;    /// cov[0]
-    Float_t  fCovXY = 0.f;      /// cov[1]
-    Float_t  fCovXZ = 0.f;      /// cov[2]
-    Float_t  fCovYY = 999.f;    /// cov[3]
-    Float_t  fCovYZ = 0.f;      /// cov[4]
-    Float_t  fCovZZ = 999.f;    /// cov[5]
-    // Quality parameters
-    Float_t  fChi2 = 999.f;             /// Chi2 of the vertex
-    UInt_t   fN = 0u;                /// Number of contributors
-
-    // The calculation of event time certainly will be modified in Run3
-    // The prototype below can be switched on request
-    Float_t fCollisionTime = -999.f;    /// Event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
-    Float_t fCollisionTimeRes = -999.f; /// Resolution on the event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
-    UChar_t fCollisionTimeMask = 0u;    /// Mask with the method used to compute the event time (0x1=T0-TOF,0x2=T0A,0x3=TOC) for each momentum bins
-
-  } collision; //! structure to keep the primary vertex (avoid name conflicts)
-  
-
+  // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
-   
-  TTree* tBC = new TTree("O2bc", "BC info"); 
-  tBC->Branch("fRunNumber", &bc.fRunNumber, "fRunNumber/I");
-  tBC->Branch("fGlobalBC", &bc.fGlobalBC, "fGlobalBC/l");
-  tBC->Branch("fTriggerMask", &bc.fTriggerMask, "fTriggerMask/l");
-
-  TTree* fTracks = new TTree("O2track", "Barrel tracks");
-  fTracks->Branch("fCollisionsID", &mytracks.fCollisionsID, "fCollisionsID/I");
-  fTracks->Branch("fTrackType", &mytracks.fTrackType, "fTrackType/b");
-  //    fTracks->Branch("fTOFclsIndex", &mytracks.fTOFclsIndex, "fTOFclsIndex/I");
-  //    fTracks->Branch("fNTOFcls", &mytracks.fNTOFcls, "fNTOFcls/I");
-  fTracks->Branch("fX", &mytracks.fX, "fX/F");
-  fTracks->Branch("fAlpha", &mytracks.fAlpha, "fAlpha/F");
-  fTracks->Branch("fY", &mytracks.fY, "fY/F");
-  fTracks->Branch("fZ", &mytracks.fZ, "fZ/F");
-  fTracks->Branch("fSnp", &mytracks.fSnp, "fSnp/F");
-  fTracks->Branch("fTgl", &mytracks.fTgl, "fTgl/F");
-  fTracks->Branch("fSigned1Pt", &mytracks.fSigned1Pt, "fSigned1Pt/F");
-  // Modified covariance matrix
-  fTracks->Branch("fSigmaY", &mytracks.fSigmaY, "fSigmaY/F");
-  fTracks->Branch("fSigmaZ", &mytracks.fSigmaZ, "fSigmaZ/F");
-  fTracks->Branch("fSigmaSnp", &mytracks.fSigmaSnp, "fSigmaSnp/F");
-  fTracks->Branch("fSigmaTgl", &mytracks.fSigmaTgl, "fSigmaTgl/F");
-  fTracks->Branch("fSigma1Pt", &mytracks.fSigma1Pt, "fSigma1Pt/F");
-  fTracks->Branch("fRhoZY", &mytracks.fRhoZY, "fRhoZY/B");
-  fTracks->Branch("fRhoSnpY", &mytracks.fRhoSnpY, "fRhoSnpY/B");
-  fTracks->Branch("fRhoSnpZ", &mytracks.fRhoSnpZ, "fRhoSnpZ/B");
-  fTracks->Branch("fRhoTglY", &mytracks.fRhoTglY, "fRhoTglY/B");
-  fTracks->Branch("fRhoTglZ", &mytracks.fRhoTglZ, "fRhoTglZ/B");
-  fTracks->Branch("fRhoTglSnp", &mytracks.fRhoTglSnp, "fRhoTglSnp/B");
-  fTracks->Branch("fRho1PtY", &mytracks.fRho1PtY, "fRho1PtY/B");
-  fTracks->Branch("fRho1PtZ", &mytracks.fRho1PtZ, "fRho1PtZ/B");
-  fTracks->Branch("fRho1PtSnp", &mytracks.fRho1PtSnp, "fRho1PtSnp/B");
-  fTracks->Branch("fRho1PtTgl", &mytracks.fRho1PtTgl, "fRho1PtTgl/B");
-  //
-  fTracks->Branch("fTPCInnerParam", &mytracks.fTPCinnerP, "fTPCInnerParam/F");
-  fTracks->Branch("fFlags", &mytracks.fFlags, "fFlags/l");
-  fTracks->Branch("fITSClusterMap", &mytracks.fITSClusterMap, "fITSClusterMap/b");
-  fTracks->Branch("fTPCNClsFindable", &mytracks.fTPCNClsFindable, "fTPCNClsFindable/b");
-  fTracks->Branch("fTPCNClsFindableMinusFound",&mytracks.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
-  fTracks->Branch("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
-  fTracks->Branch("fTPCNClsShared", &mytracks.fTPCNClsShared, "fTPCNClsShared/b");
-  fTracks->Branch("fTRDPattern", &mytracks.fTRDPattern, "fTRDPattern/b");
-  fTracks->Branch("fITSChi2NCl", &mytracks.fITSChi2NCl, "fITSChi2NCl/F");
-  fTracks->Branch("fTPCChi2NCl", &mytracks.fTPCChi2NCl, "fTPCChi2NCl/F");
-  fTracks->Branch("fTRDChi2", &mytracks.fTRDChi2, "fTRDChi2/F");
-  fTracks->Branch("fTOFChi2", &mytracks.fTOFChi2, "fTOFChi2/F");
-  fTracks->Branch("fTPCSignal", &mytracks.fTPCSignal, "fTPCSignal/F");
-  fTracks->Branch("fTRDSignal", &mytracks.fTRDSignal, "fTRDSignal/F");
-  fTracks->Branch("fTOFSignal", &mytracks.fTOFSignal, "fTOFSignal/F");
-  fTracks->Branch("fLength", &mytracks.fLength, "fLength/F");
-  fTracks->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
-
-  TTree* tEvents = new TTree("O2collision", "Collision tree");
-  tEvents->Branch("fBCsID", &collision.fBCsID, "fBCsID/I");
-  tEvents->Branch("fPosX", &collision.fPosX, "fPosX/F");
-  tEvents->Branch("fPosY", &collision.fPosY, "fPosY/F");
-  tEvents->Branch("fPosZ", &collision.fPosZ, "fPosZ/F");
-  tEvents->Branch("fCovXX", &collision.fCovXX, "fCovXX/F");
-  tEvents->Branch("fCovXY", &collision.fCovXY, "fCovXY/F");
-  tEvents->Branch("fCovXZ", &collision.fCovXZ, "fCovXZ/F");
-  tEvents->Branch("fCovYY", &collision.fCovYY, "fCovYY/F");
-  tEvents->Branch("fCovYZ", &collision.fCovYZ, "fCovYZ/F");
-  tEvents->Branch("fCovZZ", &collision.fCovZZ, "fCovZZ/F");
-  tEvents->Branch("fChi2", &collision.fChi2, "fChi2/F");
-  tEvents->Branch("fNumContrib", &collision.fN, "fNumContrib/i");
-  tEvents->Branch("fCollisionTime", &collision.fCollisionTime, "fCollisionTime/F");
-  tEvents->Branch("fCollisionTimeRes", &collision.fCollisionTimeRes, "fCollisionTimeRes/F");
-  tEvents->Branch("fCollisionTimeMask", &collision.fCollisionTimeMask, "fCollisionTimeMask/b");
+  TTree* tBC = MakeTreeO2bc();
+  TTree* fTracks = MakeTreeO2track();
+  TTree* tEvents = MakeTreeO2collision();
+  TTree* tMCvtx = MakeTreeO2mccollision();
+  TTree* tKinematics = MakeTreeO2mcparticle();
+  TTree* tLabels = MakeTreeO2mctracklabel();
+  TTree* tCollisionLabels = MakeTreeO2mccollisionlabel();
 
   UInt_t mTrackX =  0xFFFFFFFF;
   UInt_t mTrackAlpha = 0xFFFFFFFF;
@@ -232,12 +68,48 @@ createO2tables(const char *inputFile = "delphes.root",
   UInt_t mTrackCovDiag = 0xFFFFFFFF; // Including the chi2
   UInt_t mTrackCovOffDiag = 0xFFFFFFFF;
   UInt_t mTrackSignal = 0xFFFFFFFF; // PID signals and track length
-
+  
+  int fOffsetLabel = 0;
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
 
+    // loop over particles
+    for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) {
+      auto particle = (GenParticle *)particles->At(iparticle);
+      
+      particle->SetUniqueID(iparticle + fOffsetLabel); // not sure this is needed, to be sure
+      
+      mcparticle.fMcCollisionsID = ientry + eventOffset;
+      mcparticle.fPdgCode = particle->PID;
+      mcparticle.fStatusCode = particle->Status;
+      mcparticle.fFlags = 0;
+      mcparticle.fMother0 = particle->M1;
+      if (mcparticle.fMother0 > -1) mcparticle.fMother0 += fOffsetLabel;
+      mcparticle.fMother1 = particle->M2;
+      if (mcparticle.fMother1 > -1) mcparticle.fMother1 += fOffsetLabel;
+      mcparticle.fDaughter0 = particle->D1;
+      if (mcparticle.fDaughter0 > -1) mcparticle.fDaughter0 += fOffsetLabel;
+      mcparticle.fDaughter1 = particle->D2;
+      if (mcparticle.fDaughter1 > -1) mcparticle.fDaughter1 += fOffsetLabel;
+      mcparticle.fWeight = 1.;
+
+      mcparticle.fPx = particle->Px;
+      mcparticle.fPy = particle->Py;
+      mcparticle.fPz = particle->Pz;
+      mcparticle.fE  = particle->E;
+
+      mcparticle.fVx = particle->X;
+      mcparticle.fVy = particle->Y;
+      mcparticle.fVz = particle->Z;
+      mcparticle.fVt = particle->T;
+      
+      tKinematics->Fill();
+
+    }
+    fOffsetLabel += particles->GetEntries();
+    
     // loop over tracks
     std::vector<Track *> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
@@ -245,6 +117,12 @@ createO2tables(const char *inputFile = "delphes.root",
       // get track and corresponding particle
       auto track = (Track *)tracks->At(itrack);
       auto particle = (GenParticle *)track->Particle.GetObject();
+
+      // fill the label tree
+      Int_t alabel = particle->GetUniqueID();
+      mctracklabel.fLabel = TMath::Abs(alabel);
+      mctracklabel.fLabelMask = 0;
+      tLabels->Fill();
       
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
@@ -323,11 +201,28 @@ createO2tables(const char *inputFile = "delphes.root",
     tEvents->Fill();
     tBC->Fill();
     
+    mccollision.fBCsID = ientry + eventOffset;
+    mccollision.fGeneratorsID = 0;
+    mccollision.fPosX = 0.;
+    mccollision.fPosY = 0.;
+    mccollision.fPosZ = 0.;
+    mccollision.fT = 0.;
+    mccollision.fWeight = 0.;
+    mccollision.fImpactParameter = 0.;
+    tMCvtx->Fill();
+
+    mccollisionlabel.fLabel = ientry + eventOffset;
+    mccollisionlabel.fLabelMask = 0;
+    tCollisionLabels->Fill();
   }
   
   fTracks->Write();
   tEvents->Write();
+  tMCvtx->Write();
   tBC->Write();
+  tKinematics->Write();
+  tLabels->Write();
+  tCollisionLabels->Write();
   fout->Close();
   
 }

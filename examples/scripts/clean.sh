@@ -1,3 +1,6 @@
-rm pythia8.cfg
+rm *.root
+rm *.cfg *.log *.txt
 rm *.tcl
 rm *.dat
+rm *.C *.h
+rm *.pdf *.swp
