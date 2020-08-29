@@ -1,10 +1,9 @@
 #! /usr/bin/env bash
 
 ### run configuration
-NJOBS=1        # number of max parallel runs
-NRUNS=1       # number of runs
-NEVENTS=1000  # number of events in a run
-DOANALYSIS=0   # run O2 analysis
+NJOBS=50        # number of max parallel runs
+NRUNS=50       # number of runs
+NEVENTS=5000  # number of events in a run
 
 ### detector configuration
 BFIELD=5.      # magnetic field  [kG]
@@ -36,7 +35,6 @@ cp $DELPHESO2_ROOT/examples/pythia8/pythia8_ccbar.cfg .
 cp $DELPHESO2_ROOT/examples/pythia8/decays/force_hadronic_D.cfg .
 cp $DELPHESO2_ROOT/examples/aod/createO2tables.h .
 cp $DELPHESO2_ROOT/examples/aod/createO2tables.C .
-cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 
 ### set magnetic field
 sed -i -e "s/set barrel_Bz .*$/set barrel_Bz ${BFIELD}e\-1/" propagate.tcl
@@ -83,8 +81,9 @@ for I in $(seq 0 $(($NRUNS - 1))); do
     cat force_hadronic_D.cfg >> pythia8.$I.cfg
     
     ### run Delphes and analysis
+    #$(($I*$NEVENTS))
     DelphesPythia8 propagate.tcl pythia8.$I.cfg delphes.$I.root &> delphes.$I.log && \
-	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\", $(($I*$NEVENTS)))" &> createO2tables.$I.log && \
+	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\", 0)" &> createO2tables.$I.log && \
 	rm -rf delphes.root && \
 	rm -rf .running.$I && \
 	echo " --- complete run $I" &
@@ -95,32 +94,8 @@ done
 echo " --- waiting for runs to be completed "
 wait
 echo " --- all runs are processed, merging "
-hadd -f AODRun5Tot.root AODRun5.*.root && rm -rf AODRun5.*.root
-
-FILEOUTO2="AnalysisResults.root"
-AOD3NAME=AODRun5Tot.root
-
-### perform O2 analysis
-if [ $DOANALYSIS -eq 1 ]; then
-  LOGFILE="log_o2.log"
-  echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
-  rm -f $FILEOUTO2
-  if [ ! -f "$AOD3NAME" ]; then
-    echo "Error: File $AOD3NAME does not exist."
-    exit 1
-  fi
-  O2ARGS="--shm-segment-size 16000000000 --configuration json://$PWD/dpl-config_std.json --aod-file $AOD3NAME"
-  O2EXEC="o2-analysis-hftrackindexskimscreator $O2ARGS | o2-analysis-hfcandidatecreator2prong $O2ARGS | o2-analysis-taskdzero $O2ARGS | o2-analysis-qatask $AOD3NAME -b"
-  TMPSCRIPT="tmpscript.sh"
-  cat << EOF > $TMPSCRIPT # Create a temporary script with the full O2 commands.
-#!/bin/bash
-$O2EXEC
-EOF
-  $ENVO2 bash $TMPSCRIPT # Run the script in the O2 environment.
-  #$ENVO2 bash $TMPSCRIPT > $LOGFILE 2>&1 # Run the script in the O2 environment.
-  #if [ ! $? -eq 0 ]; then echo "Error"; exit 1; fi # Exit if error.
-  rm -f $TMPSCRIPT
-fi
+ls AODRun5.*.root >> listfiles.txt
+#hadd -f AODRun5Tot.root AODRun5.*.root
 
 ### clean
 rm *.tcl *.cfg *.dat *.C
