@@ -15,13 +15,13 @@ struct {
   // Quality parameters
   Float_t  fChi2 = 999.f;             /// Chi2 of the vertex
   UInt_t   fN = 0u;                /// Number of contributors
-  
+
   // The calculation of event time certainly will be modified in Run3
   // The prototype below can be switched on request
   Float_t fCollisionTime = -999.f;    /// Event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
   Float_t fCollisionTimeRes = -999.f; /// Resolution on the event time (t0) obtained with different methods (best, T0, T0-TOF, ...)
   UChar_t fCollisionTimeMask = 0u;    /// Mask with the method used to compute the event time (0x1=T0-TOF,0x2=T0A,0x3=TOC) for each momentum bins
-  
+
 } collision; //! structure to keep the primary vertex (avoid name conflicts)
 
 TTree* MakeTreeO2collision()
@@ -46,6 +46,32 @@ TTree* MakeTreeO2collision()
 }
 
 struct {
+  // MC collision
+  Int_t fBCsID = 0u;       /// Index to BC table
+  Short_t fGeneratorsID = 0u; /// Generator ID used for the MC
+  Float_t fPosX = -999.f;  /// Primary vertex x coordinate from MC
+  Float_t fPosY = -999.f;  /// Primary vertex y coordinate from MC
+  Float_t fPosZ = -999.f;  /// Primary vertex z coordinate from MC
+  Float_t fT = -999.f;  /// Time of the collision from MC
+  Float_t fWeight = -999.f;  /// Weight from MC
+  // Generation details (HepMC3 in the future)
+  Float_t fImpactParameter = -999.f; /// Impact parameter from MC
+} mccollision;  //! MC collisions = vertices
+
+TTree* MakeTreeO2mccollision()
+{
+  TTree* tMCvtx = new TTree("O2mccollision", "MC Collision tree");
+  tMCvtx->Branch("fBCsID", &mccollision.fBCsID, "fBCsID/I");
+  tMCvtx->Branch("fGeneratorsID", &mccollision.fGeneratorsID, "fGeneratorsID/S");
+  tMCvtx->Branch("fPosX", &mccollision.fPosX, "fPosX/F");
+  tMCvtx->Branch("fPosY", &mccollision.fPosY, "fPosY/F");
+  tMCvtx->Branch("fPosZ", &mccollision.fPosZ, "fPosZ/F");
+  tMCvtx->Branch("fT", &mccollision.fT, "fT/F");
+  tMCvtx->Branch("fWeight", &mccollision.fWeight, "fWeight/F");
+  tMCvtx->Branch("fImpactParameter", &mccollision.fImpactParameter, "fImpactParameter/F");
+  return tMCvtx;
+}
+struct {
   int fRunNumber = -1;         /// Run number
   ULong64_t fGlobalBC = 0u;    /// Unique bunch crossing id. Contains period, orbit and bunch crossing numbers
   ULong64_t fTriggerMask = 0u; /// Trigger class mask
@@ -53,7 +79,7 @@ struct {
 
 TTree* MakeTreeO2bc()
 {
-  TTree* tBC = new TTree("O2bc", "BC info"); 
+  TTree* tBC = new TTree("O2bc", "BC info");
   tBC->Branch("fRunNumber", &bc.fRunNumber, "fRunNumber/I");
   tBC->Branch("fGlobalBC", &bc.fGlobalBC, "fGlobalBC/l");
   tBC->Branch("fTriggerMask", &bc.fTriggerMask, "fTriggerMask/l");
@@ -62,28 +88,25 @@ TTree* MakeTreeO2bc()
 
 struct {
   // Track data
-  
   Int_t   fCollisionsID = -1;    /// The index of the collision vertex in the TF, to which the track is attached
-  
+
   uint8_t fTrackType = 0;       // Type of track: global, ITS standalone, tracklet, ...
-  
+
   // In case we need connection to TOF clusters, activate next lines
   // Int_t   fTOFclsIndex;     /// The index of the associated TOF cluster
   // Int_t   fNTOFcls;         /// The number of TOF clusters
-  
-  
-  
+
   // Coordinate system parameters
   Float_t fX = -999.f;     /// X coordinate for the point of parametrisation
   Float_t fAlpha = -999.f; /// Local <--> global coor.system rotation angle
-  
+
   // Track parameters
   Float_t fY = -999.f;          /// fP[0] local Y-coordinate of a track (cm)
   Float_t fZ = -999.f;          /// fP[1] local Z-coordinate of a track (cm)
   Float_t fSnp = -999.f;        /// fP[2] local sine of the track momentum azimuthal angle
   Float_t fTgl = -999.f;        /// fP[3] tangent of the track momentum dip angle
   Float_t fSigned1Pt = -999.f;  /// fP[4] 1/pt (1/(GeV/c))
-  
+
   // "Covariance matrix"
   // The diagonal elements represent the errors = Sqrt(C[i,i])
   // The off-diagonal elements are the correlations = C[i,j]/Sqrt(C[i,i])/Sqrt(C[j,j])
@@ -103,13 +126,13 @@ struct {
   Char_t fRho1PtZ      = 0;      /// 128*fC[11]/Sigma1Pt/SigmaZ
   Char_t fRho1PtSnp    = 0;      /// 128*fC[12]/Sigma1Pt/SigmaSnp
   Char_t fRho1PtTgl    = 0;      /// 128*fC[13]/Sigma1Pt/SigmaTgl
-  
+
   // Additional track parameters
   Float_t fTPCinnerP = -999.f; /// Full momentum at the inner wall of TPC for dE/dx PID
-  
+
   // Track quality parameters
   ULong64_t fFlags = 0u;       /// Reconstruction status flags
-  
+
   // Clusters and tracklets
   UChar_t fITSClusterMap = 0u;   /// ITS map of clusters, one bit per a layer
   UChar_t fTPCNClsFindable = 0u; /// number of clusters that could be assigned in the TPC
@@ -117,13 +140,13 @@ struct {
   Char_t fTPCNClsFindableMinusCrossedRows = 0; ///  difference between foundable clsuters and crossed rows
   UChar_t fTPCNClsShared = 0u;   /// Number of shared clusters
   UChar_t fTRDPattern = 0u;   /// Bit 0-5 if tracklet from TRD layer used for this track
-  
+
   // Chi2
   Float_t fITSChi2NCl = -999.f; /// chi2/Ncl ITS
   Float_t fTPCChi2NCl = -999.f; /// chi2/Ncl TPC
   Float_t fTRDChi2 = -999.f;    /// chi2 TRD match (?)
   Float_t fTOFChi2 = -999.f;    /// chi2 TOF match (?)
-  
+
   // PID
   Float_t fTPCSignal = -999.f; /// dE/dX TPC
   Float_t fTRDSignal = -999.f; /// dE/dX TRD
@@ -185,9 +208,9 @@ TTree* MakeTreeO2track()
 
 struct {
   // MC particle
-  
+
   Int_t   fMcCollisionsID = -1;    /// The index of the MC collision vertex
-  
+
   // MC information (modified version of TParticle
   Int_t fPdgCode    = -99999; /// PDG code of the particle
   Int_t fStatusCode = -99999; /// generation status code
@@ -197,12 +220,12 @@ struct {
   Int_t fDaughter0  = 0; /// Indices of the daughter particles
   Int_t fDaughter1  = 0;
   Float_t fWeight   = 1;     /// particle weight from the generator or ML
-  
+
   Float_t fPx = -999.f; /// x component of momentum
   Float_t fPy = -999.f; /// y component of momentum
   Float_t fPz = -999.f; /// z component of momentum
   Float_t fE  = -999.f; /// Energy (covers the case of resonances, no need for calculated mass)
-  
+
   Float_t fVx = -999.f; /// x of production vertex
   Float_t fVy = -999.f; /// y of production vertex
   Float_t fVz = -999.f; /// z of production vertex
@@ -216,16 +239,16 @@ TTree* MakeTreeO2mcparticle()
   tKinematics->Branch("fMcCollisionsID", &mcparticle.fMcCollisionsID, "fMcCollisionsID/I");
   tKinematics->Branch("fPdgCode", &mcparticle.fPdgCode, "fPdgCode/I");
   tKinematics->Branch("fStatusCode", &mcparticle.fStatusCode, "fStatusCode/I");
-  tKinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");  
+  tKinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");
   tKinematics->Branch("fMother0", &mcparticle.fMother0, "fMother0/I");
   tKinematics->Branch("fMother1", &mcparticle.fMother1, "fMother1/I");
   tKinematics->Branch("fDaughter0", &mcparticle.fDaughter0, "fDaughter0/I");
   tKinematics->Branch("fDaughter1", &mcparticle.fDaughter1, "fDaughter1/I");
-  tKinematics->Branch("fWeight", &mcparticle.fWeight, "fWeight/F");  
+  tKinematics->Branch("fWeight", &mcparticle.fWeight, "fWeight/F");
   tKinematics->Branch("fPx", &mcparticle.fPx, "fPx/F");
   tKinematics->Branch("fPy", &mcparticle.fPy, "fPy/F");
   tKinematics->Branch("fPz", &mcparticle.fPz, "fPz/F");
-  tKinematics->Branch("fE", &mcparticle.fE, "fE/F");  
+  tKinematics->Branch("fE", &mcparticle.fE, "fE/F");
   tKinematics->Branch("fVx", &mcparticle.fVx, "fVx/F");
   tKinematics->Branch("fVy", &mcparticle.fVy, "fVy/F");
   tKinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
@@ -248,4 +271,18 @@ TTree *MakeTreeO2mctracklabel()
   tLabels->Branch("fLabel", &mctracklabel.fLabel, "fLabel/i");
   tLabels->Branch("fLabelMask", &mctracklabel.fLabelMask, "fLabelMask/s");
   return tLabels;
+}
+struct {
+  // MC collision label
+  UInt_t fLabel = 0;       /// Collision label
+  UShort_t fLabelMask = 0; /// Bit mask to indicate collision mismatches (bit ON means mismatch)
+                             /// bit 15: negative label sign
+} mccollisionlabel; //! Collision labels
+
+TTree* MakeTreeO2mccollisionlabel()
+{
+  TTree* tCollisionLabels = new TTree("O2mccollisionlabel", "MC collision labels");
+  tCollisionLabels->Branch("fLabel", &mccollisionlabel.fLabel, "fLabel/i");
+  tCollisionLabels->Branch("fLabelMask", &mccollisionlabel.fLabelMask, "fLabelMask/s");
+  return tCollisionLabels;
 }

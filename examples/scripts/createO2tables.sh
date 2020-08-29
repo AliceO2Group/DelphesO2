@@ -110,7 +110,7 @@ if [ $DOANALYSIS -eq 1 ]; then
     exit 1
   fi
   O2ARGS="--shm-segment-size 16000000000 --configuration json://$PWD/dpl-config_std.json --aod-file $AOD3NAME"
-  O2EXEC="o2-analysis-hftrackindexskimscreator $O2ARGS | o2-analysis-hfcandidatecreator2prong $O2ARGS | o2-analysis-taskdzero $O2ARGS -b"
+  O2EXEC="o2-analysis-hftrackindexskimscreator $O2ARGS | o2-analysis-hfcandidatecreator2prong $O2ARGS | o2-analysis-taskdzero $O2ARGS | o2-analysis-qatask $AOD3NAME -b"
   TMPSCRIPT="tmpscript.sh"
   cat << EOF > $TMPSCRIPT # Create a temporary script with the full O2 commands.
 #!/bin/bash
