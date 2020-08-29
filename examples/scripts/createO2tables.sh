@@ -1,9 +1,9 @@
 #! /usr/bin/env bash
 
 ### run configuration
-NJOBS=50        # number of max parallel runs
-NRUNS=50       # number of runs
-NEVENTS=5000  # number of events in a run
+NJOBS=3        # number of max parallel runs
+NRUNS=3       # number of runs
+NEVENTS=1000  # number of events in a run
 
 ### detector configuration
 BFIELD=5.      # magnetic field  [kG]
