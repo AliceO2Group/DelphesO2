@@ -1,5 +1,6 @@
-rm *.log
 rm *.root
-rm pythia8.cfg
+rm *.cfg *.log *.txt
 rm *.tcl
 rm *.dat
+rm *.C *.h
+rm *.pdf *.swp
