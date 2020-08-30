@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+include(FindPackageHandleStandardArgs)
 find_package(fmt REQUIRED)
 find_package(ROOT REQUIRED)
 find_package(Delphes REQUIRED)
@@ -23,4 +24,5 @@ find_package(AliceO2 REQUIRED)
 include("${ROOT_DIR}/RootMacros.cmake")
 
 add_subdirectory(src)
+add_subdirectory(rpythia8)
 add_subdirectory(examples)
