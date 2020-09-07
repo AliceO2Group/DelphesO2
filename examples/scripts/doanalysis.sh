@@ -1,7 +1,7 @@
 FILEOUTQA="AnalysisResultsQA.root"
 FILEOUTO2="AnalysisResults.root"
-DOQA=1
-DOANALYSIS=0
+DOQA=0
+DOANALYSIS=1
 
 cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 
@@ -11,8 +11,8 @@ if [ $DOQA -eq 1 ]; then
   LOGFILE="log_qa.log"
   echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
   rm -f $FILEOUTQA
-  O2ARGS="--shm-segment-size 16000000000 --configuration json://$PWD/dpl-config_std.json --aod-file @listfiles.txt"
-  O2EXEC="o2-analysis-qatask $O2ARGS -b"
+  O2ARGS="--shm-segment-size 16000000000 --readers 4 --configuration json://$PWD/dpl-config_std.json --aod-file @listfiles.txt"
+  O2EXEC="o2-analysis-qatask --pipeline qa-tracking-kine:4,qa-tracking-resolution:4 $O2ARGS -b"
   TMPSCRIPT="tmpscript.sh"
   cat << EOF > $TMPSCRIPT # Create a temporary script with the full O2 commands.
 #!/bin/bash
@@ -28,7 +28,7 @@ if [ $DOANALYSIS -eq 1 ]; then
   echo -e "\nRunning the tasks with O2... (logfile: $LOGFILE)"
   rm -f $FILEOUTO2
   O2ARGS="--shm-segment-size 16000000000 --configuration json://$PWD/dpl-config_std.json --aod-file @listfiles.txt "
-  O2EXEC="o2-analysis-hftrackindexskimscreator $O2ARGS --nreaders 100 --pipeline o2-analysis-hftrackindexskimscreator:100,o2-analysis-hfcandidatecreator2prong:100,o2-analysis-taskdzero:100 -b"
+  O2EXEC="o2-analysis-hftrackindexskimscreator --pipeline produce-sel-track:8,vertexerhf-hftrackindexskimscreator:8 $O2ARGS | o2-analysis-hfcandidatecreator2prong --pipeline vertexerhf-hfcandcreator2prong:8,vertexerhf-hfcandcreator2prong-expressions:8 $O2ARGS | o2-analysis-taskdzero --pipeline hf-taskdzero:1 -b"
   TMPSCRIPT="tmpscript.sh"
   cat << EOF > $TMPSCRIPT # Create a temporary script with the full O2 commands.
 #!/bin/bash
