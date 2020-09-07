@@ -84,7 +84,7 @@ for I in $(seq 0 $(($NRUNS - 1))); do
     #$(($I*$NEVENTS))
     DelphesPythia8 propagate.tcl pythia8.$I.cfg delphes.$I.root &> delphes.$I.log && \
 	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\", 0)" &> createO2tables.$I.log && \
-	rm -rf delphes.root && \
+	rm -rf delphes.$I.root &&
 	rm -rf .running.$I && \
 	echo " --- complete run $I" &
 
@@ -93,7 +93,6 @@ done
 ### merge runs when all done
 echo " --- waiting for runs to be completed "
 wait
-<<<<<<< HEAD
 echo " --- all runs are processed, merging "
 ls AODRun5.*.root >> listfiles.txt
 #hadd -f AODRun5Tot.root AODRun5.*.root
