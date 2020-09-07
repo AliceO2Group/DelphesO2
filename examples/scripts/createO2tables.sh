@@ -93,6 +93,7 @@ done
 ### merge runs when all done
 echo " --- waiting for runs to be completed "
 wait
+<<<<<<< HEAD
 echo " --- all runs are processed, merging "
 ls AODRun5.*.root >> listfiles.txt
 #hadd -f AODRun5Tot.root AODRun5.*.root

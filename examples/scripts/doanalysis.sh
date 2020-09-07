@@ -1,7 +1,8 @@
 FILEOUTQA="AnalysisResultsQA.root"
 FILEOUTO2="AnalysisResults.root"
+<<<<<<< HEAD
 DOQA=0
-DOANALYSIS=1
+DOANALYSIS=0
 
 cp $DELPHESO2_ROOT/examples/scripts/dpl-config_std.json .
 

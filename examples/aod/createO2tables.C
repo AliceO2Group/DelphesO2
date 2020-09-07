@@ -164,10 +164,13 @@ createO2tables(const char *inputFile = "delphes.root",
 
       // check if has hit the TOF
       if (toflayer.hasTOF(*track)) {
-	tof_tracks.push_back(track);
 	mytracks.fLength = track->L * 0.1; // [cm]
 	mytracks.fTOFSignal = track->TOuter * 1.e12; // [ps]
 	mytracks.fTOFExpMom = track->P * 0.029979246;
+	// if primary push to TOF tracks
+	if (fabs(mytracks.fY) < 3. * mytracks.fSigmaY &&
+	    fabs(mytracks.fZ) < 3. * mytracks.fSigmaZ) 
+	  tof_tracks.push_back(track);
       }
       else {
 	mytracks.fLength = -999.f;

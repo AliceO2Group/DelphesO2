@@ -13,8 +13,11 @@ The workflow is in general the following
 ## Build and enviroment
 
 The build of DelphesO2 is supported via the `aliBuild` framework.
-The receipt is on the other hand not in the official `alidist` repository yet.
-You must grap the `delpheso2.sh` file from `https://github.com/preghenella/alidist/blob/delpheso2/delpheso2.sh` and put it in your own `alidist` directory.
+The receipt is now in the official `alidist` repository. Update `alidist` tree in case you do not find `delpheso2.sh` in there
+```
+cd alidist
+git pull --rebase origin master
+```
 
 Afterwards you should be able to build with
 ```

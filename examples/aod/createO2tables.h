@@ -45,6 +45,25 @@ TTree* MakeTreeO2collision()
   return tEvents;
 }
 
+void ConnectTreeO2collision(TTree *tEvents)
+{
+  tEvents->SetBranchAddress("fBCsID", &collision.fBCsID);
+  tEvents->SetBranchAddress("fPosX", &collision.fPosX);
+  tEvents->SetBranchAddress("fPosY", &collision.fPosY);
+  tEvents->SetBranchAddress("fPosZ", &collision.fPosZ);
+  tEvents->SetBranchAddress("fCovXX", &collision.fCovXX);
+  tEvents->SetBranchAddress("fCovXY", &collision.fCovXY);
+  tEvents->SetBranchAddress("fCovXZ", &collision.fCovXZ);
+  tEvents->SetBranchAddress("fCovYY", &collision.fCovYY);
+  tEvents->SetBranchAddress("fCovYZ", &collision.fCovYZ);
+  tEvents->SetBranchAddress("fCovZZ", &collision.fCovZZ);
+  tEvents->SetBranchAddress("fChi2", &collision.fChi2);
+  tEvents->SetBranchAddress("fNumContrib", &collision.fN);
+  tEvents->SetBranchAddress("fCollisionTime", &collision.fCollisionTime);
+  tEvents->SetBranchAddress("fCollisionTimeRes", &collision.fCollisionTimeRes);
+  tEvents->SetBranchAddress("fCollisionTimeMask", &collision.fCollisionTimeMask);
+}
+
 struct {
   // MC collision
   Int_t fBCsID = 0u;       /// Index to BC table
@@ -204,6 +223,55 @@ TTree* MakeTreeO2track()
   fTracks->Branch("fLength", &mytracks.fLength, "fLength/F");
   fTracks->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
   return fTracks;
+}
+
+void ConnectTreeO2track(TTree *fTracks)
+{
+  fTracks->SetBranchAddress("fCollisionsID", &mytracks.fCollisionsID);
+  fTracks->SetBranchAddress("fTrackType", &mytracks.fTrackType);
+  //    fTracks->SetBranchAddress("fTOFclsIndex", &mytracks.fTOFclsIndex);
+  //    fTracks->SetBranchAddress("fNTOFcls", &mytracks.fNTOFcls);
+  fTracks->SetBranchAddress("fX", &mytracks.fX);
+  fTracks->SetBranchAddress("fAlpha", &mytracks.fAlpha);
+  fTracks->SetBranchAddress("fY", &mytracks.fY);
+  fTracks->SetBranchAddress("fZ", &mytracks.fZ);
+  fTracks->SetBranchAddress("fSnp", &mytracks.fSnp);
+  fTracks->SetBranchAddress("fTgl", &mytracks.fTgl);
+  fTracks->SetBranchAddress("fSigned1Pt", &mytracks.fSigned1Pt);
+  // Modified covariance matrix
+  fTracks->SetBranchAddress("fSigmaY", &mytracks.fSigmaY);
+  fTracks->SetBranchAddress("fSigmaZ", &mytracks.fSigmaZ);
+  fTracks->SetBranchAddress("fSigmaSnp", &mytracks.fSigmaSnp);
+  fTracks->SetBranchAddress("fSigmaTgl", &mytracks.fSigmaTgl);
+  fTracks->SetBranchAddress("fSigma1Pt", &mytracks.fSigma1Pt);
+  fTracks->SetBranchAddress("fRhoZY", &mytracks.fRhoZY);
+  fTracks->SetBranchAddress("fRhoSnpY", &mytracks.fRhoSnpY);
+  fTracks->SetBranchAddress("fRhoSnpZ", &mytracks.fRhoSnpZ);
+  fTracks->SetBranchAddress("fRhoTglY", &mytracks.fRhoTglY);
+  fTracks->SetBranchAddress("fRhoTglZ", &mytracks.fRhoTglZ);
+  fTracks->SetBranchAddress("fRhoTglSnp", &mytracks.fRhoTglSnp);
+  fTracks->SetBranchAddress("fRho1PtY", &mytracks.fRho1PtY);
+  fTracks->SetBranchAddress("fRho1PtZ", &mytracks.fRho1PtZ);
+  fTracks->SetBranchAddress("fRho1PtSnp", &mytracks.fRho1PtSnp);
+  fTracks->SetBranchAddress("fRho1PtTgl", &mytracks.fRho1PtTgl);
+  //
+  fTracks->SetBranchAddress("fTPCInnerParam", &mytracks.fTPCinnerP);
+  fTracks->SetBranchAddress("fFlags", &mytracks.fFlags);
+  fTracks->SetBranchAddress("fITSClusterMap", &mytracks.fITSClusterMap);
+  fTracks->SetBranchAddress("fTPCNClsFindable", &mytracks.fTPCNClsFindable);
+  fTracks->SetBranchAddress("fTPCNClsFindableMinusFound",&mytracks.fTPCNClsFindableMinusFound);
+  fTracks->SetBranchAddress("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows);
+  fTracks->SetBranchAddress("fTPCNClsShared", &mytracks.fTPCNClsShared);
+  fTracks->SetBranchAddress("fTRDPattern", &mytracks.fTRDPattern);
+  fTracks->SetBranchAddress("fITSChi2NCl", &mytracks.fITSChi2NCl);
+  fTracks->SetBranchAddress("fTPCChi2NCl", &mytracks.fTPCChi2NCl);
+  fTracks->SetBranchAddress("fTRDChi2", &mytracks.fTRDChi2);
+  fTracks->SetBranchAddress("fTOFChi2", &mytracks.fTOFChi2);
+  fTracks->SetBranchAddress("fTPCSignal", &mytracks.fTPCSignal);
+  fTracks->SetBranchAddress("fTRDSignal", &mytracks.fTRDSignal);
+  fTracks->SetBranchAddress("fTOFSignal", &mytracks.fTOFSignal);
+  fTracks->SetBranchAddress("fLength", &mytracks.fLength);
+  fTracks->SetBranchAddress("fTOFExpMom", &mytracks.fTOFExpMom);
 }
 
 struct {
