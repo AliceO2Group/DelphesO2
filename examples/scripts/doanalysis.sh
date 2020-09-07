@@ -1,6 +1,5 @@
 FILEOUTQA="AnalysisResultsQA.root"
 FILEOUTO2="AnalysisResults.root"
-<<<<<<< HEAD
 DOQA=0
 DOANALYSIS=0
 
