@@ -2,8 +2,8 @@
 
 ### run configuration
 NJOBS=3        # number of max parallel runs
-NRUNS=3       # number of runs
-NEVENTS=1000  # number of events in a run
+NRUNS=3        # number of runs
+NEVENTS=1000   # number of events in a run
 
 ### detector configuration
 BFIELD=5.      # magnetic field  [kG]
@@ -84,7 +84,7 @@ for I in $(seq 0 $(($NRUNS - 1))); do
     #$(($I*$NEVENTS))
     DelphesPythia8 propagate.tcl pythia8.$I.cfg delphes.$I.root &> delphes.$I.log && \
 	root -b -q -l "createO2tables.C(\"delphes.$I.root\", \"AODRun5.$I.root\", 0)" &> createO2tables.$I.log && \
-	#	rm -rf delphes.$I.root && \
+#	rm -rf delphes.$I.root && \
 	rm -rf .running.$I && \
 	echo " --- complete run $I" &
 
