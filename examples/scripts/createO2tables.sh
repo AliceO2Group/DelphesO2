@@ -93,5 +93,5 @@ done
 ### merge runs when all done
 echo " --- waiting for runs to be completed "
 wait
-echo " --- all runs are processed, merging "
+echo " --- all runs are processed, so long "
 ls AODRun5.*.root >> listfiles.txt
