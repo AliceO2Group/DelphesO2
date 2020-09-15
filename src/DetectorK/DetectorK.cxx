@@ -2575,6 +2575,15 @@ Bool_t DetectorK::PropagateToR(AliExternalTrackParam* trc, double r, double b, i
     }
   }
 
+  // make sure we reached the requested radius
+  // if not, do it again
+  double pos[3];
+  trc->GetXYZ(pos);  // lab position
+  if (fabs(std::hypot(pos[0], pos[1]) - r) > 0.1) {
+    printf(" -- force propagate again because we did not reach the layer \n");
+    return PropagateToR(trc, r, b, dir, maxStep);
+  }
+  
   return kTRUE;
 }
 
