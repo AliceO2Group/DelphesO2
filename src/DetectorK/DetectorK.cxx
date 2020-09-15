@@ -1486,7 +1486,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   for (Int_t j=fLayers.GetEntries(); j--;) { 
     CylLayerK *l = (CylLayerK*) fLayers.At(j);
     //	printf("at lr %d r: %f vs %f, pt:%f\n",j,l->radius, 2*rmx-2.*kTrackingMargin, pt);
-    if (/*!(l->isDead) && */(l->radius <= 2*(rmx-5))) {lastActiveLayer = j; last = l; break;}
+    if (/*!(l->isDead) && */(l->radius <= 2*rmx-5)) {lastActiveLayer = j; last = l; break;}
   }
   if (lastActiveLayer<0) {
     printf("No active layer with radius < %f is found, pt = %f\n",rmx, pt);
