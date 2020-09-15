@@ -2562,7 +2562,7 @@ Bool_t DetectorK::PropagateToR(AliExternalTrackParam* trc, double r, double b, i
   //
   double rreal = TMath::Sqrt(xpos*xpos+trc->GetY()*trc->GetY());
   //  printf("Rtgt=%f Rreal=%f\n",r,rreal);
-  if (r>0.5) {
+  if (false && r>0.5) {
     if (!trc->Rotate(trc->PhiPos())) {
       printf("Failed to rotate to layer local frame %f | ",trc->PhiPos()); trc->Print();
       return kFALSE;
