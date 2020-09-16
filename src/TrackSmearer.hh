@@ -44,7 +44,7 @@ public:
 protected:
 
   lutHeader_t *mLUTHeader[5] = {nullptr};
-  lutEntry_t *mLUTEntry[5][1][1][100][100] = {nullptr};
+  lutEntry_t *****mLUTEntry[5] = {nullptr};
   
 };
   

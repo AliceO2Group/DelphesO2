@@ -34,9 +34,13 @@ TrackSmearer::loadTable(int pdg, const char *filename)
   const int nrad = mLUTHeader[ipdg]->radmap.nbins;
   const int neta = mLUTHeader[ipdg]->etamap.nbins;
   const int npt = mLUTHeader[ipdg]->ptmap.nbins;
+  mLUTEntry[ipdg] = new lutEntry_t****[nnch];
   for (int inch = 0; inch < nnch; ++inch) {
+    mLUTEntry[ipdg][inch] = new lutEntry_t***[nrad];
     for (int irad = 0; irad < nrad; ++irad) {
+      mLUTEntry[ipdg][inch][irad] = new lutEntry_t**[neta];
       for (int ieta = 0; ieta < neta; ++ieta) {
+	mLUTEntry[ipdg][inch][irad][ieta] = new lutEntry_t*[npt];
 	for (int ipt = 0; ipt < npt; ++ipt) {
 	  mLUTEntry[ipdg][inch][irad][ieta][ipt] = new lutEntry_t;
 	  lutFile.read(reinterpret_cast<char *>(mLUTEntry[ipdg][inch][irad][ieta][ipt]), sizeof(lutEntry_t));
@@ -47,6 +51,7 @@ TrackSmearer::loadTable(int pdg, const char *filename)
 	}}}}
   std::cout << " --- read covariance matrix table for PDG " << pdg << ": " << filename << std::endl;
   mLUTHeader[ipdg]->print();
+
   lutFile.close();
   return true;
 }
@@ -104,7 +109,6 @@ TrackSmearer::smearTrack(O2Track &o2track, int pid)
   auto eta = o2track.getEta();
   auto lutEntry = getLUTEntry(pid, 0., 0., eta, pt);
   if (!lutEntry || !lutEntry->valid) return false;
-  
   smearTrack(o2track, lutEntry);
   return true;
 }
