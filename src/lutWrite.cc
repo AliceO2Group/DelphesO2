@@ -65,11 +65,11 @@ fwdSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
 }
 
 void
-lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
+lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, float rmin = 20.)
 {
 
   // init FAT
-  fatInit(field);
+  fatInit(field, rmin);
   
   // output file
   ofstream lutFile(filename, std::ofstream::binary);
@@ -92,12 +92,12 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
   lutHeader.radmap.max   = 100.;
   // eta
   lutHeader.etamap.log   = false;
-  lutHeader.etamap.nbins = 80;
-  lutHeader.etamap.min   = -4.;
-  lutHeader.etamap.max   =  4.;
+  lutHeader.etamap.nbins = 40;
+  lutHeader.etamap.min   = -2.;
+  lutHeader.etamap.max   =  2.;
   // pt
   lutHeader.ptmap.log    = true;
-  lutHeader.ptmap.nbins  = 100;
+  lutHeader.ptmap.nbins  = 200;
   lutHeader.ptmap.min    = -2;
   lutHeader.ptmap.max    = 2.;
   lutFile.write(reinterpret_cast<char *>(&lutHeader), sizeof(lutHeader));
