@@ -11,6 +11,7 @@ void
 fatInit(float field = 0.5, float rmin = 100.)
 {
   fat.SetBField(field);
+  fat.SetdNdEtaCent(0.);
   // new ideal Pixel properties?
   Double_t x0IB     = 0.0005;
   Double_t x0OB     = 0.005;
@@ -45,12 +46,13 @@ fatInit(float field = 0.5, float rmin = 100.)
 }
 
 bool
-fatSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
+fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
 {
   int q = 1;
   TrackSol tr(1, pt, eta, q, mass);
   bool retval = fat.SolveTrack(tr);
   if (!retval) return false;
+  *eff = fat.GetEfficiency();
   AliExternalTrackParam trCopy = *((AliExternalTrackParam*)tr.fTrackCmb[0]);
   for (int i = 0; i < 15; ++i)
     covm[i] = trCopy.GetCovariance()[i];
@@ -120,7 +122,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  lutEntry.valid = true;
 	  if (fabs(eta) < 2.) {
 	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    if (!fatSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
+	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
 	      printf(" --- fatSolve: error \n");
 	      lutEntry.valid = false;
 	      for (int i = 0; i < 15; ++i)

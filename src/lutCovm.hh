@@ -46,12 +46,14 @@ struct lutEntry_t {
   float eta = 0.;
   float pt = 0.;
   bool valid = false;
+  float eff = 0.;
   float covm[15] = {0.};
   float eigval[5] = {0.};
   float eigvec[5][5] = {0.};
   float eiginv[5][5] = {0.};
   void print() {
     printf(" --- lutEntry: pt = %f, eta = %f (%s)\n", pt, eta, valid ? "valid" : "not valid");
+    printf("     efficiency: %f\n", eff);
     printf("     covMatix: ");
     int k = 0;
     for (int i = 0; i < 5; ++i) {
