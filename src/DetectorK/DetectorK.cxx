@@ -1522,6 +1522,10 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   probTr.CheckCovariance();
   //
   // Back-propagate the covariance matrix along the track.   
+  //
+  // Set efficiency to unity
+  fEfficiency[0] = 1.;
+  //
   CylLayerK *layer = 0;
   //
   for (Int_t j=lastActiveLayer+1; j--;) {  // Layer loop
@@ -1533,7 +1537,10 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
     TString name(layer->GetName());
     Bool_t isVertex = name.Contains("vertex");
     //
-    if (!PropagateToR(&probTr,layer->radius,bGauss,-1)) return kFALSE; // exit(1);
+    if (!PropagateToR(&probTr,layer->radius,bGauss,-1)) {
+      fEfficiency[0] = 0.;
+      return kFALSE; // exit(1);
+    }
     //	if (!probTr.PropagateTo(last->radius,bGauss)) exit(1);	//
     // rotate to frame with X axis normal to the surface
     if (!isVertex) {
@@ -1546,6 +1553,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
 	       phi,layer->radius,pos[0],pos[1],pos[2],pt);
 	
 	probTr.Print();
+	fEfficiency[0] = 0.;
 	return kFALSE; // exit(1);
       }
     }
@@ -1566,6 +1574,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
 	printf("Failed to update the track by measurement {%.3f,%3f} err {%.3e %.3e %.3e}\n",
 	       meas[0],meas[1], measErr2[0],measErr2[1],measErr2[2]);
 	probTr.Print();
+	fEfficiency[0] = 0.;
 	return kFALSE; // exit(1);
       }
     }
@@ -1574,6 +1583,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
     if (layer->radL>0 && !probTr.CorrectForMeanMaterial(layer->radL, 0, mass , kTRUE)) {
       printf("Failed to apply material correction, X/X0=%.4f\n",layer->radL);
       probTr.Print();
+      fEfficiency[0] = 0.;
       return kFALSE; // exit(1);
     }
   }
@@ -1668,6 +1678,30 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
     new( saveParOutwardA[j] ) AliExternalTrackParam(probTr);
     //
   }
+
+  // here we calculate the probability of adding good hits
+  for (Int_t j=0; j<=lastActiveLayer; j++) {  // Layer loop
+    //
+    layer = (CylLayerK*)fLayers.At(j);
+    TString name(layer->GetName());
+    Bool_t isVertex = name.Contains("vertex");
+    if (!isVertex && !layer->isDead) {  
+
+      // combine covariance matrices before update
+      Double_t rphiErrorOut = TMath::Sqrt(((AliExternalTrackParam*)saveParOutwardB[j])->GetSigmaY2());
+      Double_t rphiErrorIn = TMath::Sqrt(((AliExternalTrackParam*)saveParInward[j])->GetSigmaY2());
+      Double_t rphiErrorComb = rphiErrorOut * rphiErrorIn / TMath::Sqrt(rphiErrorOut * rphiErrorOut + rphiErrorIn * rphiErrorIn);
+      Double_t zErrorOut = TMath::Sqrt(((AliExternalTrackParam*)saveParOutwardB[j])->GetSigmaZ2());
+      Double_t zErrorIn = TMath::Sqrt(((AliExternalTrackParam*)saveParInward[j])->GetSigmaZ2());
+      Double_t zErrorComb = zErrorOut * zErrorIn / TMath::Sqrt(zErrorOut * zErrorOut + zErrorIn * zErrorIn);
+
+      // calculate probability of adding a good hit
+      Double_t rphiError  =  TMath::Sqrt( rphiErrorComb * rphiErrorComb + layer->phiRes * layer->phiRes );
+      Double_t zError     =  TMath::Sqrt( zErrorComb * zErrorComb + layer->zRes * layer->zRes );
+      fEfficiency[0]     *=  ProbGoodHit( layer->radius, rphiError, zError );
+    }
+  }
+      
   //
   probTr.SetUseLogTermMS(kFALSE); // Reset of MS term usage to avoid problems since its static
   //  

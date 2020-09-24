@@ -133,7 +133,8 @@ class DetectorK : public TNamed {
   Float_t GetRadiationLength(char *name);
   Float_t GetResolution(char *name, Int_t axis=0);
   Float_t GetLayerEfficiency(char *name);
-
+  Float_t GetEfficiency() { return fEfficiency[0]; };
+  
   void PrintLayout(Bool_t full = kFALSE); 
   void PlotLayout(Int_t plotDead = kTRUE);
   
