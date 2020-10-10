@@ -1,6 +1,8 @@
 /// @author: Roberto Preghenella
 /// @email: preghenella@bo.infn.it
 
+#pragma once
+
 struct map_t {
   int nbins = 1;
   float min = 0.;
