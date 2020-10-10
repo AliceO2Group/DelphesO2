@@ -11,7 +11,7 @@ void
 fatInit(float field = 0.5, float rmin = 100.)
 {
   fat.SetBField(field);
-  fat.SetdNdEtaCent(0.);
+  fat.SetdNdEtaCent(400.);
   // new ideal Pixel properties?
   Double_t x0IB     = 0.0005;
   Double_t x0OB     = 0.005;
