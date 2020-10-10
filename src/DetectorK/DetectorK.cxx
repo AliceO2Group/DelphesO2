@@ -1698,6 +1698,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
       // calculate probability of adding a good hit
       Double_t rphiError  =  TMath::Sqrt( rphiErrorComb * rphiErrorComb + layer->phiRes * layer->phiRes );
       Double_t zError     =  TMath::Sqrt( zErrorComb * zErrorComb + layer->zRes * layer->zRes );
+      //      printf(" --- the efficiency at layer %f --> %f \n", layer->radius, ProbGoodHit( layer->radius, rphiError, zError ));
       fEfficiency[0]     *=  ProbGoodHit( layer->radius, rphiError, zError );
     }
   }
