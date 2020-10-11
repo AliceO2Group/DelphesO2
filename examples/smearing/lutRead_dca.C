@@ -1,7 +1,7 @@
 #include "lutCovm.hh"
 
 TGraph *
-lutRead_dca(const char *filename = "lutCovm.dat", const char *opt = "")
+lutRead_dca(const char *filename = "lutCovm.dat", double eta = 0.)
 {
   
   // input file
@@ -33,7 +33,7 @@ lutRead_dca(const char *filename = "lutCovm.dat", const char *opt = "")
   // create graph of pt resolution at eta = 0
   auto inch = lutHeader.nchmap.find(0.);
   auto irad = lutHeader.nchmap.find(0.);
-  auto ieta = lutHeader.etamap.find(0.);
+  auto ieta = lutHeader.etamap.find(eta);
   auto gpt = new TGraph();
   for (int ipt = 0; ipt < npt; ++ipt) {
     auto lutEntry = &lutTable[inch][irad][ieta][ipt];
