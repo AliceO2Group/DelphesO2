@@ -5,16 +5,15 @@ R__LOAD_LIBRARY(libDelphesO2)
 
 using O2Track = o2::track::TrackParCov;
 
-void
-inspectTOF(const char *filename)
+void inspectTOF(const char* filename)
 {
   auto fin = TFile::Open(filename);
 
-  auto tcollision = (TTree *)fin->Get("O2collision");
+  auto tcollision = (TTree*)fin->Get("O2collision");
   auto ncollision = tcollision->GetEntries();
   ConnectTreeO2collision(tcollision);
 
-  auto ttracks = (TTree *)fin->Get("O2track");
+  auto ttracks = (TTree*)fin->Get("O2track");
   auto ntracks = ttracks->GetEntries();
   ConnectTreeO2track(ttracks);
 
@@ -30,7 +29,7 @@ inspectTOF(const char *filename)
     auto t0e = collision.fCollisionTimeRes;
     hTZero->Fill(t0 * 0.001);
   }
-  
+
   /** loop over tracks **/
   for (int itrack = 0; itrack < ntracks; ++itrack) {
 
@@ -61,7 +60,8 @@ inspectTOF(const char *filename)
     auto d0e = mytracks.fSigmaY;
 
     /** 3-sigma DCA cut on primaries **/
-    if (fabs(d0 / d0e) > 1.) continue;
+    if (fabs(d0 / d0e) > 1.)
+      continue;
 
     /** get TOF information **/
     auto L = mytracks.fLength;
@@ -71,13 +71,12 @@ inspectTOF(const char *filename)
     auto mass = 0.49367700;
     auto mass2 = mass * mass;
     auto texp = L / p / 0.029979246 * hypot(mass, p);
-    auto texpe = L / 0.029979246 / p / p * mass * mass * hypot(mass, p) * pe;    
+    auto texpe = L / 0.029979246 / p / p * mass * mass * hypot(mass, p) * pe;
     auto sigma = hypot(hypot(20., t0e), texpe);
     auto nsigma = (tof - texp) / sigma;
-    
+
     hBetaP->Fill(p, beta);
     hNsigmaP->Fill(p, nsigma);
-    
   }
 
   /** write output **/
@@ -89,5 +88,4 @@ inspectTOF(const char *filename)
 
   /** close input **/
   fin->Close();
-  
 }
