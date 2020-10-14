@@ -1,0 +1,9 @@
+createO2tables.h
+createO2tables.C
+*.log
+*.json
+*.cfg
+*.txt
+*.dat
+*.tcl
+tmpscript.sh
