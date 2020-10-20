@@ -223,6 +223,8 @@ void createO2tables(const char* inputFile = "delphes.root",
     tCollisionLabels->Fill();
   }
 
+  fout->mkdir("TF_0");
+  fout->cd("TF_0");
   TreeList->Write();
   fout->ls();
   fout->Close();
