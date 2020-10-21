@@ -52,20 +52,25 @@ def run_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             if verbose:
                 print("Did not find", i)
         else:
-            output += make_tag_file(i)
-    print("Output files:", output)
+            output += " " + make_tag_file(i)
+    print("Output files:", output.strip())
 
 
 def main(mode):
+    args = "-b --aod-file @listfiles.txt"
     if mode == 0:
-        run_o2_analysis(
-            ["o2-analysis-trackqa", "o2-analysis-trackselection"],
-            o2_arguments="-b --aod-file AODRun5.0.root")
+        an = ["o2-analysis-trackqa",
+              "o2-analysis-trackextension",
+              "o2-analysis-alice3-trackselection"]
+        tag = "TrackQA"
     elif mode == 1:
-        run_o2_analysis(
-            ["o2-analysis-spectra-tof", "o2-analysis-pid-tof"],
-            o2_arguments="-b --aod-file AODRun5.0.root",
-            tag="TOF")
+        an = ["o2-analysis-spectra-tof",
+              "o2-analysis-pid-tof --add-qa 1"]
+        tag = "TOF"
+    run_o2_analysis(
+        an,
+        o2_arguments=args,
+        tag=tag)
 
 
 if __name__ == "__main__":

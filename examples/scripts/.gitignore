@@ -6,4 +6,4 @@ createO2tables.C
 *.txt
 *.dat
 *.tcl
-tmpscript.sh
+tmpscript*.sh
