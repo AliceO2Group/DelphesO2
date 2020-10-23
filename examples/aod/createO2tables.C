@@ -28,18 +28,12 @@ void createO2tables(const char* inputFile = "delphes.root",
 
   // smearer
   o2::delphes::TrackSmearer smearer;
-  if (Bz == 0.2) {
-    smearer.loadTable(11, "lutCovm.el.2kG.dat");
-    smearer.loadTable(13, "lutCovm.mu.2kG.dat");
-    smearer.loadTable(211, "lutCovm.pi.2kG.dat");
-    smearer.loadTable(321, "lutCovm.ka.2kG.dat");
-    smearer.loadTable(2212, "lutCovm.pr.2kG.dat");
-  } else if (Bz == 0.5) {
-    smearer.loadTable(11, "lutCovm.el.5kG.dat");
-    smearer.loadTable(13, "lutCovm.mu.5kG.dat");
-    smearer.loadTable(211, "lutCovm.pi.5kG.dat");
-    smearer.loadTable(321, "lutCovm.ka.5kG.dat");
-    smearer.loadTable(2212, "lutCovm.pr.5kG.dat");
+  if (Bz == 0.2 || Bz == 0.5) {
+    smearer.loadTable(11, "lutCovm.el.dat");
+    smearer.loadTable(13, "lutCovm.mu.dat");
+    smearer.loadTable(211, "lutCovm.pi.dat");
+    smearer.loadTable(321, "lutCovm.ka.dat");
+    smearer.loadTable(2212, "lutCovm.pr.dat");
   } else {
     std::cout << " --- invalid Bz field: " << Bz << std::endl;
     return;
