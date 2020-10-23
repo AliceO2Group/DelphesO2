@@ -49,13 +49,13 @@ def process_run(run_number, remove_after_run=False):
     msg("< complete run", run_number)
 
 
-def main(configuration_file, config_entry, verbose=True):
+def main(configuration_file, config_entry, njobs, nruns, nevents, verbose):
     global verbose_mode
     verbose_mode = verbose
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
-    run_cmd("./clean.sh")
+    run_cmd("./clean.sh &> /dev/null")
 
     def opt(entry, require=True):
         try:
@@ -74,10 +74,6 @@ def main(configuration_file, config_entry, verbose=True):
             return None
 
     # Config from the config file
-    nJobs = int(opt('nJobs'))
-    nRuns = int(opt('nRuns'))
-    nEvents = opt('nEvents')
-
     # detector configuration
     bField = opt("bField")
     sigmaT = opt("sigmaT")
@@ -93,9 +89,9 @@ def main(configuration_file, config_entry, verbose=True):
 
     # Printing configuration
     msg(" --- running createO2tables.sh ")
-    msg("  nJobs   = ", nJobs)
-    msg("  nRuns   = ", nRuns)
-    msg("  nEvents = ", nEvents)
+    msg("  njobs   = ", njobs)
+    msg("  nruns   = ", nruns)
+    msg("  nevents = ", nevents)
     msg(" --- with detector configuration ")
     msg("  bField  = ", bField, " [kG] ")
     msg("  sigmaT  = ", sigmaT, " [ns] ")
@@ -157,7 +153,7 @@ def main(configuration_file, config_entry, verbose=True):
                f"{sigmaT}""e\-9/")
     set_config("createO2tables.C", "double tof_sigmat =", f"{sigmaT}""\;/")
 
-    run_list = range(nRuns)
+    run_list = range(nruns)
 
     def configure_run(run_number):
         # Create executable that runs Geneartio, Delphes and analysis
@@ -167,8 +163,10 @@ def main(configuration_file, config_entry, verbose=True):
             delphes_file = f"delphes.{run_number}.root"
             delphes_log_file = delphes_file.replace(".root", ".log")
             if custom_gen:  # Using HEPMC
+                gen_log_file = f"gen.{run_number}.root"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
-                f_run.write(custom_gen + f" --output {hepmc_file} \n")
+                f_run.write(
+                    custom_gen + f" --output {hepmc_file} &> {gen_log_file}\n")
                 f_run.write(
                     f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file} &> {delphes_log_file}\n")
             else:  # Using DelphesPythia
@@ -179,7 +177,7 @@ def main(configuration_file, config_entry, verbose=True):
                 # Adjust configuration file
                 with open(generator_cfg, "a") as f_cfg:
                     # number of events and random seed
-                    f_cfg.write(f"Main:numberOfEvents {nEvents}\n")
+                    f_cfg.write(f"Main:numberOfEvents {nevents}\n")
                     f_cfg.write(f"Random:seed = {run_number}\n")
                     # collision time spread [mm/c]
                     f_cfg.write("Beams:allowVertexSpread on \n")
@@ -195,7 +193,7 @@ def main(configuration_file, config_entry, verbose=True):
                 f"root -b -q -l 'createO2tables.C(\"{delphes_file}\", \"{aod_file}\", 0)' &> {aod_log_file}\n")
     for i in run_list:
         configure_run(i)
-    with multiprocessing.Pool(processes=nJobs) as pool:
+    with multiprocessing.Pool(processes=njobs) as pool:
         pool.map(process_run, run_list)
 
     # merge runs when all done
@@ -214,10 +212,22 @@ if __name__ == "__main__":
                         help="Input configuration file")
     parser.add_argument("--entry", type=str,
                         default="DEFAULT",
-                        help="Input configuration file")
+                        help="Entry in the configuration file")
+    parser.add_argument("--njobs", type=int,
+                        default=10,
+                        help="Number of concurrent jobs")
+    parser.add_argument("--nevents", type=int,
+                        default=1000,
+                        help="Number of simulated events (only in non custom generator mode)")
+    parser.add_argument("--nruns", type=int,
+                        default=10,
+                        help="Number of runs")
     parser.add_argument("-b", action="store_true", help="Background mode")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
+         njobs=args.njobs,
+         nevents=args.nevents,
+         nruns=args.nruns,
          verbose=args.v)
