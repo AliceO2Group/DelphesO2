@@ -7,8 +7,11 @@ import os
 import shutil
 import multiprocessing
 import numpy
+import time
 
+# Global running flags
 verbose_mode = False
+metric_mode = False
 
 
 class bcolors:
@@ -32,8 +35,8 @@ def verbose_msg(*args):
         print("** ", bcolors.OKBLUE, *args, bcolors.ENDC)
 
 
-def msg(*args):
-    print(bcolors.BOKGREEN, *args, bcolors.ENDC)
+def msg(*args, color=bcolors.BOKBLUE):
+    print(color, *args, bcolors.ENDC)
 
 
 def run_cmd(cmd):
@@ -43,15 +46,22 @@ def run_cmd(cmd):
         verbose_msg(content)
 
 
-def process_run(run_number, remove_after_run=False):
+def process_run(run_number):
+    if metric_mode:
+        start_time = time.time()
     msg("> starting run", run_number)
     run_cmd(f"bash runner{run_number}.sh")
     msg("< complete run", run_number)
+    if metric_mode:
+        msg(f"-- took {time.time() - start_time} seconds --",
+            color=bcolors.BOKGREEN)
 
 
-def main(configuration_file, config_entry, njobs, nruns, nevents, verbose):
+def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbose):
     global verbose_mode
     verbose_mode = verbose
+    global metric_mode
+    metric_mode = metric
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
@@ -88,17 +98,17 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose):
     etaMax = -numpy.log(sth/cth)
 
     # Printing configuration
-    msg(" --- running createO2tables.sh ")
+    msg(" --- running createO2tables.py", color=bcolors.HEADER)
     msg("  njobs   = ", njobs)
     msg("  nruns   = ", nruns)
     msg("  nevents = ", nevents)
-    msg(" --- with detector configuration ")
+    msg(" --- with detector configuration", color=bcolors.HEADER)
     msg("  bField  = ", bField, " [kG] ")
     msg("  sigmaT  = ", sigmaT, " [ns] ")
     msg("  radius  = ", radius, " [cm] ")
     msg("  length  = ", length, " [cm] ")
     msg("  etaMax  = ", etaMax)
-    msg(" --- start processing the runs ")
+    msg(" --- start processing the runs ", color=bcolors.HEADER)
 
     # copy relevant files in the working directory
     def do_copy(in_file, out_file):
@@ -193,12 +203,17 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose):
                 f"root -b -q -l 'createO2tables.C(\"{delphes_file}\", \"{aod_file}\", 0)' &> {aod_log_file}\n")
     for i in run_list:
         configure_run(i)
+
+    if metric_mode:
+        total_start_time = time.time()
     with multiprocessing.Pool(processes=njobs) as pool:
         pool.map(process_run, run_list)
 
     # merge runs when all done
-    msg(" --- waiting for runs to be completed ")
-    msg(" --- all runs are processed, so long ")
+    msg(" --- all runs are processed, so long", color=bcolors.HEADER)
+    if metric_mode:
+        msg(f"-- took {time.time() - total_start_time} seconds in total --",
+            color=bcolors.BOKGREEN)
 
     with open("listfiles.txt", "w") as listfiles:
         for i in os.listdir("."):
@@ -223,6 +238,7 @@ if __name__ == "__main__":
                         default=10,
                         help="Number of runs")
     parser.add_argument("-b", action="store_true", help="Background mode")
+    parser.add_argument("-t", action="store_true", help="Metric mode")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
@@ -230,4 +246,5 @@ if __name__ == "__main__":
          njobs=args.njobs,
          nevents=args.nevents,
          nruns=args.nruns,
+         metric=args.t,
          verbose=args.v)
