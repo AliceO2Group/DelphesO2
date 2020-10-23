@@ -45,19 +45,7 @@ def run_cmd(cmd):
 
 def process_run(run_number, remove_after_run=False):
     msg("> starting run", run_number)
-    # run Delphes and analysis
-    generator_cfg = f"generator.{run_number}.cfg"
-    delphes_file = f"delphes.{run_number}.root"
-    delphes_log_file = delphes_file.replace(".root", ".log")
-    aod_file = f"AODRun5.{run_number}.root"
-    aod_log_file = aod_file.replace(".root", ".log")
-    run_cmd(
-        f"DelphesPythia8 propagate.tcl {generator_cfg} {delphes_file} &> {delphes_log_file}")
-    run_cmd(
-        f"root -b -q -l 'createO2tables.C(\"{delphes_file}\", \"{aod_file}\", 0)' &> {aod_log_file}")
-
-    if remove_after_run:
-        os.remove("delphes_file")
+    run_cmd(f"bash runner{run_number}.sh")
     msg("< complete run", run_number)
 
 
@@ -69,15 +57,21 @@ def main(configuration_file, config_entry, verbose=True):
 
     run_cmd("./clean.sh")
 
-    def opt(entry):
-        o = parser.get(config_entry, entry)
-        b = ['yes', 'no', 'on', 'off', 'true', 'false']
-        for i in b:
-            if o.lower() == i:
-                o = parser.getboolean(config_entry, entry)
-                break
-        verbose_msg("Got option", entry, "=", f"'{o}'")
-        return o
+    def opt(entry, require=True):
+        try:
+            o = parser.get(config_entry, entry)
+            b = ['yes', 'no', 'on', 'off', 'true', 'false']
+            for i in b:
+                if o.lower() == i:
+                    o = parser.getboolean(config_entry, entry)
+                    break
+            verbose_msg("Got option", entry, "=", f"'{o}'")
+            return o
+        except:
+            if require:
+                raise ValueError("Missing entry", entry,
+                                 "in file", configuration_file)
+            return None
 
     # Config from the config file
     nJobs = int(opt('nJobs'))
@@ -128,9 +122,14 @@ def main(configuration_file, config_entry, verbose=True):
                              "lutCovm.{}{}.dat".format(i, lut_tag)),
                 f"lutCovm.{i}.dat")
 
-    generators = opt("generators").split(" ")
-    for i in generators:
-        do_copy(i, ".")
+    custom_gen = opt("custom_gen", require=False)
+    if custom_gen is None:
+        generators = opt("generators").split(" ")
+        for i in generators:
+            do_copy(i, ".")
+        verbose_msg("Using default pythia with configuration", generators)
+    else:
+        verbose_msg("Using custom generator", custom_gen)
 
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
@@ -161,22 +160,39 @@ def main(configuration_file, config_entry, verbose=True):
     run_list = range(nRuns)
 
     def configure_run(run_number):
-        # copy generator configuration
-        generator_cfg = f"generator.{run_number}.cfg"
-        generator_orig = generators[0].split("/")[-1]
-        do_copy(generator_orig, generator_cfg)
-        # Adjust configuration file
-        with open(generator_cfg, "a") as f_cfg:
-            # number of events and random seed
-            f_cfg.write(f"Main:numberOfEvents {nEvents}\n")
-            f_cfg.write(f"Random:seed = {run_number}\n")
-            # collision time spread [mm/c]
-            f_cfg.write("Beams:allowVertexSpread on \n")
-            f_cfg.write("Beams:sigmaTime 60.\n")
-            for i in generators[1:]:
-                with open(i.split("/")[-1], "r") as f_append:
-                    f_cfg.write(f_append.read())
-
+        # Create executable that runs Geneartio, Delphes and analysis
+        runner_file = f"runner{run_number}.sh"
+        with open(runner_file, "w") as f_run:
+            f_run.write(f"#! /usr/bin/env bash\n")
+            delphes_file = f"delphes.{run_number}.root"
+            delphes_log_file = delphes_file.replace(".root", ".log")
+            if custom_gen:  # Using HEPMC
+                hepmc_file = f"hepmcfile.{run_number}.hepmc"
+                f_run.write(custom_gen + f" --output {hepmc_file} \n")
+                f_run.write(
+                    f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file} &> {delphes_log_file}\n")
+            else:  # Using DelphesPythia
+                # copy generator configuration
+                generator_cfg = f"generator.{run_number}.cfg"
+                generator_orig = generators[0].split("/")[-1]
+                do_copy(generator_orig, generator_cfg)
+                # Adjust configuration file
+                with open(generator_cfg, "a") as f_cfg:
+                    # number of events and random seed
+                    f_cfg.write(f"Main:numberOfEvents {nEvents}\n")
+                    f_cfg.write(f"Random:seed = {run_number}\n")
+                    # collision time spread [mm/c]
+                    f_cfg.write("Beams:allowVertexSpread on \n")
+                    f_cfg.write("Beams:sigmaTime 60.\n")
+                    for i in generators[1:]:
+                        with open(i.split("/")[-1], "r") as f_append:
+                            f_cfg.write(f_append.read())
+                f_run.write(
+                    f"DelphesPythia8 propagate.tcl {generator_cfg} {delphes_file} &> {delphes_log_file}\n")
+            aod_file = f"AODRun5.{run_number}.root"
+            aod_log_file = aod_file.replace(".root", ".log")
+            f_run.write(
+                f"root -b -q -l 'createO2tables.C(\"{delphes_file}\", \"{aod_file}\", 0)' &> {aod_log_file}\n")
     for i in run_list:
         configure_run(i)
     with multiprocessing.Pool(processes=nJobs) as pool:
