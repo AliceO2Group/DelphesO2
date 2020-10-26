@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+"""
+Handler to run the DelphesO2 framework and to create O2 analysis tables
+"""
+
 import argparse
 import configparser
 import subprocess
@@ -124,9 +128,10 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     lut_tag = opt("lut_tag")
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     for i in lut_particles:
-        do_copy(os.path.join(lut_path,
-                             "lutCovm.{}{}.dat".format(i, lut_tag)),
-                f"lutCovm.{i}.dat")
+        lut_bg = "{}kG".format(bField).replace(".", "")
+        lut_n = f"lutCovm.{i}.{lut_bg}"
+        do_copy(os.path.join(
+            lut_path, f"{lut_n}.{lut_tag}.dat"), f"{lut_n}.dat")
 
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
@@ -142,8 +147,22 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     do_copy(os.path.join(aod_path, "createO2tables.C"), ".")
 
     def set_config(config_file, config, value):
+        config = config.strip()
+        value = value.strip()
         run_cmd(
             "sed -i -e \"" f"s/{config} .*$/{config} {value}" "\" " + config_file)
+        # Checking that the file has the correct configuration
+        with open(config_file) as f:
+            has_it = False
+            config_string = f"{config} {value}".replace("\\", "").strip("/")
+            for i in f:
+                if i.strip() == config_string:
+                    has_it = True
+                    break
+            if not has_it:
+                raise ValueError(config_file,
+                                 "does not have",
+                                 config_string)
 
     # set magnetic field
     set_config("propagate.tcl", "set barrel_Bz", f"{bField}""e\-1/")
