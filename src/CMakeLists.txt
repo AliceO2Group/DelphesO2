@@ -30,7 +30,6 @@ get_target_property(RECONSTRUCTIONDATAFORMATS_INCLUDE_DIRECTORIES
   AliceO2::ReconstructionDataFormats
   INTERFACE_INCLUDE_DIRECTORIES)
 
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
   ${DELPHES_INCLUDE_DIRECTORIES}
   ${DETECTORSVERTEXING_INCLUDE_DIRECTORIES}
@@ -50,6 +49,8 @@ target_link_libraries(DelphesO2
   )
 
 install(TARGETS DelphesO2 DESTINATION lib)
+
+install(FILES ${HEADERS} lutCovm.hh DESTINATION include)
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libDelphesO2_rdict.pcm
