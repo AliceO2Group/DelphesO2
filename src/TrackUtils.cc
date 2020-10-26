@@ -21,7 +21,7 @@ TrackUtils::makeO2Track(O2Track& o2track, std::array<float, 3> xyz, std::array<f
 				0., 0., 0., 0.,
 				0., 0., 0., 0., 0.};
   float s, c, x;
-  o2::utils::sincosf(ptetaphi[2], s, c);
+  o2::utils::sincos(ptetaphi[2], s, c);
   o2::utils::rotateZInv(xyz[0], xyz[1], x, params[0], s, c);
   params[1] = xyz[2];
   params[2] = 0.; // since alpha = phi
@@ -86,7 +86,7 @@ TrackUtils::convertTrackToO2Track(const Track& track, O2Track& o2track, bool atD
   //
   float s, c, x;
   std::array<float, 5> params;
-  o2::utils::sincosf(track.Phi, s, c);
+  o2::utils::sincos(track.Phi, s, c);
   o2::utils::rotateZInv(0.1 * (atDCA ? track.Xd : track.X), 0.1 * (atDCA ? track.Yd : track.Y), x, params[0], s, c);
   params[1] = 0.1 * (atDCA ? track.Zd : track.Z);
   params[2] = 0.; // since alpha = phi
@@ -123,7 +123,7 @@ TrackUtils::convertGenParticleToO2Track(const GenParticle& particle, O2Track& o2
   //
   float s, c, x;
   std::array<float, 5> params;
-  o2::utils::sincosf(track.Phi, s, c);
+  o2::utils::sincos(track.Phi, s, c);
   o2::utils::rotateZInv(0.1 * (atDCA ? track.Xd : track.X), 0.1 * (atDCA ? track.Yd : track.Y), x, params[0], s, c);
   params[1] = 0.1 * (atDCA ? track.Zd : track.Z);
   params[2] = 0.; // since alpha = phi
@@ -144,7 +144,7 @@ bool
 TrackUtils::propagateToDCA(O2Track &o2track, std::array<float, 3> xyz, float Bz)
 {
   float sn, cs, alp = o2track.getAlpha();
-  o2::utils::sincosf(alp, sn, cs);
+  o2::utils::sincos(alp, sn, cs);
   float x = o2track.getX(), y = o2track.getY(), snp = o2track.getSnp(), csp = std::sqrt((1.f - snp) * (1.f + snp));
   float xv = xyz[0] * cs + xyz[1] * sn, yv = -xyz[0] * sn + xyz[1] * cs, zv = xyz[2];
   x -= xv;
