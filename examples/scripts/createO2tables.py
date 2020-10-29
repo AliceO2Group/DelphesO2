@@ -256,8 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--nruns", type=int,
                         default=10,
                         help="Number of runs")
-    parser.add_argument("-b", action="store_true", help="Background mode")
-    parser.add_argument("-t", action="store_true", help="Metric mode")
+    parser.add_argument("-t", action="store_true", help="Metric mode: to compute wall time")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
