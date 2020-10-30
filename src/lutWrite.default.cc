@@ -42,7 +42,7 @@ fatInit_default(float field = 0.5, float rmin = 100.)
 }
 
 void
-lutWrite_default(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, float rmin = 20.)
+lutWrite_default(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.5, float rmin = 100.)
 {
 
   // init FAT
