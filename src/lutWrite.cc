@@ -53,9 +53,9 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   lutHeader.radmap.max   = 100.;
   // eta
   lutHeader.etamap.log   = false;
-  lutHeader.etamap.nbins = 40;
-  lutHeader.etamap.min   = -2.;
-  lutHeader.etamap.max   =  2.;
+  lutHeader.etamap.nbins = 80;
+  lutHeader.etamap.min   = -4.;
+  lutHeader.etamap.max   =  4.;
   // pt
   lutHeader.ptmap.log    = true;
   lutHeader.ptmap.nbins  = 200;
@@ -90,6 +90,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  }
 	  else {
 	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    lutEntry.eff = 1.;
 	    if (!fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
 	      printf(" --- fwdSolve: error \n");
 	      lutEntry.valid = false;
