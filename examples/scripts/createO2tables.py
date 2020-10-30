@@ -12,6 +12,7 @@ import shutil
 import multiprocessing
 import numpy
 import time
+from datetime import datetime
 
 # Global running flags
 verbose_mode = False
@@ -70,6 +71,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     parser.read(configuration_file)
 
     run_cmd("./clean.sh &> /dev/null")
+    option_list = []  # List of fetched options
 
     def opt(entry, require=True):
         try:
@@ -80,6 +82,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
                     o = parser.getboolean(config_entry, entry)
                     break
             verbose_msg("Got option", entry, "=", f"'{o}'")
+            option_list.append([entry, o])
             return o
         except:
             if require:
@@ -234,10 +237,32 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
         msg(f"-- took {time.time() - total_start_time} seconds in total --",
             color=bcolors.BOKGREEN)
 
+    # Writing the list of produced AODs
     with open("listfiles.txt", "w") as listfiles:
         for i in os.listdir("."):
             if "AODRun5." in i and i.endswith(".root"):
                 listfiles.write(i)
+
+    # Writing summary of production
+    with open("summary.txt", "w") as summaryfile:
+        summaryfile.write("\n## Summary of last run ##\n")
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        summaryfile.write(f"Finished at {dt_string}\n")
+
+        def write_config(entry):
+            summaryfile.write(f"{entry[0]} = {entry[1]}\n")
+
+        summaryfile.write("\n## Configuration ##\n")
+        write_config(["- configuration_file", configuration_file])
+        write_config(["- config_entry", config_entry])
+        write_config(["- njobs", njobs])
+        write_config(["- nruns", nruns])
+        write_config(["- nevents", nevents])
+
+        summaryfile.write("\n## Options ##\n")
+        for i in option_list:
+            write_config(i)
 
 
 if __name__ == "__main__":
@@ -256,7 +281,8 @@ if __name__ == "__main__":
     parser.add_argument("--nruns", type=int,
                         default=10,
                         help="Number of runs")
-    parser.add_argument("-t", action="store_true", help="Metric mode: to compute wall time")
+    parser.add_argument("-t", action="store_true",
+                        help="Metric mode: to compute wall time")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
