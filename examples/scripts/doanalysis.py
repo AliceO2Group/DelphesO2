@@ -65,7 +65,9 @@ def main(mode):
         tag = "TrackQA"
     elif mode == 1:
         an = ["o2-analysis-spectra-tof",
-              "o2-analysis-pid-tof --add-qa 1"]
+              "o2-analysis-trackextension",
+              "o2-analysis-pid-tof --add-qa 1",
+              "o2-analysis-alice3-trackselection"]
         tag = "TOF"
     run_o2_analysis(
         an,
