@@ -48,7 +48,7 @@ lutWrite_tof2(const char *filename = "lutCovm.dat", int pdg = 211, float field =
   // init FAT
   fatInit_tof2(field, rmin);
   // write
-  lutWrite(filename, pdg, field, rmin);
+  lutWrite(filename, pdg, field);
   
 }
   

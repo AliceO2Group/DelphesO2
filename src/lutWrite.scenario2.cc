@@ -54,6 +54,6 @@ lutWrite_scenario2(const char *filename = "lutCovm.dat", int pdg = 211, float fi
   // init FAT
   fatInit_scenario2(field, rmin);
   // write
-  lutWrite(filename, pdg, field, rmin);
+  lutWrite(filename, pdg, field);
   
 }

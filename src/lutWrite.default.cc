@@ -48,7 +48,7 @@ lutWrite_default(const char *filename = "lutCovm.dat", int pdg = 211, float fiel
   // init FAT
   fatInit_default(field, rmin);
   // write
-  lutWrite(filename, pdg, field, rmin);
+  lutWrite(filename, pdg, field);
   
 }
   
