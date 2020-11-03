@@ -1,1 +1,2 @@
-Directory to store lookup tables fot the covariance matrices
+# Directory to store lookup tables for the covariance matrices
+- you can create yours or get them from the repository mantainers

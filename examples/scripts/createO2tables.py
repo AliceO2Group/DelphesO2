@@ -241,28 +241,33 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     with open("listfiles.txt", "w") as listfiles:
         for i in os.listdir("."):
             if "AODRun5." in i and i.endswith(".root"):
-                listfiles.write(i)
+                listfiles.write(f"{i}\n")
 
     # Writing summary of production
-    with open("summary.txt", "w") as summaryfile:
-        summaryfile.write("\n## Summary of last run ##\n")
+    summaryfile = "summary.txt"
+    with open(summaryfile, "w") as f:
+        f.write("\n## Summary of last run ##\n")
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        summaryfile.write(f"Finished at {dt_string}\n")
+        f.write(f"Finished at {dt_string}\n")
 
         def write_config(entry):
-            summaryfile.write(f"{entry[0]} = {entry[1]}\n")
+            f.write(f"{entry[0]} = {entry[1]}\n")
 
-        summaryfile.write("\n## Configuration ##\n")
+        f.write("\n## Configuration ##\n")
         write_config(["- configuration_file", configuration_file])
         write_config(["- config_entry", config_entry])
         write_config(["- njobs", njobs])
         write_config(["- nruns", nruns])
         write_config(["- nevents", nevents])
 
-        summaryfile.write("\n## Options ##\n")
+        f.write("\n## Options ##\n")
         for i in option_list:
             write_config(i)
+
+    run_cmd("echo  >> " + summaryfile)
+    run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
+    run_cmd("git rev-parse HEAD >> " + summaryfile)
 
 
 if __name__ == "__main__":
