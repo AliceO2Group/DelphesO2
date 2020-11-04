@@ -62,7 +62,7 @@ def process_run(run_number):
             color=bcolors.BOKGREEN)
 
 
-def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbose):
+def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbose, qa):
     global verbose_mode
     verbose_mode = verbose
     global metric_mode
@@ -269,6 +269,10 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
     run_cmd("git rev-parse HEAD >> " + summaryfile)
 
+    if qa:
+        msg(" --- running test analysis", color=bcolors.HEADER)
+        run_cmd("./doanalysis.py 2")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -288,6 +292,8 @@ if __name__ == "__main__":
                         help="Number of runs")
     parser.add_argument("-t", action="store_true",
                         help="Metric mode: to compute wall time")
+    parser.add_argument("-qa", action="store_true",
+                        help="QA mode: runs basic tasks at the end to assess QA")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
@@ -296,4 +302,5 @@ if __name__ == "__main__":
          nevents=args.nevents,
          nruns=args.nruns,
          metric=args.t,
-         verbose=args.v)
+         verbose=args.v,
+         qa=args.qa)
