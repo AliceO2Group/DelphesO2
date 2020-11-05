@@ -69,6 +69,9 @@ def main(mode):
               "o2-analysis-pid-tof --add-qa 1",
               "o2-analysis-alice3-trackselection"]
         tag = "TOF"
+    elif mode == 2:
+        an = ["o2-analysis-qatask"]
+        tag = "ResoQA"
     run_o2_analysis(
         an,
         o2_arguments=args,
