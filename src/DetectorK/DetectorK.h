@@ -134,6 +134,7 @@ class DetectorK : public TNamed {
   Float_t GetResolution(char *name, Int_t axis=0);
   Float_t GetLayerEfficiency(char *name);
   Float_t GetEfficiency() { return fEfficiency[0]; };
+  Float_t GetLayerEfficiency(int i) { return fLayerEfficiency[i]; };
   
   void PrintLayout(Bool_t full = kFALSE); 
   void PlotLayout(Int_t plotDead = kTRUE);
@@ -265,6 +266,7 @@ class DetectorK : public TNamed {
   Double_t fDetPointRes[kMaxNumberOfDetectors][kNptBins];    // array of rphi resolution per layer
   Double_t fDetPointZRes[kMaxNumberOfDetectors][kNptBins];   // array of z resolution per layer
   Double_t fEfficiency[kNptBins];                            // efficiency 
+  Double_t fLayerEfficiency[kMaxNumberOfDetectors];          // layer efficiency
   Double_t fFake[kNptBins];                                  // fake prob
 
   Int_t kDetLayer;                              // layer for which a few more details are extracted

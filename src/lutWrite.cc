@@ -8,16 +8,37 @@ DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
 
 bool
-fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
+fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int layer = 0, int what = 0, int efftype = 0)
 {
   int q = 1;
   TrackSol tr(1, pt, eta, q, mass);
   bool retval = fat.SolveTrack(tr);
   if (!retval) return false;
-  *eff = fat.GetEfficiency();
-  AliExternalTrackParam trCopy = *((AliExternalTrackParam*)tr.fTrackCmb[0]);
+
+  switch (efftype) {
+  case 0:
+    *eff = fat.GetEfficiency();
+    break;
+  case 1:
+    *eff = fat.GetLayerEfficiency(layer);
+    break;
+  }
+
+  AliExternalTrackParam *trPtr = nullptr;
+  switch (what) {
+  case 0:
+    trPtr = (AliExternalTrackParam*)tr.fTrackCmb[layer];
+    break;
+  case 1:
+    trPtr = (AliExternalTrackParam*)tr.fTrackOutB[layer];
+    break;
+  case 2:
+    trPtr = (AliExternalTrackParam*)tr.fTrackOutA[layer];
+    break;
+  }
+  
   for (int i = 0; i < 15; ++i)
-    covm[i] = trCopy.GetCovariance()[i];
+    covm[i] = trPtr->GetCovariance()[i];
   return true;
 }
 
@@ -29,7 +50,7 @@ fwdSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
 }
 
 void
-lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
+lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, int layer = 0, int what = 0, int efftype = 0)
 {
 
   // output file
@@ -81,7 +102,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2)
 	  lutEntry.valid = true;
 	  if (fabs(eta) < 2.) {
 	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
+	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, layer, what, efftype)) {
 	      printf(" --- fatSolve: error \n");
 	      lutEntry.valid = false;
 	      for (int i = 0; i < 15; ++i)

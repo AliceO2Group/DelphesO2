@@ -1328,7 +1328,7 @@ void DetectorK::SolveViaBilloir(Double_t selPt, double ptmin) {
       }
       // Set Detector-Efficiency Storage area to unity
       fEfficiency[i] = 1.0 ;
-     
+
       // print out and efficiency calculation
       iLayActive=0;
       if (print == 1 && fTransMomenta[i] >= selPt && printOnce == 1) printf("\n Combined propagation estimates\n");
@@ -1525,6 +1525,8 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   //
   // Set efficiency to unity
   fEfficiency[0] = 1.;
+  for (int ii = 0; ii < kMaxNumberOfDetectors; ++ii)
+    fLayerEfficiency[ii] = 0;
   //
   CylLayerK *layer = 0;
   //
@@ -1700,6 +1702,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
       Double_t zError     =  TMath::Sqrt( zErrorComb * zErrorComb + layer->zRes * layer->zRes );
       //      printf(" --- the efficiency at layer %f --> %f \n", layer->radius, ProbGoodHit( layer->radius, rphiError, zError ));
       fEfficiency[0]     *=  ProbGoodHit( layer->radius, rphiError, zError );
+      fLayerEfficiency[j] =  ProbGoodHit( layer->radius, rphiError, zError );
     }
   }
       
