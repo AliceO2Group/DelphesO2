@@ -37,8 +37,11 @@ gInterpreter.Declare("""
                     """)
 
 
-def main(filename, verbose=True, pdg_of_interest=[421], events=None):
+def main(filename, verbose=True, pdg_of_interest=[421], events=None, summary=True):
     def get_frame(tree_name, file_name):
+        """
+        Getter of the frame from the file
+        """
         frame = RDataFrame(tree_name, file_name)
         if verbose:
             colNames = frame.GetColumnNames()
@@ -52,6 +55,8 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
     counters = {}
 
     def count(label, index):
+        if not summary:
+            return
         c = counters.setdefault(label, [])
         if index not in c:
             c.append(index)
@@ -63,6 +68,7 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
         else:
             ev_df = df.Filter(f"fMcCollisionsID >= 0")
         npy = ev_df.AsNumpy()
+        print()
         for i, part_index in enumerate(npy["part_index"]):
             ev = npy["fMcCollisionsID"][i]
             count("events", ev)
@@ -79,12 +85,6 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
                 part = part.GetName()
             else:
                 part = "Undef"
-            extra = ""
-            if m0 < 0 and m1 < 0 and d0 < 1 and d1 < 0:
-                extra = "Sterile"
-            if d1 <= d0 and d1 > -1:
-                extra = bcolors.BWARNING + "Problematic" + bcolors.ENDC
-            l = f"{part_index}) ev {ev} m0 {m0} m1 {m1}, d0 {d0} d1 {d1}, pdg {pdg} '{part}' {extra}"
 
             def daughters():
                 idaughters = []
@@ -116,10 +116,8 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
                 d = daughters()
                 pdgs = []
                 for j in d:
-                    if do_abs:
-                        pdgs.append(abs(npy["fPdgCode"][j]))
-                    else:
-                        pdgs.append(npy["fPdgCode"][j])
+                    pdgs.append(abs(npy["fPdgCode"][j])
+                                if do_abs else npy["fPdgCode"][j])
                 return pdgs
 
             def check_momentum():
@@ -138,6 +136,13 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
                     count(f"{part} in {desired_pdg_codes}", part_index)
                 return True
 
+            extra = ""
+            if m0 < 0 and m1 < 0 and d0 < 1 and d1 < 0:
+                extra = "Sterile"
+            if d1 <= d0 and d1 > -1:
+                extra = bcolors.BWARNING + "Problematic" + bcolors.ENDC
+            l = f"  ({part_index}) ev {ev} m0 {m0} m1 {m1}, d0 {d0} d1 {d1}, pdg {pdg} '{part}' {extra}"
+
             count(part, part_index)
             if verbose or pdg in pdg_of_interest:
                 print(l)
@@ -155,22 +160,26 @@ def main(filename, verbose=True, pdg_of_interest=[421], events=None):
             print_evt(i)
     for i in counters:
         print(i, ":", len(counters[i]))
+    if not summary:
+        print("Processed", filename)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file_list", type=str, nargs="+",
                         help="Input configuration file")
-    parser.add_argument("--events", type=int, default=None,
+    parser.add_argument("--events", type=int, nargs="+", default=None,
                         help="Events to analyze")
     parser.add_argument("--njobs", type=int, default=10, help="Number of jobs")
+    parser.add_argument("-s", "--summary", action="store_true",
+                        help="Flag to show summary after processing a file")
     parser.add_argument("-b", action="store_true", help="Background mode")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     file_list = args.file_list
     if len(file_list) < 3:
         for i in file_list:
-            main(i, verbose=args.v, events=args.events)
+            main(i, verbose=args.v, events=args.events, summary=args.summary)
     else:
         with multiprocessing.Pool(processes=args.njobs) as pool:
             pool.map(main, file_list)
