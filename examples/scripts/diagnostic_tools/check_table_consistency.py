@@ -12,6 +12,9 @@ import numpy
 
 
 def check_trees(file_list):
+    """
+    Function to check that the file is correctly written and has only one folder with the tree
+    """
     print("Checking file")
     for i in file_list:
         f = TFile(i, "READ")
@@ -25,6 +28,9 @@ def check_corresponding(file_list,
                         friend="delphes",
                         verbose=False,
                         show=False):
+    """
+    Function to check that the delphes and AODs are consistent
+    """
     print("Checking correspondance between O2 tables and delphes output")
     for i in file_list:
         def get_frame(tree_name, file_name):
