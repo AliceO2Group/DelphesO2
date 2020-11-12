@@ -7,3 +7,5 @@ createO2tables.C
 *.dat
 *.tcl
 tmpscript*.sh
+*.pyc
+__pycache__
