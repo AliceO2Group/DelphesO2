@@ -115,7 +115,6 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     msg("  radius  = ", radius, " [cm] ")
     msg("  length  = ", length, " [cm] ")
     msg("  etaMax  = ", etaMax)
-    msg(" --- start processing the runs ", color=bcolors.HEADER)
 
     # copy relevant files in the working directory
     def do_copy(in_file, out_file):
@@ -129,6 +128,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
+    msg("  LUT     = ", lut_tag)
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     for i in lut_particles:
         lut_bg = "{}kG".format(bField).replace(".", "")
@@ -228,6 +228,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     if metric_mode:
         total_start_time = time.time()
+    msg(" --- start processing the runs ", color=bcolors.HEADER)
     with multiprocessing.Pool(processes=njobs) as pool:
         pool.map(process_run, run_list)
 
@@ -241,7 +242,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     with open("listfiles.txt", "w") as listfiles:
         for i in os.listdir("."):
             if "AODRun5." in i and i.endswith(".root"):
-                listfiles.write(f"{i}\n")
+                listfiles.write(f"{os.getcwd()}/{i}\n")
 
     # Writing summary of production
     summaryfile = "summary.txt"
@@ -271,7 +272,9 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
+        os.chdir("diagnostic_tools")
         run_cmd("./doanalysis.py 2")
+        os.chdir("..")
 
 
 if __name__ == "__main__":

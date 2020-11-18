@@ -56,7 +56,7 @@ def run_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
     print("Output files:", output.strip())
 
 
-def main(mode):
+def main(mode, outtag=""):
     args = "-b --aod-file @listfiles.txt"
     if mode == 0:
         an = ["o2-analysis-trackqa",
@@ -70,12 +70,14 @@ def main(mode):
               "o2-analysis-alice3-trackselection"]
         tag = "TOF"
     elif mode == 2:
-        an = ["o2-analysis-qatask"]
+        an = ["o2-analysis-qatask",
+              "o2-analysis-trackextension",
+              "o2-analysis-alice3-trackselection"]
         tag = "ResoQA"
     run_o2_analysis(
         an,
         o2_arguments=args,
-        tag=tag)
+        tag=tag + outtag)
 
 
 if __name__ == "__main__":
@@ -84,6 +86,10 @@ if __name__ == "__main__":
                         type=int,
                         nargs="+",
                         help="Running modes")
+    parser.add_argument("--tag", "-t",
+                        type=str,
+                        default="",
+                        help="Tag for output files")
     args = parser.parse_args()
     for i in args.modes:
-        main(i)
+        main(i, args.tag)

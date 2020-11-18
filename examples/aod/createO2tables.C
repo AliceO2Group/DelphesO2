@@ -35,11 +35,11 @@ void createO2tables(const char* inputFile = "delphes.root",
     smearer.loadTable(321, "lutCovm.ka.2kG.dat");
     smearer.loadTable(2212, "lutCovm.pr.2kG.dat");
   } else if (Bz == 0.5) {
-    smearer.loadTable(11, "lutCovm.el.5kG.100cm.default.dat");
-    smearer.loadTable(13, "lutCovm.mu.5kG.100cm.default.dat");
-    smearer.loadTable(211, "lutCovm.pi.5kG.100cm.default.dat");
-    smearer.loadTable(321, "lutCovm.ka.5kG.100cm.default.dat");
-    smearer.loadTable(2212, "lutCovm.pr.5kG.100cm.default.dat");
+    smearer.loadTable(11, "lutCovm.el.5kG.dat");
+    smearer.loadTable(13, "lutCovm.mu.5kG.dat");
+    smearer.loadTable(211, "lutCovm.pi.5kG.dat");
+    smearer.loadTable(321, "lutCovm.ka.5kG.dat");
+    smearer.loadTable(2212, "lutCovm.pr.5kG.dat");
   } else {
     std::cout << " --- invalid Bz field: " << Bz << std::endl;
     return;
@@ -203,6 +203,7 @@ void createO2tables(const char* inputFile = "delphes.root",
     collision.fCovYZ = 0.f;
     collision.fCovZZ = 0.01;
     collision.fChi2 = 0.01;
+    collision.fN = tracks->GetEntries();
     collision.fCollisionTime = tzero[0] * 1.e3;    // [ps]
     collision.fCollisionTimeRes = tzero[1] * 1.e3; // [ps]
     tEvents->Fill();
