@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 {
 
   int nevents, pdg;
-  std::string config, output;
+  std::string config, output, background_config;
   double px, py, pz;
   double xProd, yProd, zProd;
   bool verbose, decay;
@@ -30,6 +30,7 @@ int main(int argc, char **argv)
       ("yProd", po::value<double>(&yProd)->default_value(0.), "Production vertex in the y-direction")
       ("zProd", po::value<double>(&zProd)->default_value(0.), "Production vertex in the z-direction")
       ("config,c", po::value<std::string>(&config), "Configuration file")
+      ("background-config", po::value<std::string>(&background_config), "Background configuration file")
       ("output,o", po::value<std::string>(&output)->default_value("pythia-gun.hepmc"), "Output HepMC file")
       ("decay,D", po::bool_switch(&decay)->default_value(false), "Decay particle at production vertex")
       ("verbose,V", po::bool_switch(&verbose)->default_value(false), "Verbose event listing")
@@ -89,6 +90,20 @@ int main(int argc, char **argv)
   particle.xProd(xProd);
   particle.yProd(yProd);
   particle.zProd(zProd);
+
+  // background interface
+  Pythia8::Pythia *pythia_bkg = nullptr;
+  if (!background_config.empty()) {
+    std::cout << "Background: configure from " << background_config << std::endl;
+    pythia_bkg = new Pythia8::Pythia;
+    if (!pythia_bkg->readFile(background_config)) {
+      std::cout << "Error: could not read config file \"" << background_config << "\"" << std::endl;
+      return 1;
+    }
+    pythia_bkg->init();
+  }
+  
+
   
   // event loop
   for (int iev = 0; iev < nevents; ++iev) {
@@ -102,11 +117,26 @@ int main(int argc, char **argv)
     // print verbose
     if (verbose) pythia.event.list(1);
 
+    // background
+    if (pythia_bkg) {
+      pythia_bkg->next();
+      pythia.event += pythia_bkg->event;
+    }          
+    
     // write HepMC
     HepMC::GenEvent *hepmcevt = new HepMC::GenEvent();
     ToHepMC.fill_next_event(pythia, hepmcevt);
     ascii_io << hepmcevt;
     delete hepmcevt;
   }
+
+  // print statistics
+  pythia.stat();
+  if (pythia_bkg) {
+    pythia_bkg->stat();
+    delete pythia_bkg;
+  }
+  
+  return 0;
   
 }
