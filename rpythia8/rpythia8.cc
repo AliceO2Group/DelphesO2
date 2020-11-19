@@ -7,8 +7,8 @@
 int main(int argc, char **argv)
 {
   
-  int nevents;
-  std::string config, output, inject;
+  int nevents, inject_nevents;
+  std::string config, output, inject_config;
   
   /** process arguments **/
   namespace po = boost::program_options;
@@ -16,10 +16,11 @@ int main(int argc, char **argv)
   try {
     desc.add_options()
       ("help", "Print help messages")
-      ("nevents,n"     , po::value<int>(&nevents)->default_value(10), "Number of events")
-      ("config,c"      , po::value<std::string>(&config), "Configuration file")
-      ("output,o"      , po::value<std::string>(&output)->default_value("pythia8.hepmc"), "Output HepMC file")
-      ("inject,i"      , po::value<std::string>(&inject), "Injected event configuration file")
+      ("nevents,n"      , po::value<int>(&nevents)->default_value(10), "Number of events")
+      ("config,c"       , po::value<std::string>(&config), "Configuration file")
+      ("output,o"       , po::value<std::string>(&output)->default_value("pythia8.hepmc"), "Output HepMC file")
+      ("inject-config"  , po::value<std::string>(&inject_config), "Injected event configuration file")
+      ("inject-nevents" , po::value<int>(&inject_nevents)->default_value(1), "Number of events to inject")
       ;
     
     po::variables_map vm;
@@ -53,11 +54,11 @@ int main(int argc, char **argv)
 
   // injection interface
   Pythia8::Pythia *pythia_inj = nullptr;
-  if (!inject.empty()) {
-    std::cout << "Injection: configure from " << inject << std::endl;
+  if (!inject_config.empty()) {
+    std::cout << "Injection: configure from " << inject_config << std::endl;
     pythia_inj = new Pythia8::Pythia;
-    if (!pythia_inj->readFile(inject)) {
-      std::cout << "Error: could not read config file \"" << config << "\"" << std::endl;
+    if (!pythia_inj->readFile(inject_config)) {
+      std::cout << "Error: could not read config file \"" << inject_config << "\"" << std::endl;
       return 1;
     }
     pythia_inj->init();
@@ -72,8 +73,10 @@ int main(int argc, char **argv)
     
     // injection
     if (pythia_inj) {
-      pythia_inj->next();
-      pythia.event += pythia_inj->event;
+      for (int iiev = 0; iiev < inject_nevents; ++iiev) {
+	pythia_inj->next();
+	pythia.event += pythia_inj->event;
+      }
     }
           
     // convert to HepMC
