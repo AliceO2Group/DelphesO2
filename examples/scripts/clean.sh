@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-rm *.root
+rm delphes*.root
+rm AOD*.root
 rm *.cfg *.log *.txt
 rm *.so *.d *.pcm
+rm *ACLiC*
 rm *.tcl
 rm *.dat
 rm *.C *.h
