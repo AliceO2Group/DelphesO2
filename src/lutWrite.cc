@@ -101,19 +101,19 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  lutEntry.pt = lutHeader.ptmap.eval(ipt);
 	  lutEntry.valid = true;
 	  if (fabs(eta) < 2.) {
-	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    //	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
 	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, layer, what, efftype)) {
-	      printf(" --- fatSolve: error \n");
+	      //	      printf(" --- fatSolve: error \n");
 	      lutEntry.valid = false;
 	      for (int i = 0; i < 15; ++i)
 		lutEntry.covm[i] = 0.;
 	    }
 	  }
 	  else {
-	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    //	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
 	    lutEntry.eff = 1.;
 	    if (!fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
-	      printf(" --- fwdSolve: error \n");
+	      //	      printf(" --- fwdSolve: error \n");
 	      lutEntry.valid = false;
 	      for (int i = 0; i < 15; ++i)
 		lutEntry.covm[i] = 0.;
