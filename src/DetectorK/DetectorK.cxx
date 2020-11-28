@@ -1479,7 +1479,7 @@ Bool_t DetectorK::SolveTrack(TrackSol& ts) {
   // find max layer this track can reach
   double rmx = (TMath::Abs(fBField)>1e-5) ?  pt*100./(0.3*TMath::Abs(fBField)) : 9999;
   if (2*rmx-5. < minRad && minRad>0) {
-    printf("Track of pt=%.3f cannot be tracked to min. r=%f\n",pt,minRad);
+    //    printf("Track of pt=%.3f cannot be tracked to min. r=%f\n",pt,minRad);
     return kFALSE;
   }
   Int_t lastActiveLayer = -1;
