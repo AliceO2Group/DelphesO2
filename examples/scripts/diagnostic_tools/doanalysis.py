@@ -34,7 +34,7 @@ def run_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                 line = f"{line} | \\\n \t"
             tmp_script.write(line)
             if verbose:
-                print(line)
+                print(line.strip())
         tmp_script.write("\n\n")
     cmd = f"bash {tmp_script_name}"
     if verbose:
@@ -56,7 +56,7 @@ def run_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
     print("Output files:", output.strip())
 
 
-def main(mode, outtag=""):
+def main(mode, outtag="", verbose=True):
     args = "-b --aod-file @listfiles.txt"
     if mode == 0:
         an = ["o2-analysis-trackqa",
@@ -77,7 +77,8 @@ def main(mode, outtag=""):
     run_o2_analysis(
         an,
         o2_arguments=args,
-        tag=tag + outtag)
+        tag=tag + outtag,
+        verbose=verbose)
 
 
 if __name__ == "__main__":
@@ -90,6 +91,10 @@ if __name__ == "__main__":
                         type=str,
                         default="",
                         help="Tag for output files")
+    parser.add_argument("--verbose", "-v",
+                        action="store_true", help="Verbose mode")
+    parser.add_argument("-b",
+                        action="store_true", help="Background mode")
     args = parser.parse_args()
     for i in args.modes:
-        main(i, args.tag)
+        main(i, args.tag, verbose=args.verbose)

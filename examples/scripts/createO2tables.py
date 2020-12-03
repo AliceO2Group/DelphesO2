@@ -35,43 +35,46 @@ class bcolors:
     ENDC = "\033[0m"
 
 
-def verbose_msg(*args):
+def verbose_msg(*args, color=bcolors.OKBLUE):
     if verbose_mode:
-        print("** ", bcolors.OKBLUE, *args, bcolors.ENDC)
+        print("** ", color, *args, bcolors.ENDC)
 
 
 def msg(*args, color=bcolors.BOKBLUE):
     print(color, *args, bcolors.ENDC)
 
 
-def run_cmd(cmd):
-    verbose_msg("Running", cmd)
-    content = os.popen(cmd).read()
-    if content:
-        verbose_msg(content)
+def run_cmd(cmd, comment=""):
+    verbose_msg("Running", f"'{cmd}'", comment)
+    try:
+        content = os.popen(cmd).read()
+        if content:
+            verbose_msg("++", content)
+    except:
+        raise ValueError("Error!")
 
 
 def process_run(run_number):
-    if metric_mode:
-        start_time = time.time()
+    processing_time = time.time()
     msg("> starting run", run_number)
     run_cmd(f"bash runner{run_number}.sh")
+    if not os.path.isfile(f"AODRun5.{run_number}.root"):
+        msg("++ something went wrong for run", run_number, ", no output table found. Please check:",
+            f"AODRun5.{run_number}.log", color=bcolors.FAIL)
     msg("< complete run", run_number)
-    if metric_mode:
-        msg(f"-- took {time.time() - start_time} seconds --",
-            color=bcolors.BOKGREEN)
+    processing_time = time.time() - processing_time
+    verbose_msg(f"-- took {processing_time} seconds --",
+                color=bcolors.BOKGREEN)
 
 
-def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbose, qa):
+def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
     global verbose_mode
     verbose_mode = verbose
-    global metric_mode
-    metric_mode = metric
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
     run_cmd("./clean.sh &> /dev/null")
-    option_list = []  # List of fetched options
+    running_options = {}  # Dictionary of fetched options
 
     def opt(entry, require=True):
         try:
@@ -82,7 +85,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
                     o = parser.getboolean(config_entry, entry)
                     break
             verbose_msg("Got option", entry, "=", f"'{o}'")
-            option_list.append([entry, o])
+            running_options[entry] = o
             return o
         except:
             if require:
@@ -99,22 +102,12 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     etaMax = opt("etaMax")
 
     # calculate max eta from geometry
+    verbose_msg("Computing maximum eta based on detector length and radius")
     th = numpy.arctan2(float(radius), float(length))*0.5
     sth = numpy.sin(th)
     cth = numpy.cos(th)
     etaMax = -numpy.log(sth/cth)
-
-    # Printing configuration
-    msg(" --- running createO2tables.py", color=bcolors.HEADER)
-    msg("  njobs   = ", njobs)
-    msg("  nruns   = ", nruns)
-    msg("  nevents = ", nevents)
-    msg(" --- with detector configuration", color=bcolors.HEADER)
-    msg("  bField  = ", bField, " [kG] ")
-    msg("  sigmaT  = ", sigmaT, " [ns] ")
-    msg("  radius  = ", radius, " [cm] ")
-    msg("  length  = ", length, " [cm] ")
-    msg("  etaMax  = ", etaMax)
+    running_options["etaMax"] = etaMax
 
     # copy relevant files in the working directory
     def do_copy(in_file, out_file):
@@ -128,7 +121,6 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
-    msg("  LUT     = ", lut_tag)
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     for i in lut_particles:
         lut_bg = "{}kG".format(bField).replace(".", "")
@@ -141,9 +133,28 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
         generators = opt("generators").split(" ")
         for i in generators:
             do_copy(i, ".")
-        verbose_msg("Using default pythia with configuration", generators)
+        msg("Using pythia with configuration", generators)
     else:
-        verbose_msg("Using custom generator", custom_gen)
+        def check_duplicate(option_name):
+            if f" {option_name}" in custom_gen:
+                raise ValueError(f"Remove '{option_name}' from", custom_gen,
+                                 "as it will be automatically set")
+        for i in ["--output", "-o", "--nevents", "-n"]:
+            check_duplicate(i)
+        msg("Using custom generator", custom_gen)
+
+    # Printing configuration
+    msg(" --- running createO2tables.py", color=bcolors.HEADER)
+    msg("  njobs   = ", njobs)
+    msg("  nruns   = ", nruns)
+    msg("  nevents = ", nevents)
+    msg(" --- with detector configuration", color=bcolors.HEADER)
+    msg("  bField  = ", bField, " [kG] ")
+    msg("  sigmaT  = ", sigmaT, " [ns] ")
+    msg("  radius  = ", radius, " [cm] ")
+    msg("  length  = ", length, " [cm] ")
+    msg("  LUT     = ", lut_tag)
+    msg("  etaMax  = ", etaMax)
 
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
@@ -152,14 +163,17 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
     def set_config(config_file, config, value):
         config = config.strip()
         value = value.strip()
-        run_cmd(
-            "sed -i -e \"" f"s/{config} .*$/{config} {value}" "\" " + config_file)
+        config_string = f"{config} {value}"
+        run_cmd("sed -i -e \"" f"s/{config} .*$/{config_string}" "\" "
+                + config_file)
         # Checking that the file has the correct configuration
         with open(config_file) as f:
             has_it = False
-            config_string = f"{config} {value}".replace("\\", "").strip("/")
-            for i in f:
-                if i.strip() == config_string:
+            config_string = config_string.replace("\\", "").strip("/")
+            for lineno, line in enumerate(f):
+                if line.strip() == config_string:
+                    verbose_msg("Found config string", config_string,
+                                "in line", lineno, line.strip())
                     has_it = True
                     break
             if not has_it:
@@ -169,21 +183,24 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     # set magnetic field
     set_config("propagate.tcl", "set barrel_Bz", f"{bField}""e\-1/")
-    set_config("createO2tables.C", "double Bz = ", f"{bField}""e\-1\;/")
+    set_config("createO2tables.C", "const double Bz = ", f"{bField}""e\-1\;/")
     set_config("dpl-config_std.json", "\"d_bz\":", "\""f"{bField}""\"\,/")
     # set radius
     set_config("propagate.tcl", "set barrel_Radius", f"{radius}""e\-2/")
-    set_config("createO2tables.C", "double tof_radius =", f"{radius}""\;/")
+    set_config("createO2tables.C",
+               "const double tof_radius =", f"{radius}""\;/")
     # set length
     set_config("propagate.tcl", "set barrel_HalfLength", f"{length}""e\-2/")
-    set_config("createO2tables.C", "double tof_length =", f"{length}""\;/")
+    set_config("createO2tables.C",
+               "const double tof_length =", f"{length}""\;/")
     # # set acceptance
     set_config("propagate.tcl", "set barrel_Acceptance",
                "\{ 0.0 + 1.0 * fabs(eta) < "f"{etaMax}"" \}/")
     # set time resolution
     set_config("propagate.tcl", "set barrel_TimeResolution",
                f"{sigmaT}""e\-9/")
-    set_config("createO2tables.C", "double tof_sigmat =", f"{sigmaT}""\;/")
+    set_config("createO2tables.C",
+               "const double tof_sigmat =", f"{sigmaT}""\;/")
 
     run_list = range(nruns)
 
@@ -191,16 +208,28 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
         # Create executable that runs Geneartio, Delphes and analysis
         runner_file = f"runner{run_number}.sh"
         with open(runner_file, "w") as f_run:
-            f_run.write(f"#! /usr/bin/env bash\n")
+            def write_to_runner(line, log_file=None, check_status=False):
+                if log_file is not None:
+                    line += f" &> {log_file}"
+                line += "\n"
+                f_run.write(line)
+                if check_status:
+                    f_run.write("\nReturnValue=$?\n")
+                    f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
+                    f_run.write("  echo \"Encountered error\"\n")
+                    f_run.write("  exit $ReturnValue\n")
+                    f_run.write("fi\n")
+            write_to_runner("#! /usr/bin/env bash\n")
             delphes_file = f"delphes.{run_number}.root"
             delphes_log_file = delphes_file.replace(".root", ".log")
             if custom_gen:  # Using HEPMC
-                gen_log_file = f"gen.{run_number}.root"
+                gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
-                f_run.write(
-                    custom_gen + f" --output {hepmc_file} &> {gen_log_file}\n")
-                f_run.write(
-                    f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file} &> {delphes_log_file}\n")
+                custom_gen_option = f" --output {hepmc_file} --nevents {nevents}"
+                write_to_runner(custom_gen + custom_gen_option,
+                                log_file=gen_log_file)
+                write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
+                                log_file=delphes_log_file)
             else:  # Using DelphesPythia
                 # copy generator configuration
                 generator_cfg = f"generator.{run_number}.cfg"
@@ -217,26 +246,31 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
                     for i in generators[1:]:
                         with open(i.split("/")[-1], "r") as f_append:
                             f_cfg.write(f_append.read())
-                f_run.write(
-                    f"DelphesPythia8 propagate.tcl {generator_cfg} {delphes_file} &> {delphes_log_file}\n")
+                write_to_runner(f"DelphesPythia8 propagate.tcl {generator_cfg} {delphes_file}",
+                                log_file=delphes_log_file,
+                                check_status=True)
             aod_file = f"AODRun5.{run_number}.root"
             aod_log_file = aod_file.replace(".root", ".log")
-            f_run.write(
-                f"root -b -q -l 'createO2tables.C(\"{delphes_file}\", \"{aod_file}\", 0)' &> {aod_log_file}\n")
+            write_to_runner(f"root -b -q -l 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
+                            log_file=aod_log_file,
+                            check_status=True)
+            write_to_runner("exit 0\n")
     for i in run_list:
         configure_run(i)
 
-    if metric_mode:
-        total_start_time = time.time()
+    # Compiling the table creator macro once for all
+    run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null",
+            comment="to compile the table creator")
+    total_processing_time = time.time()
     msg(" --- start processing the runs ", color=bcolors.HEADER)
     with multiprocessing.Pool(processes=njobs) as pool:
         pool.map(process_run, run_list)
 
     # merge runs when all done
     msg(" --- all runs are processed, so long", color=bcolors.HEADER)
-    if metric_mode:
-        msg(f"-- took {time.time() - total_start_time} seconds in total --",
-            color=bcolors.BOKGREEN)
+    total_processing_time = time.time() - total_processing_time
+    msg(f"-- took {total_processing_time} seconds in total --",
+        color=bcolors.BOKGREEN)
 
     # Writing the list of produced AODs
     with open("listfiles.txt", "w") as listfiles:
@@ -251,6 +285,7 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         f.write(f"Finished at {dt_string}\n")
+        f.write(f"Took {total_processing_time} seconds\n")
 
         def write_config(entry):
             f.write(f"{entry[0]} = {entry[1]}\n")
@@ -263,8 +298,8 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
         write_config(["- nevents", nevents])
 
         f.write("\n## Options ##\n")
-        for i in option_list:
-            write_config(i)
+        for i in running_options:
+            write_config([i, running_options[i]])
 
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
@@ -272,38 +307,34 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, metric, verbos
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
-        os.chdir("diagnostic_tools")
-        run_cmd("./doanalysis.py 2")
-        os.chdir("..")
+        run_cmd("./diagnostic_tools/doanalysis.py 2")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("configuration_file", type=str,
                         help="Input configuration file")
-    parser.add_argument("--entry", type=str,
+    parser.add_argument("--entry", "-e", type=str,
                         default="DEFAULT",
                         help="Entry in the configuration file")
-    parser.add_argument("--njobs", type=int,
+    parser.add_argument("--njobs", "-j", type=int,
                         default=10,
                         help="Number of concurrent jobs")
-    parser.add_argument("--nevents", type=int,
+    parser.add_argument("--nevents", "--ev", type=int,
                         default=1000,
                         help="Number of simulated events (only in non custom generator mode)")
-    parser.add_argument("--nruns", type=int,
+    parser.add_argument("--nruns", "--runs", "-r", type=int,
                         default=10,
                         help="Number of runs")
-    parser.add_argument("-t", action="store_true",
-                        help="Metric mode: to compute wall time")
-    parser.add_argument("-qa", action="store_true",
+    parser.add_argument("--qa", "-qa", action="store_true",
                         help="QA mode: runs basic tasks at the end to assess QA")
-    parser.add_argument("-v", action="store_true", help="Verbose mode")
+    parser.add_argument("--verbose", "-v",
+                        action="store_true", help="Verbose mode")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
          njobs=args.njobs,
          nevents=args.nevents,
          nruns=args.nruns,
-         metric=args.t,
-         verbose=args.v,
+         verbose=args.verbose,
          qa=args.qa)
