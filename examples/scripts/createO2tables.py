@@ -94,6 +94,10 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
             return None
 
     # Config from the config file
+    # simulation configuration
+    output_path = os.path.join(os.getcwd(), opt("output_path"))
+    msg("Output will be found in", f"'{output_path}'")
+
     # detector configuration
     bField = opt("bField")
     sigmaT = opt("sigmaT")
@@ -125,8 +129,8 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
     for i in lut_particles:
         lut_bg = "{}kG".format(bField).replace(".", "")
         lut_n = f"lutCovm.{i}.{lut_bg}"
-        do_copy(os.path.join(
-            lut_path, f"{lut_n}.{lut_tag}.dat"), f"{lut_n}.dat")
+        do_copy(os.path.join(lut_path, f"{lut_n}.{lut_tag}.dat"),
+                f"{lut_n}.dat")
 
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
@@ -205,10 +209,14 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
     run_list = range(nruns)
 
     def configure_run(run_number):
-        # Create executable that runs Geneartio, Delphes and analysis
+        # Create executable that runs Generation, Delphes and analysis
         runner_file = f"runner{run_number}.sh"
         with open(runner_file, "w") as f_run:
+
             def write_to_runner(line, log_file=None, check_status=False):
+                """
+                Writes commands to runner
+                """
                 if log_file is not None:
                     line += f" &> {log_file}"
                 line += "\n"
@@ -219,6 +227,15 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
                     f_run.write("  echo \"Encountered error\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
+
+            def copy_and_link(file_name):
+                """
+                In runner, copies file to output path (if different from current) and links it to current
+                """
+                if os.path.normpath(output_path) != os.getcwd():
+                    write_to_runner(f"mv {file_name} {output_path} \n")
+                    write_to_runner(f"ln -s {output_path}/{file_name} . \n")
+
             write_to_runner("#! /usr/bin/env bash\n")
             delphes_file = f"delphes.{run_number}.root"
             delphes_log_file = delphes_file.replace(".root", ".log")
@@ -254,13 +271,16 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
             write_to_runner(f"root -b -q -l 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
                             log_file=aod_log_file,
                             check_status=True)
+
+            copy_and_link(delphes_file)
+            copy_and_link(aod_file)
             write_to_runner("exit 0\n")
     for i in run_list:
         configure_run(i)
 
     # Compiling the table creator macro once for all
     run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null",
-            comment="to compile the table creator")
+            comment="to compile the table creator only once, before running")
     total_processing_time = time.time()
     msg(" --- start processing the runs ", color=bcolors.HEADER)
     with multiprocessing.Pool(processes=njobs) as pool:
@@ -273,7 +293,8 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
         color=bcolors.BOKGREEN)
 
     # Writing the list of produced AODs
-    with open("listfiles.txt", "w") as listfiles:
+    output_list_file = "listfiles.txt"
+    with open(output_list_file, "w") as listfiles:
         for i in os.listdir("."):
             if "AODRun5." in i and i.endswith(".root"):
                 listfiles.write(f"{os.getcwd()}/{i}\n")
@@ -304,10 +325,11 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
     run_cmd("git rev-parse HEAD >> " + summaryfile)
+    run_cmd(f"mv {summaryfile} {output_path}")
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
-        run_cmd("./diagnostic_tools/doanalysis.py 2")
+        run_cmd(f"./diagnostic_tools/doanalysis.py 2 -i {output_list_file}")
 
 
 if __name__ == "__main__":
