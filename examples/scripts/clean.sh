@@ -6,7 +6,7 @@ rm *.cfg *.log *.txt
 rm *.so *.d *.pcm
 rm *ACLiC*
 rm *.tcl
-rm *.dat
+rm -f *.dat
 rm *.C *.h
 rm *.pdf *.swp
 rm dpl-config.json imgui.ini

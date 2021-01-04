@@ -56,8 +56,10 @@ def run_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
     print("Output files:", output.strip())
 
 
-def main(mode, outtag="", verbose=True):
-    args = "-b --aod-file @listfiles.txt"
+def main(mode, input_file="listfiles.txt", out_tag="", verbose=True):
+    args = f"-b --aod-file @{input_file}"
+    an = None
+    tag = None
     if mode == 0:
         an = ["o2-analysis-trackqa",
               "o2-analysis-trackextension",
@@ -77,7 +79,7 @@ def main(mode, outtag="", verbose=True):
     run_o2_analysis(
         an,
         o2_arguments=args,
-        tag=tag + outtag,
+        tag=tag + out_tag,
         verbose=verbose)
 
 
@@ -87,6 +89,10 @@ if __name__ == "__main__":
                         type=int,
                         nargs="+",
                         help="Running modes")
+    parser.add_argument("--input", "-i",
+                        type=str,
+                        default="listfiles.txt",
+                        help="Input file")
     parser.add_argument("--tag", "-t",
                         type=str,
                         default="",
@@ -97,4 +103,7 @@ if __name__ == "__main__":
                         action="store_true", help="Background mode")
     args = parser.parse_args()
     for i in args.modes:
-        main(i, args.tag, verbose=args.verbose)
+        main(mode=i,
+             input_file=args.input,
+             out_tag=args.tag,
+             verbose=args.verbose)

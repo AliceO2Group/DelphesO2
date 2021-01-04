@@ -9,6 +9,8 @@ createO2tables.C
 *.txt
 *.dat
 *.tcl
+*ACLiC*
 tmpscript*.sh
+runner*.sh
 *.pyc
 __pycache__
