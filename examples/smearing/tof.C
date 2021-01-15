@@ -30,6 +30,7 @@ tof(const char *inputFile = "delphes.root",
   
   // smearer
   o2::delphes::TrackSmearer smearer;
+  smearer.useEfficiency(true);
   if (Bz == 0.2) {
     smearer.loadTable(11, "lutCovm.el.2kG.dat");
     smearer.loadTable(13, "lutCovm.mu.2kG.dat");

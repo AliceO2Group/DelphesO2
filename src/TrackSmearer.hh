@@ -24,9 +24,10 @@ public:
 
   /** LUT methods **/
   bool loadTable(int pdg, const char *filename);
+  void useEfficiency(bool val) { mUseEfficiency = val; };
   lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
 
-  void smearTrack(O2Track &o2track, lutEntry_t *lutEntry);
+  bool smearTrack(O2Track &o2track, lutEntry_t *lutEntry);
   bool smearTrack(O2Track &o2track, int pid);
   bool smearTrack(Track &track, bool atDCA = true);
 
@@ -45,6 +46,7 @@ protected:
 
   lutHeader_t *mLUTHeader[5] = {nullptr};
   lutEntry_t *****mLUTEntry[5] = {nullptr};
+  bool mUseEfficiency = true;
   
 };
   

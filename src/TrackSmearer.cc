@@ -72,9 +72,12 @@ TrackSmearer::getLUTEntry(int pdg, float nch, float radius, float eta, float pt)
 
 /*****************************************************************/
 
-void
+bool
 TrackSmearer::smearTrack(O2Track &o2track, lutEntry_t *lutEntry)
 {
+  // generate efficiency
+  if (mUseEfficiency && (gRandom->Uniform() > lutEntry->eff))
+    return false;
   // transform params vector and smear
   double params_[5];
   for (int i = 0; i < 5; ++i) {
@@ -97,6 +100,7 @@ TrackSmearer::smearTrack(O2Track &o2track, lutEntry_t *lutEntry)
   // set covariance matrix
   for (int i = 0; i < 15; ++i) 
     o2track.setCov(lutEntry->covm[i], i);
+  return true;
 }  
 
 /*****************************************************************/
@@ -109,8 +113,7 @@ TrackSmearer::smearTrack(O2Track &o2track, int pid)
   auto eta = o2track.getEta();
   auto lutEntry = getLUTEntry(pid, 0., 0., eta, pt);
   if (!lutEntry || !lutEntry->valid) return false;
-  smearTrack(o2track, lutEntry);
-  return true;
+  return smearTrack(o2track, lutEntry);
 }
   
 /*****************************************************************/
