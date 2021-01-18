@@ -159,7 +159,9 @@ void createO2tables(const char* inputFile = "delphes.root",
 
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
-      smearer.smearTrack(o2track, track->PID);
+      if (!smearer.smearTrack(o2track, track->PID)) { // Skipping inefficient/not correctly smeared tracks
+        continue;
+      }
       o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
 
       // set track information
