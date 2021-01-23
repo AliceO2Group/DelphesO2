@@ -76,6 +76,14 @@ def main(mode, input_file="listfiles.txt", out_tag="", verbose=True):
               "o2-analysis-trackextension",
               "o2-analysis-alice3-trackselection"]
         tag = "ResoQA"
+    elif mode == 3:
+        an = ["o2-analysis-mc-spectra-efficiency",
+              "o2-analysis-trackextension",
+              "o2-analysis-alice3-trackselection"]
+        tag = "Efficiency"
+    elif mode == 4:
+        an = ["o2-analysis-pid-tpc --add-qa 1"]
+        tag = "TPC"
     run_o2_analysis(
         an,
         o2_arguments=args,
