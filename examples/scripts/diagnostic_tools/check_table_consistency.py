@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Script to check the consistency between O2 tables and delphes
+Script to check the consistency between O2 tables and delphes.
+This allows the user to check the consistency of variables in the AOD and in the delphes file.
 """
 
 from ROOT import TFile
@@ -48,6 +49,7 @@ def check_corresponding(file_list,
         df_reco = get_frame("TF_0/O2track", i)
         df_reco = df_reco.Define("fEta",
                                  "-1.f * TMath::Log(TMath::Tan(0.25f * TMath::Pi() - 0.5f * TMath::ATan(fTgl)))")
+        df_reco = df_reco.Define("fPt", "1./TMath::Abs(fSigned1Pt)")
         #
         df_delphes = get_frame("Delphes", i.replace(origin, friend))
         gInterpreter.Declare("""
@@ -133,8 +135,11 @@ def check_corresponding(file_list,
             h2.SetLineStyle(3)
             can = canvas(var, diff=True)
             can.cd(1)
-            h.Draw()
-            h2.Draw("same")
+            h.SetDirectory(0)
+            h2.SetDirectory(0)
+            hdrawn = [h.DrawCopy(), h2.DrawCopy("same")]
+            for i in hdrawn:
+                i.SetDirectory(0)
             leg = TLegend(.7, .5, .9, .75)
             leg.AddEntry(h.GetValue())
             leg.AddEntry(h2.GetValue())
@@ -142,6 +147,7 @@ def check_corresponding(file_list,
             gPad.Update()
             can.cd(2)
             hdiff = h.DrawCopy()
+            hdiff.SetDirectory(0)
             hdiff.SetName("hdiff")
             hdiff.SetTitle("diff")
             hdiff.Add(h2.GetValue(), -1)
@@ -195,6 +201,8 @@ def check_corresponding(file_list,
                 print("Something is wrong for", i)
         # Comparison of Delphes Tracks and O2 Tracks
         check("Eta", 1000, -10, 10, frame=df_reco, friend_var="Track.{}")
+        check("Pt", 1000, 0, 30, frame=df_reco, friend_var="Track.PT")
+        # check("Pt", 1000, 0, 30, frame=df_reco, friend_var="Particle.PT")
         # Correlation of Delphes variables
         correlate(df_delphes, ["Eta", 1000, -10, 10],
                   ["Particle.Eta", 1000, -10, 10])
@@ -207,12 +215,20 @@ def check_corresponding(file_list,
         plot(df_delphes, ["PhiDiff", 1000, -2, 2])
         if show:
             input("Press enter to continue")
+        fout = TFile("table_check.root", "RECREATE")
+        fout.cd()
+        canvas_list[0].SaveAs("table_check.pdf[")
+        for i in canvas_list:
+            i.SaveAs("table_check.pdf")
+            i.Write()
+        canvas_list[0].SaveAs("table_check.pdf]")
+        fout.Close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file_list", type=str, nargs="+",
-                        help="Input configuration file")
+                        help="Space separated list of the AODs to analyze e.g. /tmp/AODRun5.0.root")
     parser.add_argument("-b", action="store_true", help="Background mode")
     parser.add_argument("-v", action="store_true", help="Verbose mode")
     args = parser.parse_args()

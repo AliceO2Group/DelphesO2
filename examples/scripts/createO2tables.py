@@ -67,7 +67,15 @@ def process_run(run_number):
                 color=bcolors.BOKGREEN)
 
 
-def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
+def main(configuration_file,
+         config_entry,
+         njobs,
+         nruns,
+         nevents,
+         verbose,
+         qa,
+         output_path,
+         clean_delphes_files):
     global verbose_mode
     verbose_mode = verbose
     parser = configparser.RawConfigParser()
@@ -95,7 +103,9 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
 
     # Config from the config file
     # simulation configuration
-    output_path = os.path.join(os.getcwd(), opt("output_path"))
+    if output_path is None:
+        output_path = ""
+    output_path = os.path.join(os.getcwd(), output_path)
     msg("Output will be found in", f"'{output_path}'")
 
     # detector configuration
@@ -271,9 +281,11 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
             write_to_runner(f"root -b -q -l 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
                             log_file=aod_log_file,
                             check_status=True)
-
-            copy_and_link(delphes_file)
+            if not clean_delphes_files:
+                copy_and_link(delphes_file)
             copy_and_link(aod_file)
+            if clean_delphes_files:
+                write_to_runner(f"rm {delphes_file}")
             write_to_runner("exit 0\n")
     for i in run_list:
         configure_run(i)
@@ -325,7 +337,8 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
     run_cmd("git rev-parse HEAD >> " + summaryfile)
-    run_cmd(f"mv {summaryfile} {output_path}")
+    if os.path.normpath(output_path) != os.getcwd():
+        run_cmd(f"mv {summaryfile} {output_path}")
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
@@ -335,23 +348,29 @@ def main(configuration_file, config_entry, njobs, nruns, nevents, verbose, qa):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("configuration_file", type=str,
-                        help="Input configuration file")
+                        help="Input configuration file e.g. you can use the provided default_configfile.ini or variations of it.")
     parser.add_argument("--entry", "-e", type=str,
                         default="DEFAULT",
-                        help="Entry in the configuration file")
+                        help="Entry in the configuration file, e.g. the INEL or CCBAR entries in the configuration file.")
+    parser.add_argument("--output-path", "-o", type=str,
+                        default=None,
+                        help="Output path, by default the current path is used as output.")
     parser.add_argument("--njobs", "-j", type=int,
                         default=10,
-                        help="Number of concurrent jobs")
+                        help="Number of concurrent jobs, by default 10.")
     parser.add_argument("--nevents", "--ev", type=int,
                         default=1000,
-                        help="Number of simulated events (only in non custom generator mode)")
+                        help="Number of simulated events, by default 1000.")
     parser.add_argument("--nruns", "--runs", "-r", type=int,
                         default=10,
-                        help="Number of runs")
+                        help="Number of runs, by default 10.")
     parser.add_argument("--qa", "-qa", action="store_true",
-                        help="QA mode: runs basic tasks at the end to assess QA")
+                        help="QA mode: runs basic tasks at the end to assess QA.")
     parser.add_argument("--verbose", "-v",
-                        action="store_true", help="Verbose mode")
+                        action="store_true", help="Verbose mode.")
+    parser.add_argument("--clean-delphes", "-c",
+                        action="store_true",
+                        help="Option to clean the delphes files in output and keep only the AODs, by default everything is kept.")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
@@ -359,4 +378,6 @@ if __name__ == "__main__":
          nevents=args.nevents,
          nruns=args.nruns,
          verbose=args.verbose,
+         output_path=args.output_path,
+         clean_delphes_files=args.clean_delphes,
          qa=args.qa)

@@ -151,18 +151,18 @@ void createO2tables(const char* inputFile = "delphes.root",
       auto track = (Track*)tracks->At(itrack);
       auto particle = (GenParticle*)track->Particle.GetObject();
 
-      // fill the label tree
-      Int_t alabel = particle->GetUniqueID();
-      mctracklabel.fLabel = TMath::Abs(alabel);
-      mctracklabel.fLabelMask = 0;
-      tLabels->Fill();
-
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
       if (!smearer.smearTrack(o2track, track->PID)) { // Skipping inefficient/not correctly smeared tracks
         continue;
       }
       o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
+
+      // fill the label tree
+      Int_t alabel = particle->GetUniqueID();
+      mctracklabel.fLabel = TMath::Abs(alabel);
+      mctracklabel.fLabelMask = 0;
+      tLabels->Fill();
 
       // set track information
       mytracks.fCollisionsID = ientry + eventOffset;
