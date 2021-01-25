@@ -61,7 +61,8 @@ def main(mode, input_file="listfiles.txt", out_tag="", verbose=True):
     an = None
     tag = None
     if mode == 0:
-        an = ["o2-analysis-trackqa",
+        an = ["o2-analysis-qa-simple",
+              "o2-analysis-qa-efficiency --make-eff 1 --eta-min -0.8 --eta-max 0.8",
               "o2-analysis-trackextension",
               "o2-analysis-alice3-trackselection"]
         tag = "TrackQA"
