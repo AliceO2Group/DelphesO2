@@ -342,7 +342,7 @@ def main(configuration_file,
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
-        run_cmd(f"./diagnostic_tools/doanalysis.py 0 2 -i {output_list_file}")
+        run_cmd(f"./diagnostic_tools/doanalysis.py TrackQA -i {output_list_file} -M 25 -B 25")
 
 
 if __name__ == "__main__":
