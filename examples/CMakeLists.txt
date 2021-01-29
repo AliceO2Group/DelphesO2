@@ -31,11 +31,11 @@ file(GLOB AOD
   aod/*.h
   )
 
-install(FILES ${PYTHIA8} DESTINATION examples/pythia8)
-install(FILES ${PYTHIA8DECAYS} DESTINATION examples/pythia8/decays)
-install(FILES ${CARDS} DESTINATION examples/cards)
-install(FILES ${LUTS} DESTINATION examples/smearing/luts)
-install(FILES ${SCRIPTS} DESTINATION examples/scripts)
-install(FILES ${SMEARING} DESTINATION examples/smearing)
-install(FILES ${AOD} DESTINATION examples/aod)
+install(FILES    ${PYTHIA8}       DESTINATION examples/pythia8)
+install(FILES    ${PYTHIA8DECAYS} DESTINATION examples/pythia8/decays)
+install(FILES    ${CARDS}         DESTINATION examples/cards)
+install(FILES    ${LUTS}          DESTINATION examples/smearing/luts)
+install(PROGRAMS ${SCRIPTS}       DESTINATION examples/scripts)
+install(FILES    ${SMEARING}      DESTINATION examples/smearing)
+install(FILES    ${AOD}           DESTINATION examples/aod)
 
