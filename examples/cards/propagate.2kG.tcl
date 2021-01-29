@@ -8,6 +8,7 @@ set ExecutionPath {
     ParticlePropagator
     Merger
     Acceptance
+    DecayFilter
     TimeSmearing
     TreeWriter
 }
@@ -38,8 +39,13 @@ module Efficiency Acceptance {
     set EfficiencyFormula $barrel_Acceptance
 }
 
+module DecayFilter DecayFilter {
+    set InputArray Acceptance/tracks
+    set OutputArray tracks
+}
+
 module TimeSmearing TimeSmearing {
-    add InputArray Acceptance/tracks
+    add InputArray DecayFilter/tracks
     add OutputArray tracks
     set TimeResolution $barrel_TimeResolution
 }
