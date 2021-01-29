@@ -22,7 +22,7 @@ RICHdetector::setup(float radius, float length)
 /*****************************************************************/
 
 bool
-RICHdetector::hasRICH(const Track &track)
+RICHdetector::hasRICH(const Track &track) const
 {
   auto x = track.XOuter * 0.1; // [cm]
   auto y = track.YOuter * 0.1; // [cm]
@@ -31,22 +31,24 @@ RICHdetector::hasRICH(const Track &track)
   bool ishit = (fabs(hypot(x, y) - mRadius) < 0.001 && fabs(z) < mLength);
   if (!ishit) return false;
   /** check if above threshold **/
-  int pid = track.PID;
+  auto particle = (GenParticle *)track.Particle.GetObject();
+  int pid = particle->PID;
   double mass = TDatabasePDG::Instance()->GetParticle(pid)->Mass();
   auto thr = cherenkovThreshold(mass);
-  if (track.P < thr) return false; // fixme: P should be the true P
+  if (particle->P < thr) return false;
   return true;
 }
 
 /*****************************************************************/
 
 std::pair<float, float>
-RICHdetector::getMeasuredAngle(const Track &track)
+RICHdetector::getMeasuredAngle(const Track &track) const
 {
   if (!hasRICH(track)) return {0., 0.};
-  int pid = track.PID;
+  auto particle = (GenParticle *)track.Particle.GetObject();
+  int pid = particle->PID;
   double mass = TDatabasePDG::Instance()->GetParticle(pid)->Mass();
-  auto angle = cherenkovAngle(track.P, mass); // fixme: P should be the true P
+  auto angle = cherenkovAngle(particle->P, mass);
   auto nph_av = numberOfPhotons(angle); // average number of photons
   auto nph = gRandom->Poisson(nph_av); // random number of photons
   if (nph <= 0) return {0., 0.};
@@ -58,6 +60,52 @@ RICHdetector::getMeasuredAngle(const Track &track)
   auto sigma = mSigma / sqrt(nph_el);
   angle = gRandom->Gaus(angle, sigma);
   return {angle, sigma};
+}
+
+/*****************************************************************/
+
+float
+RICHdetector::getExpectedAngle(float p, float mass) const
+{
+  auto thr = cherenkovThreshold(mass);
+  if (p < thr) return 0.;
+  return cherenkovAngle(p, mass);
+}
+
+/*****************************************************************/
+
+void
+RICHdetector::makePID(const Track &track, std::array<float, 5> &deltaangle, std::array<float, 5> &nsigma) const
+{
+  double pmass[5] = {0.00051099891, 0.10565800, 0.13957000, 0.49367700, 0.93827200};
+  
+  /** get info **/
+  auto measurement = getMeasuredAngle(track);
+  auto angle = measurement.first;
+  auto anglee = measurement.second;
+  
+  /** perform PID **/
+  double p = track.P;
+  double ep = p * track.ErrorP;
+  double n = mIndex; 
+  for (Int_t ipart = 0; ipart < 5; ++ipart) {
+    auto m = pmass[ipart];
+    auto A = m * m + p * p;
+    auto sqrtA = sqrt(A);
+    auto B = n * p;
+    auto B2 = B * B;
+    auto exp_angle = getExpectedAngle(p, m);
+    auto exp_sigma = ( 1. / sqrt(1. - A/B2) ) * ( ( n * p * p / sqrtA - m * sqrtA ) / B2 ) * ep;
+    exp_sigma = sqrt(anglee * anglee + exp_sigma * exp_sigma);
+    if (anglee <= 0. || exp_angle <= 0.) {
+      deltaangle[ipart] = -1000.;
+      nsigma[ipart] = 1000.;
+      continue;
+    }
+    deltaangle[ipart] = angle - exp_angle;
+    nsigma[ipart] = deltaangle[ipart] / exp_sigma; // should also consider the momentum resolution
+  }
+
 }
 
 /*****************************************************************/

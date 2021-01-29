@@ -97,7 +97,7 @@ rich(const char *inputFile = "delphes.root",
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
     
-    // loop over tracks, smear and store TOF tracks
+    // loop over tracks and smear
     std::vector<Track *> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
 
@@ -107,17 +107,19 @@ rich(const char *inputFile = "delphes.root",
 
       auto pdg = std::abs(track->PID);
       auto ipdg = pidmap[pdg];
-      auto m = pidmass[ipdg];
-      auto p = track->P;
-      auto pt = track->PT;
+      auto true_m = pidmass[ipdg];
+      auto true_p = track->P;
+      auto true_pt = track->PT;
 
-      if (std::fabs(track->Eta) < 0.5) {
-	hGenP[ipdg]->Fill(p);
-	hGenPt[ipdg]->Fill(pt);
-      }
+      if (std::fabs(track->Eta) > 0.5) continue;
+
+      hGenP[ipdg]->Fill(true_p);
+      hGenPt[ipdg]->Fill(true_pt);
       
       // smear track
       if (!smearer.smearTrack(*track)) continue;
+      auto p = track->P;
+      auto pt = track->PT;
 
       // select primaries based on 3 sigma DCA cuts
       if (fabs(track->D0 / track->ErrorD0) > 3.) continue;
@@ -132,22 +134,20 @@ rich(const char *inputFile = "delphes.root",
       auto anglee = measurement.second;
       if (anglee == 0.) continue;
 
-      hRecP[ipdg]->Fill(p);
-      hRecPt[ipdg]->Fill(pt);
+      hRecP[ipdg]->Fill(true_p);
+      hRecPt[ipdg]->Fill(true_pt);
       
       hAngleP->Fill(p, angle);
       hAngleP_true[ipdg]->Fill(p, angle);
 
-      // fill nsigma
+      // make pid
+      std::array<float, 5> deltaangle, nsigma;
+      richdetector.makePID(*track, deltaangle, nsigma);
       for (int i = 0; i < 5; ++i) {
-	auto _m = pidmass[i];
-	if (p <= richdetector.cherenkovThreshold(_m)) continue;
-	auto _angle = richdetector.cherenkovAngle(p, _m);
-	auto nsigma = (angle - _angle) / anglee;
-	hNsigmaP[i]->Fill(p, nsigma);
-	hNsigmaPt[i]->Fill(pt, nsigma);
-	hNsigmaP_true[i][ipdg]->Fill(p, nsigma);	
-	hNsigmaPt_true[i][ipdg]->Fill(pt, nsigma);	
+	hNsigmaP[i]->Fill(p, nsigma[i]);
+	hNsigmaPt[i]->Fill(pt, nsigma[i]);
+	hNsigmaP_true[i][ipdg]->Fill(p, nsigma[i]);	
+	hNsigmaPt_true[i][ipdg]->Fill(pt, nsigma[i]);	
       }
       
     }

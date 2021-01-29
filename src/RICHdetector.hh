@@ -18,14 +18,16 @@ public:
   ~RICHdetector() = default;
   
   void setup(float radius, float length);  
-  bool hasRICH(const Track &track);
+  bool hasRICH(const Track &track) const;
 
   void setIndex(float val) { mIndex = val; };
   void setRadiatorLength(float val) { mRadiatorLength = val; };
   void setEfficiency(float val) { mEfficiency = val; };
   void setSigma(float val) { mSigma = val; };
 
-  std::pair<float, float> getMeasuredAngle(const Track &track);
+  void makePID(const Track &track, std::array<float, 5> &deltaangle, std::array<float, 5> &nsigma) const;
+  std::pair<float, float> getMeasuredAngle(const Track &track) const;
+  float getExpectedAngle(float p, float mass) const;
   
   double cherenkovAngle(double p, double m) const {
     return acos( sqrt( m * m + p * p ) / ( mIndex * p ) ); };
@@ -45,7 +47,7 @@ protected:
 
   float mIndex = 1.03;
   float mRadiatorLength = 2.; // [cm]
-  float mEfficiency = 0.25;
+  float mEfficiency = 0.4;
   float mSigma = 7.e-3; // [rad]
   float mMinPhotons = 3.;
   

@@ -13,13 +13,14 @@ RICHETA=1.443   # RICH max pseudorapidity
 RICHETA=`awk -v a=$RICHRAD -v b=$RICHLEN 'BEGIN {th=atan2(a,b)*0.5; sth=sin(th); cth=cos(th); print -log(sth/cth)}'`
 echo "maxEta = $RICHETA"
 
-LUTPATH=$HOME/cernbox/ALICE3/DelphesO2/LUTS
-
 ### copy relevant files in the working directory
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
+LUTPATH=$HOME/cernbox/ALICE3/DelphesO2/LUTS
+tar zxf $LUTPATH/lutCovm.2kG.20cm.default.tgz -C .
+tar zxf $LUTPATH/lutCovm.5kG.20cm.default.tgz -C .
 for I in el mu pi ka pr; do
-    ln -sf $LUTPATH/lutCovm.$I.2kG.20cm.default.dat lutCovm.$I.2kG.dat;
-    ln -sf $LLUTPATH/lutCovm.$I.5kG.20cm.default.dat lutCovm.$I.5kG.dat;
+    ln -sf lutCovm.$I.2kG.20cm.default.dat lutCovm.$I.2kG.dat;
+    ln -sf lutCovm.$I.5kG.20cm.default.dat lutCovm.$I.5kG.dat;
 done
 cp $DELPHESO2_ROOT/examples/smearing/rich.C .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_inel.cfg pythia8.cfg
@@ -42,7 +43,7 @@ sed -i -e "s/double rich_length = .*$/double rich_length = ${RICHLEN}\;/" rich.C
 sed -i -e "s/set barrel_Acceptance .*$/set barrel_Acceptance \{ 0.0 + 1.0 * fabs(eta) < ${RICHETA} \}/" propagate.tcl
 
 ### loop over runs
-rm .running.* delphes.*.root
+rm -f .running.* delphes.*.root
 for I in $(seq 1 $NRUNS); do
 
     ### wait for a free slot
