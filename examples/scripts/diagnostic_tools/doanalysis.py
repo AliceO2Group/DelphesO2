@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""
+Script to run o2 analyses on AODs.
+This script is used to run the basic QA checks on the productions.
+Several analyses are implemented already, you can pick yours and run e.g.:
+`./doanalysis.py TrackQA -i ../AODRun5.0.root`
+Results will be available for each batch of files in the `AnalysisResults` directory.
+You can check the help of the script (i.e. `./doanalysis.py --h`) to have information on the available options and workflows.
+"""
+
 import argparse
 import multiprocessing
 from itertools import islice
@@ -174,7 +183,8 @@ def main(mode,
             for i, lines in enumerate(files_per_batch):
                 if not os.path.isdir(f"AnalysisResults/{i}"):
                     os.makedirs(f"AnalysisResults/{i}")
-                run_list.append(f"AnalysisResults/{i}/ListForRun5Analysis.{i}.txt")
+                run_list.append(
+                    f"AnalysisResults/{i}/ListForRun5Analysis.{i}.txt")
                 with open(run_list[-1], "w") as f:
                     for j in lines:
                         f.write(j.strip() + "\n")
