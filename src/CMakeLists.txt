@@ -12,6 +12,7 @@ set(HEADERS
   VertexFitter.hh
   TrackSmearer.hh
   TrackUtils.hh
+  TOFLayer.hh
   RICHdetector.hh
   )
 
