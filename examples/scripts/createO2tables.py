@@ -44,14 +44,21 @@ def msg(*args, color=bcolors.BOKBLUE):
     print(color, *args, bcolors.ENDC)
 
 
+def fatal_msg(*args):
+    msg("[FATAL]", *args, color=bcolors.BFAIL)
+    raise ValueError("Fatal Error!")
+
+
 def run_cmd(cmd, comment=""):
-    verbose_msg("Running", f"'{cmd}'", comment)
+    verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
     try:
         content = os.popen(cmd).read()
         if content:
-            verbose_msg("++", content)
+            verbose_msg("++", content.strip())
+        if "Encountered error" in content:
+            msg("[WARNING] Error encountered runtime in", cmd, color=bcolors.BWARNING)
     except:
-        raise ValueError("Error!")
+        fatal_msg("Error while running", cmd)
 
 
 def process_run(run_number):
@@ -97,8 +104,8 @@ def main(configuration_file,
             return o
         except:
             if require:
-                raise ValueError("Missing entry", entry,
-                                 "in file", configuration_file)
+                fatal_msg("Missing entry", entry,
+                          "in file", configuration_file)
             return None
 
     # Config from the config file
@@ -151,8 +158,8 @@ def main(configuration_file,
     else:
         def check_duplicate(option_name):
             if f" {option_name}" in custom_gen:
-                raise ValueError(f"Remove '{option_name}' from", custom_gen,
-                                 "as it will be automatically set")
+                fatal_msg(f"Remove '{option_name}' from", custom_gen,
+                          "as it will be automatically set")
         for i in ["--output", "-o", "--nevents", "-n"]:
             check_duplicate(i)
         msg("Using custom generator", custom_gen)
@@ -191,9 +198,7 @@ def main(configuration_file,
                     has_it = True
                     break
             if not has_it:
-                raise ValueError(config_file,
-                                 "does not have",
-                                 config_string)
+                fatal_msg(config_file, "does not have", config_string)
 
     # set magnetic field
     set_config("propagate.tcl", "set barrel_Bz", f"{bField}""e\-1/")
@@ -228,13 +233,13 @@ def main(configuration_file,
                 Writes commands to runner
                 """
                 if log_file is not None:
-                    line += f" &> {log_file}"
+                    line += f" &> {log_file} 2>&1"
                 line += "\n"
                 f_run.write(line)
                 if check_status:
                     f_run.write("\nReturnValue=$?\n")
                     f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
-                    f_run.write("  echo \"Encountered error\"\n")
+                    f_run.write(f"  echo \"Encountered error with command '{line}'\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
 
@@ -291,8 +296,12 @@ def main(configuration_file,
         configure_run(i)
 
     # Compiling the table creator macro once for all
-    run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null",
+    run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null 2>&1",
             comment="to compile the table creator only once, before running")
+    if not os.path.isfile("createO2tables_C.so"):
+        run_cmd("root -l -b -q 'createO2tables.C+(\"\")'",
+                comment="to compile with full log")
+        fatal_msg("'createO2tables.C' did not compile!")
     total_processing_time = time.time()
     msg(" --- start processing the runs ", color=bcolors.HEADER)
     with multiprocessing.Pool(processes=njobs) as pool:
@@ -342,7 +351,8 @@ def main(configuration_file,
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
-        run_cmd(f"./diagnostic_tools/doanalysis.py TrackQA -i {output_list_file} -M 25 -B 25")
+        run_cmd(
+            f"./diagnostic_tools/doanalysis.py TrackQA -i {output_list_file} -M 25 -B 25")
 
 
 if __name__ == "__main__":
