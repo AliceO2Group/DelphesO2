@@ -239,7 +239,7 @@ def main(configuration_file,
                 if check_status:
                     f_run.write("\nReturnValue=$?\n")
                     f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
-                    f_run.write(f"  echo \"Encountered error with command '{line}'\"\n")
+                    f_run.write(f"  echo \"Encountered error with command '{line.strip()}'\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
 
