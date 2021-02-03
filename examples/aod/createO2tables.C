@@ -15,6 +15,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "CommonDataFormat/BunchFilling.h"
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
+#include "DataFormatsFT0/RecPoints.h"
 
 // DelphesO2 includes
 #include "TrackSmearer.hh"
@@ -28,6 +29,32 @@ const double Bz = 0.2;          // [T]
 const double tof_radius = 100.; // [cm]
 const double tof_length = 200.; // [cm]
 const double tof_sigmat = 0.02; // [ns]
+
+class TrackAlice3 : public o2::track::TrackParCov
+{
+  using timeEst = o2::dataformats::TimeStampWithError<float, float>;
+
+ public:
+  TrackAlice3() = default;
+  ~TrackAlice3() = default;
+  TrackAlice3(const TrackAlice3& src) = default;
+  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), mTimeMUS{t, te}, mLabel{label} {}
+
+  const timeEst& getTimeMUS() const { return mTimeMUS; }
+  timeEst& getTimeMUS() { return mTimeMUS; }
+  void setTimeMUS(const timeEst& t) { mTimeMUS = t; }
+  void setTimeMUS(float t, float te)
+  {
+    mTimeMUS.setTimeStamp(t);
+    mTimeMUS.setTimeStampError(te);
+  }
+
+  void print() const;
+  const int mLabel;
+
+ private:
+  timeEst mTimeMUS; ///< time estimate in ns
+};
 
 void createO2tables(const char* inputFile = "delphes.root",
                     const char* outputFile = "AODRun5.root",
@@ -144,7 +171,7 @@ void createO2tables(const char* inputFile = "delphes.root",
     fOffsetLabel += particles->GetEntries();
 
     // loop over tracks
-    std::vector<O2Track> tracks_for_vertexing;
+    std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<Track*> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
 
@@ -216,7 +243,7 @@ void createO2tables(const char* inputFile = "delphes.root",
         mytracks.fTOFExpMom = -999.f;
       }
       if (do_vertexing) {
-        tracks_for_vertexing.push_back(o2track);
+        tracks_for_vertexing.push_back(TrackAlice3{o2track, float(0), 1, TMath::Abs(alabel)});
       }
       fTracks->Fill();
       // fill histograms
@@ -233,18 +260,29 @@ void createO2tables(const char* inputFile = "delphes.root",
       o2::BunchFilling bcfill;
       bcfill.setDefault();
       o2::vertexing::PVertexer vertexer;
-      vertexer.setValidateWithFT0(kFALSE);
+      vertexer.setValidateWithIR(kFALSE);
       vertexer.setBunchFilling(bcfill);
       vertexer.init();
 
-      gsl::span<const o2::MCCompLabel> lblITS;
-      gsl::span<const O2Track> span_tracks_for_vertexing(tracks_for_vertexing);
+      std::vector<o2::MCCompLabel> lblITS;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
       std::vector<o2::vertexing::V2TRef> v2tRefs;
       std::vector<o2::MCEventLabel> lblVtx;
+      lblVtx.emplace_back(ientry + eventOffset, 1);
+      std::vector<o2::dataformats::GlobalTrackID> idxVec; // here we will the global IDs of all used tracks
+      idxVec.reserve(tracks_for_vertexing.size());
+      for (unsigned i = 0; i < tracks_for_vertexing.size(); i++) {
+        lblITS.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
+        idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
+      }
+      std::vector<o2::ft0::RecPoints> ft0Data;
       vertexer.setStartIR({0, 0});
-      const int n_vertices = vertexer.process(span_tracks_for_vertexing, vertices, vertexTrackIDs, v2tRefs);
+      const int n_vertices = vertexer.process(gsl::span<const TrackAlice3>{tracks_for_vertexing},
+                                              idxVec, ft0Data, vertices, vertexTrackIDs, v2tRefs,
+                                              gsl::span<const o2::MCCompLabel>{lblITS},
+                                              gsl::span<const o2::MCCompLabel>{lblITS},
+                                              lblVtx);
       Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
         collision.fPosX = 0.f;
