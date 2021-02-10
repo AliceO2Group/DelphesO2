@@ -5,6 +5,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TMath.h"
 #include "TChain.h"
 #include "TClonesArray.h"
+#include "TRandom3.h"
 
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
@@ -25,11 +26,16 @@ R__LOAD_LIBRARY(libDelphesO2)
 
 #include "createO2tables.h"
 
+// Detector parameters
 const double Bz = 0.2;          // [T]
 const double tof_radius = 100.; // [cm]
 const double tof_length = 200.; // [cm]
 const double tof_sigmat = 0.02; // [ns]
 
+// Simulation parameters
+const bool do_vertexing = true;
+
+// Class to hold the information for the O2 vertexing
 class TrackAlice3 : public o2::track::TrackParCov
 {
   using timeEst = o2::dataformats::TimeStampWithError<float, float>;
@@ -58,8 +64,7 @@ class TrackAlice3 : public o2::track::TrackParCov
 
 void createO2tables(const char* inputFile = "delphes.root",
                     const char* outputFile = "AODRun5.root",
-                    int eventOffset = 0,
-                    const bool do_vertexing = true)
+                    int eventOffset = 0)
 {
   if ((inputFile != NULL) && (inputFile[0] == '\0')) {
     Printf("input file is empty, returning");
@@ -282,7 +287,6 @@ void createO2tables(const char* inputFile = "delphes.root",
       vertexer.setStartIR({0, 0});
       const int n_vertices = vertexer.process(gsl::span<const TrackAlice3>{tracks_for_vertexing},
                                               idxVec, ft0Data, vertices, vertexTrackIDs, v2tRefs,
-                                              gsl::span<const o2::MCCompLabel>{lblITS},
                                               gsl::span<const o2::MCCompLabel>{lblITS},
                                               lblVtx);
       Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
