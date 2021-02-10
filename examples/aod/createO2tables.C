@@ -243,7 +243,9 @@ void createO2tables(const char* inputFile = "delphes.root",
         mytracks.fTOFExpMom = -999.f;
       }
       if (do_vertexing) {
-        tracks_for_vertexing.push_back(TrackAlice3{o2track, float(0), 1, TMath::Abs(alabel)});
+        o2::InteractionRecord ir(ientry + eventOffset, 0);
+        const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
+        tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
       fTracks->Fill();
       // fill histograms
