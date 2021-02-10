@@ -348,8 +348,16 @@ void createO2tables(const char* inputFile = "delphes.root",
     tCollisionLabels->Fill();
   }
 
-  fout->mkdir("TF_0");
-  fout->cd("TF_0");
+  TString out_dir = outputFile;
+  out_dir.ReplaceAll(".root", "");
+  out_dir.ReplaceAll("AODRun5.", "");
+  if (out_dir.IsDec()) {
+    out_dir = "TF_0";
+  } else {
+    out_dir = Form("TF_%010i", out_dir.Atoi());
+  }
+  fout->mkdir(out_dir);
+  fout->cd(out_dir);
   TreeList->Write();
   fout->ls();
   fout->Close();
