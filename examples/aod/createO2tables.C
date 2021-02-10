@@ -5,6 +5,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TMath.h"
 #include "TChain.h"
 #include "TClonesArray.h"
+#include "TRandom3.h"
 
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
@@ -15,23 +16,55 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "CommonDataFormat/BunchFilling.h"
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
+#include "DataFormatsFT0/RecPoints.h"
 
 // DelphesO2 includes
 #include "TrackSmearer.hh"
 #include "TOFLayer.hh"
+#include "RICHdetector.hh"
 #include "TrackUtils.hh"
 
 #include "createO2tables.h"
 
+// Detector parameters
 const double Bz = 0.2;          // [T]
 const double tof_radius = 100.; // [cm]
 const double tof_length = 200.; // [cm]
 const double tof_sigmat = 0.02; // [ns]
 
+// Simulation parameters
+const bool do_vertexing = true;
+
+// Class to hold the information for the O2 vertexing
+class TrackAlice3 : public o2::track::TrackParCov
+{
+  using timeEst = o2::dataformats::TimeStampWithError<float, float>;
+
+ public:
+  TrackAlice3() = default;
+  ~TrackAlice3() = default;
+  TrackAlice3(const TrackAlice3& src) = default;
+  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), mTimeMUS{t, te}, mLabel{label} {}
+
+  const timeEst& getTimeMUS() const { return mTimeMUS; }
+  timeEst& getTimeMUS() { return mTimeMUS; }
+  void setTimeMUS(const timeEst& t) { mTimeMUS = t; }
+  void setTimeMUS(float t, float te)
+  {
+    mTimeMUS.setTimeStamp(t);
+    mTimeMUS.setTimeStampError(te);
+  }
+
+  void print() const;
+  const int mLabel;
+
+ private:
+  timeEst mTimeMUS; ///< time estimate in ns
+};
+
 void createO2tables(const char* inputFile = "delphes.root",
                     const char* outputFile = "AODRun5.root",
-                    int eventOffset = 0,
-                    const bool do_vertexing = false)
+                    int eventOffset = 0)
 {
   if ((inputFile != NULL) && (inputFile[0] == '\0')) {
     Printf("input file is empty, returning");
@@ -143,7 +176,7 @@ void createO2tables(const char* inputFile = "delphes.root",
     fOffsetLabel += particles->GetEntries();
 
     // loop over tracks
-    std::vector<o2::dataformats::TrackTPCITS> global_tracks;
+    std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<Track*> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
 
@@ -215,10 +248,9 @@ void createO2tables(const char* inputFile = "delphes.root",
         mytracks.fTOFExpMom = -999.f;
       }
       if (do_vertexing) {
-        o2::dataformats::TrackTPCITS tracktpcits(o2track);
-        tracktpcits.setTimeMUS(1, 0.1);
-        tracktpcits.setChi2Refit(1.f);
-        global_tracks.push_back(tracktpcits);
+        o2::InteractionRecord ir(ientry + eventOffset, 0);
+        const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
+        tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
       fTracks->Fill();
       // fill histograms
@@ -232,51 +264,72 @@ void createO2tables(const char* inputFile = "delphes.root",
     collision.fBCsID = ientry + eventOffset;
     bc.fGlobalBC = ientry + eventOffset;
     if (do_vertexing) { // Performing vertexing
-
       o2::BunchFilling bcfill;
       bcfill.setDefault();
       o2::vertexing::PVertexer vertexer;
-      vertexer.setValidateWithFT0(kFALSE);
+      vertexer.setValidateWithIR(kFALSE);
       vertexer.setBunchFilling(bcfill);
       vertexer.init();
 
-      gsl::span<const o2::MCCompLabel> lblITS, lblTPC;
-      gsl::span<const o2::dataformats::TrackTPCITS> tracksITSTPC(global_tracks);
-      gsl::span<const o2::ft0::RecPoints> ft0Data;
+      std::vector<o2::MCCompLabel> lblITS;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
       std::vector<o2::vertexing::V2TRef> v2tRefs;
       std::vector<o2::MCEventLabel> lblVtx;
+      lblVtx.emplace_back(ientry + eventOffset, 1);
+      std::vector<o2::dataformats::GlobalTrackID> idxVec; // here we will the global IDs of all used tracks
+      idxVec.reserve(tracks_for_vertexing.size());
+      for (unsigned i = 0; i < tracks_for_vertexing.size(); i++) {
+        lblITS.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
+        idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
+      }
+      std::vector<o2::ft0::RecPoints> ft0Data;
       vertexer.setStartIR({0, 0});
-      Printf("Found %i vertices",
-             vertexer.process(tracksITSTPC, ft0Data, vertices, vertexTrackIDs, v2tRefs, lblITS, lblTPC, lblVtx));
-
-      collision.fPosX = vertices[0].getX();
-      collision.fPosY = vertices[0].getY();
-      collision.fPosZ = vertices[0].getZ();
-      collision.fCovXX = vertices[0].getSigmaX2();
-      collision.fCovXY = vertices[0].getSigmaXY();
-      collision.fCovXZ = vertices[0].getSigmaXZ();
-      collision.fCovYY = vertices[0].getSigmaY2();
-      collision.fCovYZ = vertices[0].getSigmaYZ();
-      collision.fCovZZ = vertices[0].getSigmaZ2();
-      collision.fChi2 = vertices[0].getChi2();
-      collision.fN = vertices[0].getNContributors();
+      const int n_vertices = vertexer.process(gsl::span<const TrackAlice3>{tracks_for_vertexing},
+                                              idxVec, ft0Data, vertices, vertexTrackIDs, v2tRefs,
+                                              gsl::span<const o2::MCCompLabel>{lblITS},
+                                              lblVtx);
+      Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
+      if (n_vertices == 0) {
+        collision.fPosX = 0.f;
+        collision.fPosY = 0.f;
+        collision.fPosZ = 0.f;
+        collision.fCovXX = 0.f;
+        collision.fCovXY = 0.f;
+        collision.fCovXZ = 0.f;
+        collision.fCovYY = 0.f;
+        collision.fCovYZ = 0.f;
+        collision.fCovZZ = 0.f;
+        collision.fChi2 = 0.01f;
+        collision.fN = 0;
+      } else {
+        collision.fPosX = vertices[0].getX();
+        collision.fPosY = vertices[0].getY();
+        collision.fPosZ = vertices[0].getZ();
+        collision.fCovXX = vertices[0].getSigmaX2();
+        collision.fCovXY = vertices[0].getSigmaXY();
+        collision.fCovXZ = vertices[0].getSigmaXZ();
+        collision.fCovYY = vertices[0].getSigmaY2();
+        collision.fCovYZ = vertices[0].getSigmaYZ();
+        collision.fCovZZ = vertices[0].getSigmaZ2();
+        collision.fChi2 = vertices[0].getChi2();
+        collision.fN = vertices[0].getNContributors();
+      }
     } else {
-      collision.fPosX = 0.;
-      collision.fPosY = 0.;
-      collision.fPosZ = 0.;
+      collision.fPosX = 0.f;
+      collision.fPosY = 0.f;
+      collision.fPosZ = 0.f;
       collision.fCovXX = 0.f;
       collision.fCovXY = 0.f;
       collision.fCovXZ = 0.f;
       collision.fCovYY = 0.f;
       collision.fCovYZ = 0.f;
       collision.fCovZZ = 0.f;
-      collision.fChi2 = 0.01;
+      collision.fChi2 = 0.01f;
       collision.fN = tracks->GetEntries();
     }
-    collision.fCollisionTime = tzero[0] * 1.e3;    // [ps]
-    collision.fCollisionTimeRes = tzero[1] * 1.e3; // [ps]
+    collision.fCollisionTime = tzero[0];    // [ns]
+    collision.fCollisionTimeRes = tzero[1]; // [ns]
     tEvents->Fill();
     tBC->Fill();
 
@@ -295,8 +348,16 @@ void createO2tables(const char* inputFile = "delphes.root",
     tCollisionLabels->Fill();
   }
 
-  fout->mkdir("TF_0");
-  fout->cd("TF_0");
+  TString out_dir = outputFile;
+  out_dir.ReplaceAll(".root", "");
+  out_dir.ReplaceAll("AODRun5.", "");
+  if (out_dir.IsDec()) {
+    out_dir = "TF_0";
+  } else {
+    out_dir = Form("TF_%010i", out_dir.Atoi());
+  }
+  fout->mkdir(out_dir);
+  fout->cd(out_dir);
   TreeList->Write();
   fout->ls();
   fout->Close();

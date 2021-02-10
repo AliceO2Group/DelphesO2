@@ -192,7 +192,7 @@ def main(mode,
 
     if type(input_file) is list:
         if batch_size == 1:
-            input_file_list = input_file
+            input_file_list = os.path.join(os.getcwd(), input_file)
         else:
             input_file_list = build_list_of_files(input_file)
 
@@ -201,7 +201,7 @@ def main(mode,
             lines = f.readlines()
             input_file_list = build_list_of_files(lines)
     else:
-        input_file_list = [input_file]
+        input_file_list = [os.path.join(os.getcwd(), input_file)]
 
     if dpl_configuration_file is not None:
         dpl_configuration_file = os.path.join(
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument("--input", "-i",
                         type=str,
                         nargs="+",
-                        default="listfiles.txt",
+                        default=["listfiles.txt"],
                         help="Input file")
     parser.add_argument("--tag", "-t",
                         type=str,
