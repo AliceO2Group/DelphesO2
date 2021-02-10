@@ -328,8 +328,8 @@ void createO2tables(const char* inputFile = "delphes.root",
       collision.fChi2 = 0.01f;
       collision.fN = tracks->GetEntries();
     }
-    collision.fCollisionTime = tzero[0] * 1.e3;    // [ps]
-    collision.fCollisionTimeRes = tzero[1] * 1.e3; // [ps]
+    collision.fCollisionTime = tzero[0];    // [ns]
+    collision.fCollisionTimeRes = tzero[1]; // [ns]
     tEvents->Fill();
     tBC->Fill();
 
