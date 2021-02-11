@@ -27,10 +27,18 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "createO2tables.h"
 
 // Detector parameters
-const double Bz = 0.2;          // [T]
+const double Bz = 0.2; // [T]
+// TOF
 const double tof_radius = 100.; // [cm]
 const double tof_length = 200.; // [cm]
 const double tof_sigmat = 0.02; // [ns]
+// RICH
+const double rich_radius = 100.; // [cm]
+const double rich_length = 200.; // [cm]
+const double rich_index = 1.03;
+const double rich_radiator_length = 2.;
+const double rich_efficiency = 0.4;
+const double rich_sigma = 7.e-3;
 
 // Simulation parameters
 const bool do_vertexing = true;
@@ -101,11 +109,19 @@ void createO2tables(const char* inputFile = "delphes.root",
   // TOF layer
   o2::delphes::TOFLayer toflayer;
   toflayer.setup(tof_radius, tof_length, tof_sigmat);
+  // RICH layer
+  o2::delphes::RICHdetector richdetector;
+  richdetector.setup(rich_radius, rich_length);
+  richdetector.setIndex(rich_index);
+  richdetector.setRadiatorLength(rich_radiator_length);
+  richdetector.setEfficiency(rich_efficiency);
+  richdetector.setSigma(rich_sigma);
 
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
   TTree* tBC = MakeTreeO2bc();
   TTree* fTracks = MakeTreeO2track();
+  TTree* fRICH = MakeTreeO2rich();
   TTree* tEvents = MakeTreeO2collision();
   TTree* tMCvtx = MakeTreeO2mccollision();
   TTree* tKinematics = MakeTreeO2mcparticle();
@@ -122,6 +138,7 @@ void createO2tables(const char* inputFile = "delphes.root",
   const UInt_t mTrackSignal = 0xFFFFFFFF; // PID signals and track length
 
   int fOffsetLabel = 0;
+  int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
 
     // Load selected branches with data from specified event
@@ -238,12 +255,34 @@ void createO2tables(const char* inputFile = "delphes.root",
         mytracks.fTOFSignal = -999.f;
         mytracks.fTOFExpMom = -999.f;
       }
+      // check if has hit on RICH
+      if (richdetector.hasRICH(*track)) {
+        const auto measurement = richdetector.getMeasuredAngle(*track);
+        rich.fCollisionsID = ientry + eventOffset;
+        rich.fTracksID = fTrackCounter; // Index in the Track table
+        rich.fRICHSignal = measurement.first;
+        rich.fRICHSignalError = measurement.second;
+        std::array<float, 5> deltaangle, nsigma;
+        richdetector.makePID(*track, deltaangle, nsigma);
+        rich.fRICHDeltaEl = deltaangle[0];
+        rich.fRICHDeltaMu = deltaangle[1];
+        rich.fRICHDeltaPi = deltaangle[2];
+        rich.fRICHDeltaKa = deltaangle[3];
+        rich.fRICHDeltaPr = deltaangle[4];
+        rich.fRICHNsigmaEl = nsigma[0];
+        rich.fRICHNsigmaMu = nsigma[1];
+        rich.fRICHNsigmaPi = nsigma[2];
+        rich.fRICHNsigmaKa = nsigma[3];
+        rich.fRICHNsigmaPr = nsigma[4];
+        fRICH->Fill();
+      }
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
         tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
       fTracks->Fill();
+      fTrackCounter++;
       // fill histograms
     }
 
@@ -345,10 +384,10 @@ void createO2tables(const char* inputFile = "delphes.root",
   TString out_dir = outputFile;
   out_dir.ReplaceAll(".root", "");
   out_dir.ReplaceAll("AODRun5.", "");
-  if (out_dir.IsDec()) {
+  if (!out_dir.IsDec()) {
     out_dir = "TF_0";
   } else {
-    out_dir = Form("TF_%010i", out_dir.Atoi());
+    out_dir = Form("TF_%i", out_dir.Atoi());
   }
   fout->mkdir(out_dir);
   fout->cd(out_dir);

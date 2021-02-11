@@ -115,6 +115,11 @@ def main(configuration_file,
         output_path = ""
     output_path = os.path.join(os.getcwd(), output_path)
     msg("Output will be found in", f"'{output_path}'")
+    if not os.path.isdir(output_path):
+        msg("Creating output path")
+        os.makedirs(output_path)
+        if not os.path.isdir(output_path):
+            raise RuntimeError("Cannot find output path", output_path)
 
     # detector configuration
     bField = opt("bField")
