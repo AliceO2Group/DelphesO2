@@ -14,20 +14,29 @@ void fatInit_its3(float field = 0.5, float rmin = 100.) {
   fat.SetBField(field);
   fat.SetdNdEtaCent(400.);
 
-  Double_t x0BP = 0.0014;     // 500 mum Be
-  Double_t xrhoBP = 9.24e-02; // 500 mum Be
+  const Double_t x0BP = 0.0014;     // 500 mum Be
+  const Double_t xrhoBP = 9.24e-02; // 500 mum Be
 
   // dummy vertex for matrix calculation
   fat.AddLayer((char *)"vertex", 0.0, 0, 0);
   fat.AddLayer((char *)"bpipe", 1.625, x0BP, xrhoBP); // 500 mum Be beam pipe
 
-  Double_t x0IB = 0.0005;       // X/X0 of the inner barrel (first three layers)
-  Double_t x0OB = 0.008;        // X/X0 of the outer barrel
-  Double_t resRPhi = 0.0006;    // Resolution in Rphi
-  Double_t resZ = 0.0006;       // Resolution in Z
-  Double_t eff = 0.98;          // Efficiency
-  Double_t xrhoIB = 1.1646e-02; // Surface density for 50 mum thick Si
-  Double_t xrhoOB = 1.1646e-01; // Surface density for 500 mum thick Si
+  // X/X0 of the inner barrel first three layers), values taken from the LOI of
+  // the ITS3
+  const Double_t x0IB = 0.0005;
+  // X/X0 of the outer barrel, values taken from the TDR of ITS upgrade
+  const Double_t x0OB = 0.008;
+  // Resolution in Rphi values taken from A. Kalweit (table presented at the
+  // Physics Forum on 24th Feb. 2021) the value is in the middle of 15 and 30
+  // micron pitch
+  const Double_t resRPhi = 0.0006;
+  // Resolution in Z, values taken from A. Kalweit (table presented at the
+  // Physics Forum on 24th Feb. 2021) the value is in the middle of 15 and 30
+  // micron pitch
+  const Double_t resZ = 0.0006;
+  const Double_t eff = 0.98;          // Efficiency (lower limit)
+  const Double_t xrhoIB = 1.1646e-02; // Surface density for 50 mum thick Si
+  const Double_t xrhoOB = 1.1646e-01; // Surface density for 500 mum thick Si
 
   const Double_t x0Foam = 0.0008;   // X0 ~710cm for 0.6cm thick foam
   float foam_radius = 9.370 * x0IB; // width of a chip
