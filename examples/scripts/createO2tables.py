@@ -56,7 +56,8 @@ def run_cmd(cmd, comment=""):
         if content:
             verbose_msg("++", content.strip())
         if "Encountered error" in content:
-            msg("[WARNING] Error encountered runtime in", cmd, color=bcolors.BWARNING)
+            msg("[WARNING] Error encountered runtime in",
+                cmd, color=bcolors.BWARNING)
     except:
         fatal_msg("Error while running", cmd)
 
@@ -239,7 +240,8 @@ def main(configuration_file,
                 if check_status:
                     f_run.write("\nReturnValue=$?\n")
                     f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
-                    f_run.write(f"  echo \"Encountered error with command '{line.strip()}'\"\n")
+                    f_run.write(
+                        f"  echo \"Encountered error with command '{line.strip()}'\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
 
@@ -270,7 +272,9 @@ def main(configuration_file,
                 # Adjust configuration file
                 with open(generator_cfg, "a") as f_cfg:
                     # number of events and random seed
+                    f_cfg.write(f"\n\n\n#### Additional part ###\n\n\n\n")
                     f_cfg.write(f"Main:numberOfEvents {nevents}\n")
+                    f_cfg.write(f"Random:setSeed = on\n")
                     f_cfg.write(f"Random:seed = {run_number}\n")
                     # collision time spread [mm/c]
                     f_cfg.write("Beams:allowVertexSpread on \n")
