@@ -45,17 +45,7 @@ class TrackAlice3 : public o2::track::TrackParCov
   ~TrackAlice3() = default;
   TrackAlice3(const TrackAlice3& src) = default;
   TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), mTimeMUS{t, te}, mLabel{label} {}
-
   const timeEst& getTimeMUS() const { return mTimeMUS; }
-  timeEst& getTimeMUS() { return mTimeMUS; }
-  void setTimeMUS(const timeEst& t) { mTimeMUS = t; }
-  void setTimeMUS(float t, float te)
-  {
-    mTimeMUS.setTimeStamp(t);
-    mTimeMUS.setTimeStampError(te);
-  }
-
-  void print() const;
   const int mLabel;
 
  private:
@@ -177,6 +167,7 @@ void createO2tables(const char* inputFile = "delphes.root",
 
     // loop over tracks
     std::vector<TrackAlice3> tracks_for_vertexing;
+    std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
 
@@ -271,7 +262,7 @@ void createO2tables(const char* inputFile = "delphes.root",
       vertexer.setBunchFilling(bcfill);
       vertexer.init();
 
-      std::vector<o2::MCCompLabel> lblITS;
+      std::vector<o2::MCCompLabel> lblTracks;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
       std::vector<o2::vertexing::V2TRef> v2tRefs;
@@ -280,14 +271,17 @@ void createO2tables(const char* inputFile = "delphes.root",
       std::vector<o2::dataformats::GlobalTrackID> idxVec; // here we will the global IDs of all used tracks
       idxVec.reserve(tracks_for_vertexing.size());
       for (unsigned i = 0; i < tracks_for_vertexing.size(); i++) {
-        lblITS.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
+        lblTracks.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
         idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
       }
-      std::vector<o2::ft0::RecPoints> ft0Data;
       vertexer.setStartIR({0, 0});
       const int n_vertices = vertexer.process(gsl::span<const TrackAlice3>{tracks_for_vertexing},
-                                              idxVec, ft0Data, vertices, vertexTrackIDs, v2tRefs,
-                                              gsl::span<const o2::MCCompLabel>{lblITS},
+                                              idxVec,
+                                              gsl::span<o2::InteractionRecord>{bcData},
+                                              vertices,
+                                              vertexTrackIDs,
+                                              v2tRefs,
+                                              gsl::span<const o2::MCCompLabel>{lblTracks},
                                               lblVtx);
       Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
