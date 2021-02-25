@@ -22,14 +22,18 @@ enum TreeIndex { // Index of the output trees
   kMcCaloLabel,
   kMcCollisionLabel,
   kBC,
+  kRICH,
   kTrees
 };
+
+const int fBasketSizeEvents = 1000000;  // Maximum basket size of the trees for events
+const int fBasketSizeTracks = 10000000; // Maximum basket size of the trees for tracks
 
 TList* TreeList = new TList();
 TTree* CreateTree(TreeIndex t)
 {
-  const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc"};
-  const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel mytracks", "Calorimeter cells", "Calorimeter triggers", "MUON mytracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info"};
+  const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2rich"};
+  const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel mytracks", "Calorimeter cells", "Calorimeter triggers", "MUON mytracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "RICH info"};
   TTree* tree = new TTree(TreeName[t], TreeTitle[t]);
   TreeList->Add(tree);
   return tree;
@@ -79,6 +83,7 @@ TTree* MakeTreeO2collision()
   tEvents->Branch("fCollisionTime", &collision.fCollisionTime, "fCollisionTime/F");
   tEvents->Branch("fCollisionTimeRes", &collision.fCollisionTimeRes, "fCollisionTimeRes/F");
   tEvents->Branch("fCollisionTimeMask", &collision.fCollisionTimeMask, "fCollisionTimeMask/b");
+  tEvents->SetBasketSize("*", fBasketSizeEvents);
   return tEvents;
 }
 
@@ -125,6 +130,7 @@ TTree* MakeTreeO2mccollision()
   tMCvtx->Branch("fT", &mccollision.fT, "fT/F");
   tMCvtx->Branch("fWeight", &mccollision.fWeight, "fWeight/F");
   tMCvtx->Branch("fImpactParameter", &mccollision.fImpactParameter, "fImpactParameter/F");
+  tMCvtx->SetBasketSize("*", fBasketSizeEvents);
   return tMCvtx;
 }
 
@@ -140,6 +146,7 @@ TTree* MakeTreeO2bc()
   tBC->Branch("fRunNumber", &bc.fRunNumber, "fRunNumber/I");
   tBC->Branch("fGlobalBC", &bc.fGlobalBC, "fGlobalBC/l");
   tBC->Branch("fTriggerMask", &bc.fTriggerMask, "fTriggerMask/l");
+  tBC->SetBasketSize("*", fBasketSizeEvents);
   return tBC;
 }
 
@@ -266,6 +273,7 @@ TTree* MakeTreeO2track()
   tTracks->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
   tTracks->Branch("fTrackEtaEMCAL", &mytracks.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
   tTracks->Branch("fTrackPhiEMCAL", &mytracks.fTrackPhiEMCAL, "fTrackPhiEMCAL/F");
+  tTracks->SetBasketSize("*", fBasketSizeTracks);
   return tTracks;
 }
 
@@ -321,6 +329,47 @@ void ConnectTreeO2track(TTree* fTracks)
 }
 
 struct {
+  // RICH data
+
+  Int_t fCollisionsID = -1; /// Collision ID
+  Int_t fTracksID = -1;     /// Track ID
+
+  Float_t fRICHSignal = -999.f;      /// RICH signal
+  Float_t fRICHSignalError = -999.f; /// RICH signal error
+  Float_t fRICHDeltaEl = -999.f;     /// Delta for El
+  Float_t fRICHDeltaMu = -999.f;     /// Delta for Mu
+  Float_t fRICHDeltaPi = -999.f;     /// Delta for Pi
+  Float_t fRICHDeltaKa = -999.f;     /// Delta for Ka
+  Float_t fRICHDeltaPr = -999.f;     /// Delta for Pr
+  Float_t fRICHNsigmaEl = -999.f;    /// Nsigma for El
+  Float_t fRICHNsigmaMu = -999.f;    /// Nsigma for Mu
+  Float_t fRICHNsigmaPi = -999.f;    /// Nsigma for Pi
+  Float_t fRICHNsigmaKa = -999.f;    /// Nsigma for Ka
+  Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
+} rich;                              //! structure to keep RICH info
+
+TTree* MakeTreeO2rich()
+{
+  TTree* t = CreateTree(kRICH);
+  t->Branch("fCollisionsID", &rich.fCollisionsID, "fCollisionsID/I");
+  t->Branch("fTracksID", &rich.fTracksID, "fTracksID/I");
+  t->Branch("fRICHSignal", &rich.fRICHSignal, "fRICHSignal/F");
+  t->Branch("fRICHSignalError", &rich.fRICHSignalError, "fRICHSignalError/F");
+  t->Branch("fRICHDeltaEl", &rich.fRICHDeltaEl, "fRICHDeltaEl/F");
+  t->Branch("fRICHDeltaMu", &rich.fRICHDeltaMu, "fRICHDeltaMu/F");
+  t->Branch("fRICHDeltaPi", &rich.fRICHDeltaPi, "fRICHDeltaPi/F");
+  t->Branch("fRICHDeltaKa", &rich.fRICHDeltaKa, "fRICHDeltaKa/F");
+  t->Branch("fRICHDeltaPr", &rich.fRICHDeltaPr, "fRICHDeltaPr/F");
+  t->Branch("fRICHNsigmaEl", &rich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
+  t->Branch("fRICHNsigmaMu", &rich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
+  t->Branch("fRICHNsigmaPi", &rich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
+  t->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
+  t->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  t->SetBasketSize("*", fBasketSizeTracks);
+  return t;
+}
+
+struct {
   // MC particle
 
   Int_t fMcCollisionsID = -1; /// The index of the MC collision vertex
@@ -367,6 +416,7 @@ TTree* MakeTreeO2mcparticle()
   tKinematics->Branch("fVy", &mcparticle.fVy, "fVy/F");
   tKinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
   tKinematics->Branch("fVt", &mcparticle.fVt, "fVt/F");
+  tKinematics->SetBasketSize("*", fBasketSizeTracks);
   return tKinematics;
 }
 
@@ -384,6 +434,7 @@ TTree* MakeTreeO2mctracklabel()
   TTree* tLabels = CreateTree(kMcTrackLabel);
   tLabels->Branch("fLabel", &mctracklabel.fLabel, "fLabel/i");
   tLabels->Branch("fLabelMask", &mctracklabel.fLabelMask, "fLabelMask/s");
+  tLabels->SetBasketSize("*", fBasketSizeTracks);
   return tLabels;
 }
 struct {
@@ -398,5 +449,6 @@ TTree* MakeTreeO2mccollisionlabel()
   TTree* tCollisionLabels = CreateTree(kMcCollisionLabel);
   tCollisionLabels->Branch("fLabel", &mccollisionlabel.fLabel, "fLabel/i");
   tCollisionLabels->Branch("fLabelMask", &mccollisionlabel.fLabelMask, "fLabelMask/s");
+  tCollisionLabels->SetBasketSize("*", fBasketSizeEvents);
   return tCollisionLabels;
 }
