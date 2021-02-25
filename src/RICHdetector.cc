@@ -90,12 +90,10 @@ RICHdetector::makePID(const Track &track, std::array<float, 5> &deltaangle, std:
   double n = mIndex; 
   for (Int_t ipart = 0; ipart < 5; ++ipart) {
     auto m = pmass[ipart];
-    auto A = m * m + p * p;
-    auto sqrtA = sqrt(A);
-    auto B = n * p;
-    auto B2 = B * B;
     auto exp_angle = getExpectedAngle(p, m);
-    auto exp_sigma = ( 1. / sqrt(1. - A/B2) ) * ( ( n * p * p / sqrtA - m * sqrtA ) / B2 ) * ep;
+    auto A = std::sqrt(n * n * p * p - m * m - p * p);
+    auto B = std::sqrt(m * m + p * p);
+    auto exp_sigma = m * m / p / A / B * ep;
     exp_sigma = sqrt(anglee * anglee + exp_sigma * exp_sigma);
     if (anglee <= 0. || exp_angle <= 0.) {
       deltaangle[ipart] = -1000.;
