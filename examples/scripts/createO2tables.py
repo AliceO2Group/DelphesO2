@@ -265,7 +265,8 @@ def main(configuration_file,
                 gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
                 custom_gen_option = f" --output {hepmc_file} --nevents {nevents}"
-                write_to_runner(custom_gen + custom_gen_option,
+                custom_seed = f" --seed {run_number}"
+                write_to_runner(custom_gen + custom_gen_option + custom_seed,
                                 log_file=gen_log_file)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
                                 log_file=delphes_log_file)
