@@ -2,6 +2,7 @@
 #include <string>
 
 #include "Pythia8/Pythia.h"
+#include "Pythia8/ParticleData.h"
 #include "Pythia8Plugins/HepMC2.h"
 
 int main(int argc, char **argv)
@@ -40,6 +41,8 @@ int main(int argc, char **argv)
 
   // pythia, config and init
   Pythia8::Pythia pythia;
+  pythia.particleData.addParticle(9920443, "X(3872)", 3, 0, 0, 3.87196, 0.00012);
+
   Pythia8::Rndm   rndm;
   if (!config.empty() && !pythia.readFile(config)) {
     std::cout << "Error: could not read config file \"" << config << "\"" << std::endl;
