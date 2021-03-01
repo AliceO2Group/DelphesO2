@@ -60,6 +60,50 @@ class TrackAlice3 : public o2::track::TrackParCov
   timeEst mTimeMUS; ///< time estimate in ns
 };
 
+template <typename T>
+bool IsSecondary(const T& particleTree, const int& index)
+{
+  auto particle = (GenParticle*)particleTree->At(index);
+  if (particle->M1 < 0) {
+    return false;
+  }
+
+  auto mother = (GenParticle*)particleTree->At(particle->M1);
+  if (!mother) {
+    return false;
+  }
+  // Ancore di salvezza :)
+  if ((particle->M1 == particle->M2) && (particle->M1 == 0)) {
+    return false;
+  }
+  if (abs(mother->PID) <= 8) {
+    return false;
+  }
+  // 100% secondaries if true here
+  switch (abs(mother->PID)) {
+    // K0S
+    case 310:
+    // Lambda
+    case 3122:
+    // Sigma0
+    case 3212:
+    // Sigma-
+    case 3112:
+    // Sigma+
+    case 3222:
+    // Xi-
+    case 3312:
+    // Xi0
+    case 3322:
+    // Omega-
+    case 3334:
+      return true;
+      break;
+  }
+
+  return IsSecondary(particleTree, particle->M1);
+}
+
 void createO2tables(const char* inputFile = "delphes.root",
                     const char* outputFile = "AODRun5.root",
                     int eventOffset = 0)
@@ -154,6 +198,9 @@ void createO2tables(const char* inputFile = "delphes.root",
       mcparticle.fPdgCode = particle->PID;
       mcparticle.fStatusCode = particle->Status;
       mcparticle.fFlags = 0;
+      if (IsSecondary(particles, iparticle)) {
+        mcparticle.fFlags |= 1;
+      }
       mcparticle.fMother0 = particle->M1;
       if (mcparticle.fMother0 > -1)
         mcparticle.fMother0 += fOffsetLabel;
