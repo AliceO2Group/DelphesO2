@@ -261,6 +261,7 @@ def main(configuration_file,
             write_to_runner("#! /usr/bin/env bash\n")
             delphes_file = f"delphes.{run_number}.root"
             delphes_log_file = delphes_file.replace(".root", ".log")
+            hepmc_file = None
             if custom_gen:  # Using HEPMC
                 gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
@@ -280,7 +281,7 @@ def main(configuration_file,
                     f_cfg.write(f"\n\n\n#### Additional part ###\n\n\n\n")
                     f_cfg.write(f"Main:numberOfEvents {nevents}\n")
                     f_cfg.write(f"Random:setSeed = on\n")
-                    f_cfg.write(f"Random:seed = {run_number}\n")
+                    f_cfg.write(f"Random:seed = {run_number + 1}\n")
                     # collision time spread [mm/c]
                     f_cfg.write("Beams:allowVertexSpread on \n")
                     f_cfg.write("Beams:sigmaTime 60.\n")
@@ -297,9 +298,13 @@ def main(configuration_file,
                             check_status=True)
             if not clean_delphes_files:
                 copy_and_link(delphes_file)
+                if hepmc_file is not None:
+                    copy_and_link(hepmc_file)
             copy_and_link(aod_file)
             if clean_delphes_files:
                 write_to_runner(f"rm {delphes_file}")
+                if hepmc_file is not None:
+                    write_to_runner(f"rm {hepmc_file}")
             write_to_runner("exit 0\n")
     for i in run_list:
         configure_run(i)
