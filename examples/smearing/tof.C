@@ -36,14 +36,26 @@ tof(const char *inputFile = "delphes.root",
   smearer.loadTable(321, "lutCovm.ka.dat");
   smearer.loadTable(2212, "lutCovm.pr.dat");
 
+  // logx binning
+  const Int_t nbins = 80;
+  double xmin = 1.e-2;
+  double xmax = 1.e2;
+  double logxmin = std::log10(xmin);
+  double logxmax = std::log10(xmax);
+  double binwidth = (logxmax - logxmin) / nbins;
+  double xbins[nbins + 1];
+  xbins[0] = xmin;
+  for (Int_t i = 1; i <= nbins; ++i)
+    xbins[i] = xmin + std::pow(10., logxmin + i * binwidth);
+  
   // histograms
   auto hTime0 = new TH1F("hTime0", ";t_{0} (ns)", 1000, -1., 1.);
-  auto hBetaP = new TH2F("hBetaP", ";log_{10}(#it{p}/GeV);#beta", 400, -2., 2., 1000, 0.1, 1.1);
+  auto hBetaP = new TH2F("hBetaP", ";#it{p} (GeV/#it{c});#beta", nbins, xbins, 1000, 0.1, 1.1);
   TH2 *hNsigmaP[5];
   const char *pname[5] = {"el", "mu", "pi", "ka", "pr"};
   const char *plabel[5] = {"e", "#mu", "#pi", "K", "p"};
   for (int i = 0; i < 5; ++i)
-    hNsigmaP[i] = new TH2F(Form("hNsigmaP_%s", pname[i]), Form(";log_{10}(#it{p}/GeV);n#sigma_{%s}", plabel[i]), 40, -2., 2., 200, -10., 10.);
+    hNsigmaP[i] = new TH2F(Form("hNsigmaP_%s", pname[i]), Form("#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
     
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
@@ -84,13 +96,13 @@ tof(const char *inputFile = "delphes.root",
       // fill beta-p
       auto p = track->P;
       auto beta = toflayer.getBeta(*track);
-      hBetaP->Fill(log10(p), beta);
+      hBetaP->Fill(p, beta);
       
       // fill nsigma
       std::array<float, 5> deltat, nsigma;
       toflayer.makePID(*track, deltat, nsigma);
       for (int i = 0; i < 5; ++i)
-	hNsigmaP[i]->Fill(log10(p), nsigma[i]);
+	hNsigmaP[i]->Fill(p, nsigma[i]);
       
     }
   }
