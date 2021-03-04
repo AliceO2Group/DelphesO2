@@ -1,7 +1,6 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
-double Bz = 0.2; // [T]
 double tof_radius = 100.; // [cm]
 double tof_length = 200.; // [cm]
 double tof_sigmat = 0.02; // [ns]
@@ -31,22 +30,11 @@ tof(const char *inputFile = "delphes.root",
   // smearer
   o2::delphes::TrackSmearer smearer;
   smearer.useEfficiency(true);
-  if (Bz == 0.2) {
-    smearer.loadTable(11, "lutCovm.el.2kG.dat");
-    smearer.loadTable(13, "lutCovm.mu.2kG.dat");
-    smearer.loadTable(211, "lutCovm.pi.2kG.dat");
-    smearer.loadTable(321, "lutCovm.ka.2kG.dat");
-    smearer.loadTable(2212, "lutCovm.pr.2kG.dat");
-  } else if (Bz == 0.5) {
-    smearer.loadTable(11, "lutCovm.el.5kG.dat");
-    smearer.loadTable(13, "lutCovm.mu.5kG.dat");
-    smearer.loadTable(211, "lutCovm.pi.5kG.dat");
-    smearer.loadTable(321, "lutCovm.ka.5kG.dat");
-    smearer.loadTable(2212, "lutCovm.pr.5kG.dat");
-  } else {
-    std::cout << " --- invalid Bz field: " << Bz << std::endl;
-    return;
-  }
+  smearer.loadTable(11, "lutCovm.el.dat");
+  smearer.loadTable(13, "lutCovm.mu.dat");
+  smearer.loadTable(211, "lutCovm.pi.dat");
+  smearer.loadTable(321, "lutCovm.ka.dat");
+  smearer.loadTable(2212, "lutCovm.pr.dat");
 
   // histograms
   auto hTime0 = new TH1F("hTime0", ";t_{0} (ns)", 1000, -1., 1.);

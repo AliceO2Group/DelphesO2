@@ -16,7 +16,6 @@ echo "maxEta = $TOFETA"
 
 ### copy relevant files in the working directory
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
-cp $DELPHESO2_ROOT/examples/smearing/luts/lutCovm.* .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_inel.cfg .
 cp $DELPHESO2_ROOT/examples/smearing/tof.C .
 
@@ -34,6 +33,10 @@ sed -i -e "s/set barrel_Acceptance .*$/set barrel_Acceptance \{ 0.0 + 1.0 * fabs
 ### set TOF time resolution
 sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\-9/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" tof.C
+
+### create LUTs
+BFIELDT=`awk -v a=$BFIELD 'BEGIN {print a*0.1}'`
+$DELPHESO2_ROOT/examples/scripts/create_luts.sh werner $BFIELDT $TOFRAD
 
 ### loop over runs
 for I in $(seq 1 $NRUNS); do

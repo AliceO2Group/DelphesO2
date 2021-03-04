@@ -15,13 +15,6 @@ echo "maxEta = $RICHETA"
 
 ### copy relevant files in the working directory
 cp $DELPHESO2_ROOT/examples/cards/propagate.2kG.tcl propagate.tcl
-LUTPATH=$HOME/cernbox/ALICE3/DelphesO2/LUTS
-tar zxf $LUTPATH/lutCovm.2kG.20cm.default.tgz -C .
-tar zxf $LUTPATH/lutCovm.5kG.20cm.default.tgz -C .
-for I in el mu pi ka pr; do
-    ln -sf lutCovm.$I.2kG.20cm.default.dat lutCovm.$I.2kG.dat;
-    ln -sf lutCovm.$I.5kG.20cm.default.dat lutCovm.$I.5kG.dat;
-done
 cp $DELPHESO2_ROOT/examples/smearing/rich.C .
 cp $DELPHESO2_ROOT/examples/pythia8/pythia8_inel.cfg pythia8.cfg
 
@@ -32,7 +25,6 @@ echo "Main:numberOfEvents $NEVENTS" >> pythia8.cfg
 
 ### set magnetic field
 sed -i -e "s/set barrel_Bz .*$/set barrel_Bz ${BFIELD}e\-1/" propagate.tcl
-sed -i -e "s/double Bz = .*$/double Bz = ${BFIELD}e\-1\;/" rich.C
 ### set TOF radius
 sed -i -e "s/set barrel_Radius .*$/set barrel_Radius ${RICHRAD}e\-2/" propagate.tcl
 sed -i -e "s/double rich_radius = .*$/double rich_radius = ${RICHRAD}\;/" rich.C
@@ -41,6 +33,10 @@ sed -i -e "s/set barrel_HalfLength .*$/set barrel_HalfLength ${RICHLEN}e\-2/" pr
 sed -i -e "s/double rich_length = .*$/double rich_length = ${RICHLEN}\;/" rich.C
 ### set TOF acceptance
 sed -i -e "s/set barrel_Acceptance .*$/set barrel_Acceptance \{ 0.0 + 1.0 * fabs(eta) < ${RICHETA} \}/" propagate.tcl
+
+### create LUTs
+BFIELDT=`awk -v a=$BFIELD 'BEGIN {print a*0.1}'`
+$DELPHESO2_ROOT/examples/scripts/create_luts.sh werner $BFIELDT $TOFRAD
 
 ### loop over runs
 rm -f .running.* delphes.*.root

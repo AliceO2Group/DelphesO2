@@ -54,6 +54,12 @@ install(TARGETS DelphesO2 DESTINATION lib)
 
 install(FILES ${HEADERS} lutCovm.hh DESTINATION include)
 
+FILE(GLOB WRITERS lutWrite.*.cc)
+install(FILES DetectorK/DetectorK.cxx DESTINATION lut/DetectorK)
+install(FILES DetectorK/DetectorK.h DESTINATION lut/DetectorK)
+install(FILES fwdRes/fwdRes.C DESTINATION lut/fwdRes)
+install(FILES lutWrite.cc ${WRITERS} DESTINATION lut)
+
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libDelphesO2_rdict.pcm
   ${CMAKE_CURRENT_BINARY_DIR}/libDelphesO2.rootmap
