@@ -2,12 +2,13 @@
 #include <string>
 
 #include "Pythia8/Pythia.h"
+#include "Pythia8/ParticleData.h"
 #include "Pythia8Plugins/HepMC2.h"
 
 int main(int argc, char **argv)
 {
   
-  int nevents, inject_nevents;
+  int nevents, inject_nevents, seed;
   std::string config, output, inject_config;
   
   /** process arguments **/
@@ -21,6 +22,7 @@ int main(int argc, char **argv)
       ("output,o"       , po::value<std::string>(&output)->default_value("pythia8.hepmc"), "Output HepMC file")
       ("inject-config"  , po::value<std::string>(&inject_config), "Injected event configuration file")
       ("inject-nevents" , po::value<int>(&inject_nevents)->default_value(1), "Number of events to inject")
+      ("seed"           , po::value<int>(&seed)->default_value(1), "initial seed")
       ;
     
     po::variables_map vm;
@@ -40,11 +42,16 @@ int main(int argc, char **argv)
 
   // pythia, config and init
   Pythia8::Pythia pythia;
+  pythia.particleData.addParticle(9920443, "X(3872)", 3, 0, 0, 3.87196, 0.00012);
+
   Pythia8::Rndm   rndm;
   if (!config.empty() && !pythia.readFile(config)) {
     std::cout << "Error: could not read config file \"" << config << "\"" << std::endl;
     return 1;
   }
+  std::cout<<"Random:seed =" + std::to_string(seed)<<std::endl;
+  pythia.readString("Random:setSeed = on");
+  pythia.readString("Random:seed =" + std::to_string(seed));
   pythia.init();
   rndm.init();
 
@@ -61,6 +68,8 @@ int main(int argc, char **argv)
       std::cout << "Error: could not read config file \"" << inject_config << "\"" << std::endl;
       return 1;
     }
+    pythia_inj->readString("Random:setSeed = on");
+    pythia_inj->readString("Random:seed =" + std::to_string(seed));
     pythia_inj->init();
   }
   
