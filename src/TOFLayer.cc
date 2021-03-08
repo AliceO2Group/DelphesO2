@@ -29,11 +29,11 @@ TOFLayer::hasTOF(const Track &track)
   auto z = track.ZOuter * 0.1; // [cm]  
   if (mType == kBarrel) {
     auto r = hypot(x, y);
-    return fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
+    return (fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
   }
   if (mType = kForward) {
-    auto r = hypot(x, y)
-      return (r > mRadiusIn) && (r < mRadius) && (fabs(fabs(z) - mLength) < 0.001);
+    auto r = hypot(x, y);
+    return (r > mRadiusIn) && (r < mRadius) && (fabs(fabs(z) - mLength) < 0.001);
   }
   return false;
 }
