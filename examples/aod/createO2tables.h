@@ -4,6 +4,8 @@ enum TreeIndex { // Index of the output trees
   kEvents = 0,
   kEventsExtra,
   kTracks,
+  kTracksCov,
+  kTracksExtra,
   kCalo,
   kCaloTrigger,
   kMuon,
@@ -22,6 +24,8 @@ enum TreeIndex { // Index of the output trees
   kMcCaloLabel,
   kMcCollisionLabel,
   kBC,
+  kRun2BCInfo,
+  kHMPID,
   kRICH,
   kTrees
 };
@@ -29,19 +33,21 @@ enum TreeIndex { // Index of the output trees
 const int fBasketSizeEvents = 1000000;  // Maximum basket size of the trees for events
 const int fBasketSizeTracks = 10000000; // Maximum basket size of the trees for tracks
 
-TList* TreeList = new TList();
+const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2hmpid", "O2rich"};
+const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Calorimeter cells", "Calorimeter triggers", "MUON tracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "HMPID info", "RICH info"};
+
+TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
 {
-  const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2rich"};
-  const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel mytracks", "Calorimeter cells", "Calorimeter triggers", "MUON mytracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "RICH info"};
   TTree* tree = new TTree(TreeName[t], TreeTitle[t]);
-  TreeList->Add(tree);
+  tree->SetAutoFlush(0);
+  Trees[t] = tree;
   return tree;
 }
 
 struct {
   // Event data
-  Int_t fBCsID = 0u; /// Index to BC table
+  Int_t fIndexBCs = 0u; /// Index to BC table
   // Primary vertex position
   Float_t fPosX = -999.f; /// Primary vertex x coordinate
   Float_t fPosY = -999.f; /// Primary vertex y coordinate
@@ -54,8 +60,9 @@ struct {
   Float_t fCovYZ = 0.f;   /// cov[4]
   Float_t fCovZZ = 999.f; /// cov[5]
   // Quality parameters
+  UShort_t fFlags = 0;   /// Vertex type
   Float_t fChi2 = 999.f; /// Chi2 of the vertex
-  UInt_t fN = 0u;        /// Number of contributors
+  UShort_t fN = 0u;      /// Number of contributors
 
   // The calculation of event time certainly will be modified in Run3
   // The prototype below can be switched on request
@@ -65,10 +72,10 @@ struct {
 
 } collision; //! structure to keep the primary vertex (avoid name conflicts)
 
-TTree* MakeTreeO2collision()
+void MakeTreeO2collision()
 {
   TTree* tEvents = CreateTree(kEvents);
-  tEvents->Branch("fBCsID", &collision.fBCsID, "fBCsID/I");
+  tEvents->Branch("fIndexBCs", &collision.fIndexBCs, "fIndexBCs/I");
   tEvents->Branch("fPosX", &collision.fPosX, "fPosX/F");
   tEvents->Branch("fPosY", &collision.fPosY, "fPosY/F");
   tEvents->Branch("fPosZ", &collision.fPosZ, "fPosZ/F");
@@ -78,37 +85,35 @@ TTree* MakeTreeO2collision()
   tEvents->Branch("fCovYY", &collision.fCovYY, "fCovYY/F");
   tEvents->Branch("fCovYZ", &collision.fCovYZ, "fCovYZ/F");
   tEvents->Branch("fCovZZ", &collision.fCovZZ, "fCovZZ/F");
+  tEvents->Branch("fFlags", &collision.fFlags, "fFlags/s");
   tEvents->Branch("fChi2", &collision.fChi2, "fChi2/F");
-  tEvents->Branch("fNumContrib", &collision.fN, "fNumContrib/i");
+  tEvents->Branch("fNumContrib", &collision.fN, "fNumContrib/s");
   tEvents->Branch("fCollisionTime", &collision.fCollisionTime, "fCollisionTime/F");
   tEvents->Branch("fCollisionTimeRes", &collision.fCollisionTimeRes, "fCollisionTimeRes/F");
   tEvents->Branch("fCollisionTimeMask", &collision.fCollisionTimeMask, "fCollisionTimeMask/b");
   tEvents->SetBasketSize("*", fBasketSizeEvents);
-  return tEvents;
 }
 
-void ConnectTreeO2collision(TTree* tEvents)
+struct {
+  // Start indices and numbers of elements for data in the other trees matching this vertex.
+  // Needed for random access of collision-related data, allowing skipping data discarded by the user
+  Int_t fStart[kTrees] = {0};    /// Start entry indices for data in the other trees matching this vertex
+  Int_t fNentries[kTrees] = {0}; /// Numbers of entries for data in the other trees matching this vertex
+} eventextra;                    //! structure for benchmarking information
+
+void MakeTreeO2collisionExtra()
 {
-  tEvents->SetBranchAddress("fBCsID", &collision.fBCsID);
-  tEvents->SetBranchAddress("fPosX", &collision.fPosX);
-  tEvents->SetBranchAddress("fPosY", &collision.fPosY);
-  tEvents->SetBranchAddress("fPosZ", &collision.fPosZ);
-  tEvents->SetBranchAddress("fCovXX", &collision.fCovXX);
-  tEvents->SetBranchAddress("fCovXY", &collision.fCovXY);
-  tEvents->SetBranchAddress("fCovXZ", &collision.fCovXZ);
-  tEvents->SetBranchAddress("fCovYY", &collision.fCovYY);
-  tEvents->SetBranchAddress("fCovYZ", &collision.fCovYZ);
-  tEvents->SetBranchAddress("fCovZZ", &collision.fCovZZ);
-  tEvents->SetBranchAddress("fChi2", &collision.fChi2);
-  tEvents->SetBranchAddress("fNumContrib", &collision.fN);
-  tEvents->SetBranchAddress("fCollisionTime", &collision.fCollisionTime);
-  tEvents->SetBranchAddress("fCollisionTimeRes", &collision.fCollisionTimeRes);
-  tEvents->SetBranchAddress("fCollisionTimeMask", &collision.fCollisionTimeMask);
+  TTree* tEventsExtra = CreateTree(kEventsExtra);
+  TString sstart = TString::Format("fStart[%d]/I", kTrees);
+  TString sentries = TString::Format("fNentries[%d]/I", kTrees);
+  tEventsExtra->Branch("fStart", eventextra.fStart, sstart.Data());
+  tEventsExtra->Branch("fNentries", eventextra.fNentries, sentries.Data());
+  tEventsExtra->SetBasketSize("*", fBasketSizeEvents);
 }
 
 struct {
   // MC collision
-  Int_t fBCsID = 0u;          /// Index to BC table
+  Int_t fIndexBCs = 0u;       /// Index to BC table
   Short_t fGeneratorsID = 0u; /// Generator ID used for the MC
   Float_t fPosX = -999.f;     /// Primary vertex x coordinate from MC
   Float_t fPosY = -999.f;     /// Primary vertex y coordinate from MC
@@ -119,10 +124,10 @@ struct {
   Float_t fImpactParameter = -999.f; /// Impact parameter from MC
 } mccollision;                       //! MC collisions = vertices
 
-TTree* MakeTreeO2mccollision()
+void MakeTreeO2mccollision()
 {
   TTree* tMCvtx = CreateTree(kMcCollision);
-  tMCvtx->Branch("fBCsID", &mccollision.fBCsID, "fBCsID/I");
+  tMCvtx->Branch("fIndexBCs", &mccollision.fIndexBCs, "fIndexBCs/I");
   tMCvtx->Branch("fGeneratorsID", &mccollision.fGeneratorsID, "fGeneratorsID/S");
   tMCvtx->Branch("fPosX", &mccollision.fPosX, "fPosX/F");
   tMCvtx->Branch("fPosY", &mccollision.fPosY, "fPosY/F");
@@ -131,7 +136,6 @@ TTree* MakeTreeO2mccollision()
   tMCvtx->Branch("fWeight", &mccollision.fWeight, "fWeight/F");
   tMCvtx->Branch("fImpactParameter", &mccollision.fImpactParameter, "fImpactParameter/F");
   tMCvtx->SetBasketSize("*", fBasketSizeEvents);
-  return tMCvtx;
 }
 
 struct {
@@ -140,19 +144,19 @@ struct {
   ULong64_t fTriggerMask = 0u; /// Trigger class mask
 } bc;                          //! structure to keep trigger-related info
 
-TTree* MakeTreeO2bc()
+void MakeTreeO2bc()
 {
   TTree* tBC = CreateTree(kBC);
   tBC->Branch("fRunNumber", &bc.fRunNumber, "fRunNumber/I");
   tBC->Branch("fGlobalBC", &bc.fGlobalBC, "fGlobalBC/l");
   tBC->Branch("fTriggerMask", &bc.fTriggerMask, "fTriggerMask/l");
   tBC->SetBasketSize("*", fBasketSizeEvents);
-  return tBC;
 }
 
 struct {
   // Track data
-  Int_t fCollisionsID = -1; /// The index of the collision vertex in the TF, to which the track is attached
+
+  Int_t fIndexCollisions = -1; /// The index of the collision vertex in the TF, to which the track is attached
 
   uint8_t fTrackType = 0; // Type of track: global, ITS standalone, tracklet, ...
 
@@ -223,13 +227,11 @@ struct {
   Float_t fTrackPhiEMCAL = -999.f; /// Track phi at the EMCAL surface
 } mytracks;                        //! structure to keep track information
 
-TTree* MakeTreeO2track()
+void MakeTreeO2track()
 {
   TTree* tTracks = CreateTree(kTracks);
-  tTracks->Branch("fCollisionsID", &mytracks.fCollisionsID, "fCollisionsID/I");
+  tTracks->Branch("fIndexCollisions", &mytracks.fIndexCollisions, "fIndexCollisions/I");
   tTracks->Branch("fTrackType", &mytracks.fTrackType, "fTrackType/b");
-  //    tTracks->Branch("fTOFclsIndex", &mytracks.fTOFclsIndex, "fTOFclsIndex/I");
-  //    tTracks->Branch("fNTOFcls", &mytracks.fNTOFcls, "fNTOFcls/I");
   tTracks->Branch("fX", &mytracks.fX, "fX/F");
   tTracks->Branch("fAlpha", &mytracks.fAlpha, "fAlpha/F");
   tTracks->Branch("fY", &mytracks.fY, "fY/F");
@@ -237,102 +239,61 @@ TTree* MakeTreeO2track()
   tTracks->Branch("fSnp", &mytracks.fSnp, "fSnp/F");
   tTracks->Branch("fTgl", &mytracks.fTgl, "fTgl/F");
   tTracks->Branch("fSigned1Pt", &mytracks.fSigned1Pt, "fSigned1Pt/F");
-  // Modified covariance matrix
-  tTracks->Branch("fSigmaY", &mytracks.fSigmaY, "fSigmaY/F");
-  tTracks->Branch("fSigmaZ", &mytracks.fSigmaZ, "fSigmaZ/F");
-  tTracks->Branch("fSigmaSnp", &mytracks.fSigmaSnp, "fSigmaSnp/F");
-  tTracks->Branch("fSigmaTgl", &mytracks.fSigmaTgl, "fSigmaTgl/F");
-  tTracks->Branch("fSigma1Pt", &mytracks.fSigma1Pt, "fSigma1Pt/F");
-  tTracks->Branch("fRhoZY", &mytracks.fRhoZY, "fRhoZY/B");
-  tTracks->Branch("fRhoSnpY", &mytracks.fRhoSnpY, "fRhoSnpY/B");
-  tTracks->Branch("fRhoSnpZ", &mytracks.fRhoSnpZ, "fRhoSnpZ/B");
-  tTracks->Branch("fRhoTglY", &mytracks.fRhoTglY, "fRhoTglY/B");
-  tTracks->Branch("fRhoTglZ", &mytracks.fRhoTglZ, "fRhoTglZ/B");
-  tTracks->Branch("fRhoTglSnp", &mytracks.fRhoTglSnp, "fRhoTglSnp/B");
-  tTracks->Branch("fRho1PtY", &mytracks.fRho1PtY, "fRho1PtY/B");
-  tTracks->Branch("fRho1PtZ", &mytracks.fRho1PtZ, "fRho1PtZ/B");
-  tTracks->Branch("fRho1PtSnp", &mytracks.fRho1PtSnp, "fRho1PtSnp/B");
-  tTracks->Branch("fRho1PtTgl", &mytracks.fRho1PtTgl, "fRho1PtTgl/B");
-  //
-  tTracks->Branch("fTPCInnerParam", &mytracks.fTPCinnerP, "fTPCInnerParam/F");
-  tTracks->Branch("fFlags", &mytracks.fFlags, "fFlags/i");
-  tTracks->Branch("fITSClusterMap", &mytracks.fITSClusterMap, "fITSClusterMap/b");
-  tTracks->Branch("fTPCNClsFindable", &mytracks.fTPCNClsFindable, "fTPCNClsFindable/b");
-  tTracks->Branch("fTPCNClsFindableMinusFound", &mytracks.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
-  tTracks->Branch("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
-  tTracks->Branch("fTPCNClsShared", &mytracks.fTPCNClsShared, "fTPCNClsShared/b");
-  tTracks->Branch("fTRDPattern", &mytracks.fTRDPattern, "fTRDPattern/b");
-  tTracks->Branch("fITSChi2NCl", &mytracks.fITSChi2NCl, "fITSChi2NCl/F");
-  tTracks->Branch("fTPCChi2NCl", &mytracks.fTPCChi2NCl, "fTPCChi2NCl/F");
-  tTracks->Branch("fTRDChi2", &mytracks.fTRDChi2, "fTRDChi2/F");
-  tTracks->Branch("fTOFChi2", &mytracks.fTOFChi2, "fTOFChi2/F");
-  tTracks->Branch("fTPCSignal", &mytracks.fTPCSignal, "fTPCSignal/F");
-  tTracks->Branch("fTRDSignal", &mytracks.fTRDSignal, "fTRDSignal/F");
-  tTracks->Branch("fTOFSignal", &mytracks.fTOFSignal, "fTOFSignal/F");
-  tTracks->Branch("fLength", &mytracks.fLength, "fLength/F");
-  tTracks->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
-  tTracks->Branch("fTrackEtaEMCAL", &mytracks.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
-  tTracks->Branch("fTrackPhiEMCAL", &mytracks.fTrackPhiEMCAL, "fTrackPhiEMCAL/F");
   tTracks->SetBasketSize("*", fBasketSizeTracks);
-  return tTracks;
 }
 
-void ConnectTreeO2track(TTree* fTracks)
+void MakeTreeO2trackCov()
 {
-  fTracks->SetBranchAddress("fCollisionsID", &mytracks.fCollisionsID);
-  fTracks->SetBranchAddress("fTrackType", &mytracks.fTrackType);
-  //    fTracks->SetBranchAddress("fTOFclsIndex", &mytracks.fTOFclsIndex);
-  //    fTracks->SetBranchAddress("fNTOFcls", &mytracks.fNTOFcls);
-  fTracks->SetBranchAddress("fX", &mytracks.fX);
-  fTracks->SetBranchAddress("fAlpha", &mytracks.fAlpha);
-  fTracks->SetBranchAddress("fY", &mytracks.fY);
-  fTracks->SetBranchAddress("fZ", &mytracks.fZ);
-  fTracks->SetBranchAddress("fSnp", &mytracks.fSnp);
-  fTracks->SetBranchAddress("fTgl", &mytracks.fTgl);
-  fTracks->SetBranchAddress("fSigned1Pt", &mytracks.fSigned1Pt);
+  TTree* tTracksCov = CreateTree(kTracksCov);
   // Modified covariance matrix
-  fTracks->SetBranchAddress("fSigmaY", &mytracks.fSigmaY);
-  fTracks->SetBranchAddress("fSigmaZ", &mytracks.fSigmaZ);
-  fTracks->SetBranchAddress("fSigmaSnp", &mytracks.fSigmaSnp);
-  fTracks->SetBranchAddress("fSigmaTgl", &mytracks.fSigmaTgl);
-  fTracks->SetBranchAddress("fSigma1Pt", &mytracks.fSigma1Pt);
-  fTracks->SetBranchAddress("fRhoZY", &mytracks.fRhoZY);
-  fTracks->SetBranchAddress("fRhoSnpY", &mytracks.fRhoSnpY);
-  fTracks->SetBranchAddress("fRhoSnpZ", &mytracks.fRhoSnpZ);
-  fTracks->SetBranchAddress("fRhoTglY", &mytracks.fRhoTglY);
-  fTracks->SetBranchAddress("fRhoTglZ", &mytracks.fRhoTglZ);
-  fTracks->SetBranchAddress("fRhoTglSnp", &mytracks.fRhoTglSnp);
-  fTracks->SetBranchAddress("fRho1PtY", &mytracks.fRho1PtY);
-  fTracks->SetBranchAddress("fRho1PtZ", &mytracks.fRho1PtZ);
-  fTracks->SetBranchAddress("fRho1PtSnp", &mytracks.fRho1PtSnp);
-  fTracks->SetBranchAddress("fRho1PtTgl", &mytracks.fRho1PtTgl);
-  //
-  fTracks->SetBranchAddress("fTPCInnerParam", &mytracks.fTPCinnerP);
-  fTracks->SetBranchAddress("fFlags", &mytracks.fFlags);
-  fTracks->SetBranchAddress("fITSClusterMap", &mytracks.fITSClusterMap);
-  fTracks->SetBranchAddress("fTPCNClsFindable", &mytracks.fTPCNClsFindable);
-  fTracks->SetBranchAddress("fTPCNClsFindableMinusFound", &mytracks.fTPCNClsFindableMinusFound);
-  fTracks->SetBranchAddress("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows);
-  fTracks->SetBranchAddress("fTPCNClsShared", &mytracks.fTPCNClsShared);
-  fTracks->SetBranchAddress("fTRDPattern", &mytracks.fTRDPattern);
-  fTracks->SetBranchAddress("fITSChi2NCl", &mytracks.fITSChi2NCl);
-  fTracks->SetBranchAddress("fTPCChi2NCl", &mytracks.fTPCChi2NCl);
-  fTracks->SetBranchAddress("fTRDChi2", &mytracks.fTRDChi2);
-  fTracks->SetBranchAddress("fTOFChi2", &mytracks.fTOFChi2);
-  fTracks->SetBranchAddress("fTPCSignal", &mytracks.fTPCSignal);
-  fTracks->SetBranchAddress("fTRDSignal", &mytracks.fTRDSignal);
-  fTracks->SetBranchAddress("fTOFSignal", &mytracks.fTOFSignal);
-  fTracks->SetBranchAddress("fLength", &mytracks.fLength);
-  fTracks->SetBranchAddress("fTOFExpMom", &mytracks.fTOFExpMom);
-  fTracks->SetBranchAddress("fTrackEtaEMCAL", &mytracks.fTrackEtaEMCAL);
-  fTracks->SetBranchAddress("fTrackPhiEMCAL", &mytracks.fTrackPhiEMCAL);
+  tTracksCov->Branch("fSigmaY", &mytracks.fSigmaY, "fSigmaY/F");
+  tTracksCov->Branch("fSigmaZ", &mytracks.fSigmaZ, "fSigmaZ/F");
+  tTracksCov->Branch("fSigmaSnp", &mytracks.fSigmaSnp, "fSigmaSnp/F");
+  tTracksCov->Branch("fSigmaTgl", &mytracks.fSigmaTgl, "fSigmaTgl/F");
+  tTracksCov->Branch("fSigma1Pt", &mytracks.fSigma1Pt, "fSigma1Pt/F");
+  tTracksCov->Branch("fRhoZY", &mytracks.fRhoZY, "fRhoZY/B");
+  tTracksCov->Branch("fRhoSnpY", &mytracks.fRhoSnpY, "fRhoSnpY/B");
+  tTracksCov->Branch("fRhoSnpZ", &mytracks.fRhoSnpZ, "fRhoSnpZ/B");
+  tTracksCov->Branch("fRhoTglY", &mytracks.fRhoTglY, "fRhoTglY/B");
+  tTracksCov->Branch("fRhoTglZ", &mytracks.fRhoTglZ, "fRhoTglZ/B");
+  tTracksCov->Branch("fRhoTglSnp", &mytracks.fRhoTglSnp, "fRhoTglSnp/B");
+  tTracksCov->Branch("fRho1PtY", &mytracks.fRho1PtY, "fRho1PtY/B");
+  tTracksCov->Branch("fRho1PtZ", &mytracks.fRho1PtZ, "fRho1PtZ/B");
+  tTracksCov->Branch("fRho1PtSnp", &mytracks.fRho1PtSnp, "fRho1PtSnp/B");
+  tTracksCov->Branch("fRho1PtTgl", &mytracks.fRho1PtTgl, "fRho1PtTgl/B");
+  tTracksCov->SetBasketSize("*", fBasketSizeTracks);
+}
+
+void MakeTreeO2trackExtra()
+{
+  TTree* tTracksExtra = CreateTree(kTracksExtra);
+  //Extra
+  tTracksExtra->Branch("fTPCInnerParam", &mytracks.fTPCinnerP, "fTPCInnerParam/F");
+  tTracksExtra->Branch("fFlags", &mytracks.fFlags, "fFlags/i");
+  tTracksExtra->Branch("fITSClusterMap", &mytracks.fITSClusterMap, "fITSClusterMap/b");
+  tTracksExtra->Branch("fTPCNClsFindable", &mytracks.fTPCNClsFindable, "fTPCNClsFindable/b");
+  tTracksExtra->Branch("fTPCNClsFindableMinusFound", &mytracks.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
+  tTracksExtra->Branch("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
+  tTracksExtra->Branch("fTPCNClsShared", &mytracks.fTPCNClsShared, "fTPCNClsShared/b");
+  tTracksExtra->Branch("fTRDPattern", &mytracks.fTRDPattern, "fTRDPattern/b");
+  tTracksExtra->Branch("fITSChi2NCl", &mytracks.fITSChi2NCl, "fITSChi2NCl/F");
+  tTracksExtra->Branch("fTPCChi2NCl", &mytracks.fTPCChi2NCl, "fTPCChi2NCl/F");
+  tTracksExtra->Branch("fTRDChi2", &mytracks.fTRDChi2, "fTRDChi2/F");
+  tTracksExtra->Branch("fTOFChi2", &mytracks.fTOFChi2, "fTOFChi2/F");
+  tTracksExtra->Branch("fTPCSignal", &mytracks.fTPCSignal, "fTPCSignal/F");
+  tTracksExtra->Branch("fTRDSignal", &mytracks.fTRDSignal, "fTRDSignal/F");
+  tTracksExtra->Branch("fTOFSignal", &mytracks.fTOFSignal, "fTOFSignal/F");
+  tTracksExtra->Branch("fLength", &mytracks.fLength, "fLength/F");
+  tTracksExtra->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
+  tTracksExtra->Branch("fTrackEtaEMCAL", &mytracks.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
+  tTracksExtra->Branch("fTrackPhiEMCAL", &mytracks.fTrackPhiEMCAL, "fTrackPhiEMCAL/F");
+  tTracksExtra->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
   // RICH data
-
-  Int_t fCollisionsID = -1; /// Collision ID
-  Int_t fTracksID = -1;     /// Track ID
+  Int_t fIndexCollisions = -1; /// Collision ID
+  Int_t fIndexTracks = -1;     /// Track ID
 
   Float_t fRICHSignal = -999.f;      /// RICH signal
   Float_t fRICHSignalError = -999.f; /// RICH signal error
@@ -348,11 +309,11 @@ struct {
   Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
 } rich;                              //! structure to keep RICH info
 
-TTree* MakeTreeO2rich()
+void MakeTreeO2rich()
 {
   TTree* t = CreateTree(kRICH);
-  t->Branch("fCollisionsID", &rich.fCollisionsID, "fCollisionsID/I");
-  t->Branch("fTracksID", &rich.fTracksID, "fTracksID/I");
+  t->Branch("fIndexCollisions", &rich.fIndexCollisions, "fIndexCollisions/I");
+  t->Branch("fIndexTracks", &rich.fIndexTracks, "fIndexTracks/I");
   t->Branch("fRICHSignal", &rich.fRICHSignal, "fRICHSignal/F");
   t->Branch("fRICHSignalError", &rich.fRICHSignalError, "fRICHSignalError/F");
   t->Branch("fRICHDeltaEl", &rich.fRICHDeltaEl, "fRICHDeltaEl/F");
@@ -366,13 +327,12 @@ TTree* MakeTreeO2rich()
   t->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
   t->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
   t->SetBasketSize("*", fBasketSizeTracks);
-  return t;
 }
 
 struct {
   // MC particle
 
-  Int_t fMcCollisionsID = -1; /// The index of the MC collision vertex
+  Int_t fIndexMcCollisions = -1; /// The index of the MC collision vertex
 
   // MC information (modified version of TParticle
   Int_t fPdgCode = -99999;    /// PDG code of the particle
@@ -396,10 +356,10 @@ struct {
   // We do not use the polarisation so far
 } mcparticle; //! MC particles from the kinematics tree
 
-TTree* MakeTreeO2mcparticle()
+void MakeTreeO2mcparticle()
 {
   TTree* tKinematics = CreateTree(kMcParticle);
-  tKinematics->Branch("fMcCollisionsID", &mcparticle.fMcCollisionsID, "fMcCollisionsID/I");
+  tKinematics->Branch("fIndexMcCollisions", &mcparticle.fIndexMcCollisions, "fIndexMcCollisions/I");
   tKinematics->Branch("fPdgCode", &mcparticle.fPdgCode, "fPdgCode/I");
   tKinematics->Branch("fStatusCode", &mcparticle.fStatusCode, "fStatusCode/I");
   tKinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");
@@ -417,38 +377,42 @@ TTree* MakeTreeO2mcparticle()
   tKinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
   tKinematics->Branch("fVt", &mcparticle.fVt, "fVt/F");
   tKinematics->SetBasketSize("*", fBasketSizeTracks);
-  return tKinematics;
 }
 
 struct {
   // Track label to find the corresponding MC particle
-  UInt_t fLabel = 0;       /// Track label
-  UShort_t fLabelMask = 0; /// Bit mask to indicate detector mismatches (bit ON means mismatch)
-                           /// Bit 0-6: mismatch at ITS layer
-                           /// Bit 7-9: # of TPC mismatches in the ranges 0, 1, 2-3, 4-7, 8-15, 16-31, 32-63, >64
-                           /// Bit 10: TRD, bit 11: TOF, bit 15: negative label sign
-} mctracklabel;            //! Track labels
+  Int_t fIndexMcParticles = 0; /// Track label
+  UShort_t fMcMask = 0;        /// Bit mask to indicate detector mismatches (bit ON means mismatch)
+                               /// Bit 0-6: mismatch at ITS layer
+                               /// Bit 7-9: # of TPC mismatches in the ranges 0, 1, 2-3, 4-7, 8-15, 16-31, 32-63, >64
+                               /// Bit 10: TRD, bit 11: TOF, bit 15: negative label sign
+} mctracklabel;                //! Track labels
 
-TTree* MakeTreeO2mctracklabel()
+void MakeTreeO2mctracklabel()
 {
   TTree* tLabels = CreateTree(kMcTrackLabel);
-  tLabels->Branch("fLabel", &mctracklabel.fLabel, "fLabel/i");
-  tLabels->Branch("fLabelMask", &mctracklabel.fLabelMask, "fLabelMask/s");
+  tLabels->Branch("fIndexMcParticles", &mctracklabel.fIndexMcParticles, "fIndexMcParticles/I");
+  tLabels->Branch("fMcMask", &mctracklabel.fMcMask, "fMcMask/s");
   tLabels->SetBasketSize("*", fBasketSizeTracks);
-  return tLabels;
 }
+
 struct {
   // MC collision label
-  UInt_t fLabel = 0;       /// Collision label
-  UShort_t fLabelMask = 0; /// Bit mask to indicate collision mismatches (bit ON means mismatch)
-                           /// bit 15: negative label sign
-} mccollisionlabel;        //! Collision labels
+  Int_t fIndexMcCollisions = 0; /// Collision label
+  UShort_t fMcMask = 0;         /// Bit mask to indicate collision mismatches (bit ON means mismatch)
+                                /// bit 15: negative label sign
+} mccollisionlabel;             //! Collision labels
 
-TTree* MakeTreeO2mccollisionlabel()
+void MakeTreeO2mccollisionlabel()
 {
   TTree* tCollisionLabels = CreateTree(kMcCollisionLabel);
-  tCollisionLabels->Branch("fLabel", &mccollisionlabel.fLabel, "fLabel/i");
-  tCollisionLabels->Branch("fLabelMask", &mccollisionlabel.fLabelMask, "fLabelMask/s");
+  tCollisionLabels->Branch("fIndexMcCollisions", &mccollisionlabel.fIndexMcCollisions, "fIndexMcCollisions/I");
+  tCollisionLabels->Branch("fMcMask", &mccollisionlabel.fMcMask, "fMcMask/s");
   tCollisionLabels->SetBasketSize("*", fBasketSizeEvents);
-  return tCollisionLabels;
+}
+
+void FillTree(TreeIndex t)
+{
+  Trees[t]->Fill();
+  eventextra.fNentries[t]++;
 }
