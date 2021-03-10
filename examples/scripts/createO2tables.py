@@ -126,7 +126,6 @@ def main(configuration_file,
     sigmaT = opt("sigmaT")
     radius = opt("radius")
     length = opt("length")
-    etaMax = opt("etaMax")
 
     # calculate max eta from geometry
     verbose_msg("Computing maximum eta based on detector length and radius")
@@ -265,9 +264,8 @@ def main(configuration_file,
             if custom_gen:  # Using HEPMC
                 gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
-                custom_gen_option = f" --output {hepmc_file} --nevents {nevents}"
-                custom_seed = f" --seed {run_number}"
-                write_to_runner(custom_gen + custom_gen_option + custom_seed,
+                custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {run_number}"
+                write_to_runner(custom_gen + custom_gen_option,
                                 log_file=gen_log_file)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
                                 log_file=delphes_log_file)

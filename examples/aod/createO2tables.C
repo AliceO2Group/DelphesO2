@@ -163,14 +163,18 @@ void createO2tables(const char* inputFile = "delphes.root",
 
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
-  TTree* tBC = MakeTreeO2bc();
-  TTree* fTracks = MakeTreeO2track();
-  TTree* fRICH = MakeTreeO2rich();
-  TTree* tEvents = MakeTreeO2collision();
-  TTree* tMCvtx = MakeTreeO2mccollision();
-  TTree* tKinematics = MakeTreeO2mcparticle();
-  TTree* tLabels = MakeTreeO2mctracklabel();
-  TTree* tCollisionLabels = MakeTreeO2mccollisionlabel();
+  // Make output Trees
+  MakeTreeO2bc();
+  MakeTreeO2track();
+  MakeTreeO2trackCov();
+  MakeTreeO2trackExtra();
+  MakeTreeO2rich();
+  MakeTreeO2collision();
+  MakeTreeO2collisionExtra();
+  MakeTreeO2mccollision();
+  MakeTreeO2mcparticle();
+  MakeTreeO2mctracklabel();
+  MakeTreeO2mccollisionlabel();
 
   const UInt_t mTrackX = 0xFFFFFFFF;
   const UInt_t mTrackAlpha = 0xFFFFFFFF;
@@ -181,20 +185,26 @@ void createO2tables(const char* inputFile = "delphes.root",
   const UInt_t mTrackCovOffDiag = 0xFFFFFFFF;
   const UInt_t mTrackSignal = 0xFFFFFFFF; // PID signals and track length
 
+  // Counters
   int fOffsetLabel = 0;
   int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
-  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
+
+  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
+    // Adjust start indices for this event in all trees by adding the number of entries of the previous event
+    for (auto i = 0; i < kTrees; ++i) {
+      eventextra.fStart[i] += eventextra.fNentries[i];
+      eventextra.fNentries[i] = 0;
+    }
 
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
 
-    // loop over particles
-    for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) {
+    for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) { // Loop over particles
       auto particle = (GenParticle*)particles->At(iparticle);
 
       particle->SetUniqueID(iparticle + fOffsetLabel); // not sure this is needed, to be sure
 
-      mcparticle.fMcCollisionsID = ientry + eventOffset;
+      mcparticle.fIndexMcCollisions = ientry + eventOffset;
       mcparticle.fPdgCode = particle->PID;
       mcparticle.fStatusCode = particle->Status;
       mcparticle.fFlags = 0;
@@ -220,12 +230,12 @@ void createO2tables(const char* inputFile = "delphes.root",
       mcparticle.fPz = particle->Pz;
       mcparticle.fE = particle->E;
 
-      mcparticle.fVx = particle->X;
-      mcparticle.fVy = particle->Y;
-      mcparticle.fVz = particle->Z;
+      mcparticle.fVx = particle->X * 0.1;
+      mcparticle.fVy = particle->Y * 0.1;
+      mcparticle.fVz = particle->Z * 0.1;
       mcparticle.fVt = particle->T;
 
-      tKinematics->Fill();
+      FillTree(kMcParticle);
     }
     fOffsetLabel += particles->GetEntries();
 
@@ -233,7 +243,7 @@ void createO2tables(const char* inputFile = "delphes.root",
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
-    for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
+    for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) { // Loop over tracks
 
       // get track and corresponding particle
       auto track = (Track*)tracks->At(itrack);
@@ -248,12 +258,12 @@ void createO2tables(const char* inputFile = "delphes.root",
 
       // fill the label tree
       Int_t alabel = particle->GetUniqueID();
-      mctracklabel.fLabel = TMath::Abs(alabel);
-      mctracklabel.fLabelMask = 0;
-      tLabels->Fill();
+      mctracklabel.fIndexMcParticles = TMath::Abs(alabel);
+      mctracklabel.fMcMask = 0;
+      FillTree(kMcTrackLabel);
 
       // set track information
-      mytracks.fCollisionsID = ientry + eventOffset;
+      mytracks.fIndexCollisions = ientry + eventOffset;
       mytracks.fX = o2track.getX();
       mytracks.fAlpha = o2track.getAlpha();
       mytracks.fY = o2track.getY();
@@ -305,8 +315,8 @@ void createO2tables(const char* inputFile = "delphes.root",
       // check if has hit on RICH
       if (richdetector.hasRICH(*track)) {
         const auto measurement = richdetector.getMeasuredAngle(*track);
-        rich.fCollisionsID = ientry + eventOffset;
-        rich.fTracksID = fTrackCounter; // Index in the Track table
+        rich.fIndexCollisions = ientry + eventOffset;
+        rich.fIndexTracks = fTrackCounter; // Index in the Track table
         rich.fRICHSignal = measurement.first;
         rich.fRICHSignalError = measurement.second;
         std::array<float, 5> deltaangle, nsigma;
@@ -321,16 +331,22 @@ void createO2tables(const char* inputFile = "delphes.root",
         rich.fRICHNsigmaPi = nsigma[2];
         rich.fRICHNsigmaKa = nsigma[3];
         rich.fRICHNsigmaPr = nsigma[4];
-        fRICH->Fill();
+        FillTree(kRICH);
       }
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
         tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
-      fTracks->Fill();
+      FillTree(kTracks);
+      FillTree(kTracksCov);
+      FillTree(kTracksExtra);
       fTrackCounter++;
       // fill histograms
+    }
+    if (eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksCov] || eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksExtra]) {
+      Printf("Issue with the counters");
+      return;
     }
 
     // compute the event time
@@ -338,7 +354,7 @@ void createO2tables(const char* inputFile = "delphes.root",
     toflayer.eventTime(tof_tracks, tzero);
 
     // fill collision information
-    collision.fBCsID = ientry + eventOffset;
+    collision.fIndexBCs = ientry + eventOffset;
     bc.fGlobalBC = ientry + eventOffset;
     if (do_vertexing) { // Performing vertexing
       o2::BunchFilling bcfill;
@@ -369,7 +385,7 @@ void createO2tables(const char* inputFile = "delphes.root",
                                               v2tRefs,
                                               gsl::span<const o2::MCCompLabel>{lblTracks},
                                               lblVtx);
-      Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
+      // Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
         collision.fPosX = 0.f;
         collision.fPosY = 0.f;
@@ -380,6 +396,7 @@ void createO2tables(const char* inputFile = "delphes.root",
         collision.fCovYY = 0.f;
         collision.fCovYZ = 0.f;
         collision.fCovZZ = 0.f;
+        collision.fFlags = 0;
         collision.fChi2 = 0.01f;
         collision.fN = 0;
       } else {
@@ -392,6 +409,7 @@ void createO2tables(const char* inputFile = "delphes.root",
         collision.fCovYY = vertices[0].getSigmaY2();
         collision.fCovYZ = vertices[0].getSigmaYZ();
         collision.fCovZZ = vertices[0].getSigmaZ2();
+        collision.fFlags = 0;
         collision.fChi2 = vertices[0].getChi2();
         collision.fN = vertices[0].getNContributors();
       }
@@ -405,15 +423,16 @@ void createO2tables(const char* inputFile = "delphes.root",
       collision.fCovYY = 0.f;
       collision.fCovYZ = 0.f;
       collision.fCovZZ = 0.f;
+      collision.fFlags = 0;
       collision.fChi2 = 0.01f;
       collision.fN = tracks->GetEntries();
     }
     collision.fCollisionTime = tzero[0];    // [ns]
     collision.fCollisionTimeRes = tzero[1]; // [ns]
-    tEvents->Fill();
-    tBC->Fill();
+    FillTree(kEvents);
+    FillTree(kBC);
 
-    mccollision.fBCsID = ientry + eventOffset;
+    mccollision.fIndexBCs = ientry + eventOffset;
     mccollision.fGeneratorsID = 0;
     mccollision.fPosX = 0.;
     mccollision.fPosY = 0.;
@@ -421,24 +440,30 @@ void createO2tables(const char* inputFile = "delphes.root",
     mccollision.fT = 0.;
     mccollision.fWeight = 0.;
     mccollision.fImpactParameter = 0.;
-    tMCvtx->Fill();
+    FillTree(kMcCollision);
 
-    mccollisionlabel.fLabel = ientry + eventOffset;
-    mccollisionlabel.fLabelMask = 0;
-    tCollisionLabels->Fill();
+    mccollisionlabel.fIndexMcCollisions = ientry + eventOffset;
+    mccollisionlabel.fMcMask = 0;
+    FillTree(kMcCollisionLabel);
+
+    FillTree(kEventsExtra);
   }
 
+  Printf("Writing tables for %i events", eventextra.fStart[kEvents]);
   TString out_dir = outputFile;
   out_dir.ReplaceAll(".root", "");
   out_dir.ReplaceAll("AODRun5.", "");
   if (!out_dir.IsDec()) {
-    out_dir = "TF_0";
+    out_dir = "DF_0";
   } else {
-    out_dir = Form("TF_%i", out_dir.Atoi());
+    out_dir = Form("DF_%i", out_dir.Atoi());
   }
   fout->mkdir(out_dir);
   fout->cd(out_dir);
-  TreeList->Write();
+  for (int i = 0; i < kTrees; i++) {
+    if (Trees[i])
+      Trees[i]->Write();
+  }
   fout->ls();
   fout->Close();
 }
