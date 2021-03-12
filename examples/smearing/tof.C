@@ -4,6 +4,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 double tof_radius = 100.; // [cm]
 double tof_length = 200.; // [cm]
 double tof_sigmat = 0.02; // [ns]
+double tof_sigma0 = 0.20; // [ns]
 
 void
 tof(const char *inputFile = "delphes.root",
@@ -25,7 +26,7 @@ tof(const char *inputFile = "delphes.root",
 
   // TOF layer
   o2::delphes::TOFLayer toflayer;
-  toflayer.setup(tof_radius, tof_length, tof_sigmat);
+  toflayer.setup(tof_radius, tof_length, tof_sigmat, tof_sigma0);
   
   // smearer
   o2::delphes::TrackSmearer smearer;
@@ -51,12 +52,18 @@ tof(const char *inputFile = "delphes.root",
   // histograms
   auto hTime0 = new TH1F("hTime0", ";t_{0} (ns)", 1000, -1., 1.);
   auto hBetaP = new TH2F("hBetaP", ";#it{p} (GeV/#it{c});#beta", nbins, xbins, 1000, 0.1, 1.1);
-  TH2 *hNsigmaP[5];
+  TH2 *hNsigmaPt[5], *hNsigmaPt_true[5][5];
   const char *pname[5] = {"el", "mu", "pi", "ka", "pr"};
   const char *plabel[5] = {"e", "#mu", "#pi", "K", "p"};
-  for (int i = 0; i < 5; ++i)
-    hNsigmaP[i] = new TH2F(Form("hNsigmaP_%s", pname[i]), Form("#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
-    
+  for (int i = 0; i < 5; ++i) {
+    hNsigmaPt[i] = new TH2F(Form("hNsigmaPt_%s", pname[i]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
+    for (int j = 0; j < 5; ++j) {
+      hNsigmaPt_true[i][j] = new TH2F(Form("hNsigmaPt_%s_true_%s", pname[i], pname[j]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
+    }
+  }
+
+  std::map<int, int> pidmap = { {11, 0}, {13, 1}, {211, 2}, {321, 3}, {2212, 4} };
+
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {
     
     // Load selected branches with data from specified event
@@ -93,16 +100,22 @@ tof(const char *inputFile = "delphes.root",
     // loop over tracks and do PID
     for (auto track : tof_tracks) {
     
+      auto pdg = std::abs(track->PID);
+      auto ipdg = pidmap[pdg];
+
       // fill beta-p
       auto p = track->P;
+      auto pt = track->PT;
       auto beta = toflayer.getBeta(*track);
       hBetaP->Fill(p, beta);
       
       // fill nsigma
       std::array<float, 5> deltat, nsigma;
       toflayer.makePID(*track, deltat, nsigma);
-      for (int i = 0; i < 5; ++i)
-	hNsigmaP[i]->Fill(p, nsigma[i]);
+      for (int i = 0; i < 5; ++i) {
+	hNsigmaPt[i]->Fill(pt, nsigma[i]);
+	hNsigmaPt_true[i][ipdg]->Fill(pt, nsigma[i]);
+      }
       
     }
   }
@@ -110,8 +123,12 @@ tof(const char *inputFile = "delphes.root",
   auto fout = TFile::Open(outputFile, "RECREATE");
   hTime0->Write();
   hBetaP->Write();
-  for (int i = 0; i < 5; ++i)
-    hNsigmaP[i]->Write();
+  for (int i = 0; i < 5; ++i) {
+    hNsigmaPt[i]->Write();
+    for (int j = 0; j < 5; ++j) {
+      hNsigmaPt_true[i][j]->Write();
+    }
+  }
   fout->Close();
 
 }

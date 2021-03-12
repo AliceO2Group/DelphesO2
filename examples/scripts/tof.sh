@@ -1,16 +1,18 @@
 #! /usr/bin/env bash
 
-NJOBS=5        # number of max parallel runs
-NRUNS=10       # number of runs
-NEVENTS=10000  # number of events in a run
+NJOBS=5              # number of max parallel runs
+NRUNS=10             # number of runs
+NEVENTS=10000        # number of events in a run
 
-BFIELD=5.      # magnetic field  [kG]
-SIGMAT=0.020   # time resolution [ns]
-TAILLX=1.0     # tail on left    [q]
-TAILRX=1.3     # tail on right   [q]
-TOFRAD=100.    # TOF radius      [cm]
-TOFLEN=200.    # TOF half length [cm]
-TOFETA=1.443   # TOF max pseudorapidity
+LUTTAG="werner"      # LUT tag name
+BFIELD=5.            # magnetic field     [kG]
+SIGMAT=0.020         # time resolution    [ns]
+SIGMA0=0.200         # vertex time spread [ns]
+TAILLX=1.0           # tail on left       [q]
+TAILRX=1.3           # tail on right      [q]
+TOFRAD=100.          # TOF radius         [cm]
+TOFLEN=200.          # TOF half length    [cm]
+TOFETA=1.443         # TOF max pseudorapidity
 
 ### calculate max eta from geometry
 TOFETA=`awk -v a=$TOFRAD -v b=$TOFLEN 'BEGIN {th=atan2(a,b)*0.5; sth=sin(th); cth=cos(th); print -log(sth/cth)}'`
@@ -36,10 +38,11 @@ sed -i -e "s/set barrel_TimeResolution .*$/set barrel_TimeResolution ${SIGMAT}e\
 sed -i -e "s/set barrel_TailRight .*$/set barrel_TailRight ${TAILRX}/" propagate.tcl
 sed -i -e "s/set barrel_TailLeft  .*$/set barrel_TailLeft ${TAILLX}/" propagate.tcl
 sed -i -e "s/double tof_sigmat = .*$/double tof_sigmat = ${SIGMAT}\;/" tof.C
+sed -i -e "s/double tof_sigma0 = .*$/double tof_sigma0 = ${SIGMA0}\;/" tof.C
 
 ### create LUTs
 BFIELDT=`awk -v a=$BFIELD 'BEGIN {print a*0.1}'`
-$DELPHESO2_ROOT/examples/scripts/create_luts.sh werner $BFIELDT $TOFRAD
+$DELPHESO2_ROOT/examples/scripts/create_luts.sh $LUTTAG $BFIELDT $TOFRAD
 
 ### loop over runs
 rm -f .running.* delphes.*.root
