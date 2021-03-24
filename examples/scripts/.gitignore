@@ -14,3 +14,8 @@ tmpscript*.sh
 runner*.sh
 *.pyc
 __pycache__
+DetectorK.*
+create_libs.C
+create_luts.C
+fwdRes/fwdRes.C
+lutWrite*.cc
