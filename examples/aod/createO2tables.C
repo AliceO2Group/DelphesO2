@@ -29,12 +29,13 @@ R__LOAD_LIBRARY(libDelphesO2)
 // Detector parameters
 const double Bz = 0.2; // [T]
 // TOF
-const double tof_radius = 100.; // [cm]
-const double tof_length = 200.; // [cm]
-const double tof_sigmat = 0.02; // [ns]
+const double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
+const double tof_length = 200.; // [cm] Length of the TOF detector (used to compute acceptance)
+const double tof_sigmat = 0.02; // [ns] Resolution of the TOF detector
+const double tof_sigmat0 = 0.2; // [ns] Time spread of the vertex
 // RICH
-const double rich_radius = 100.; // [cm]
-const double rich_length = 200.; // [cm]
+const double rich_radius = 100.; // [cm] Radius of the RICH detector (used to compute acceptance)
+const double rich_length = 200.; // [cm] Length of the RICH detector  (used to compute acceptance)
 const double rich_index = 1.03;
 const double rich_radiator_length = 2.;
 const double rich_efficiency = 0.4;
@@ -152,7 +153,7 @@ void createO2tables(const char* inputFile = "delphes.root",
 
   // TOF layer
   o2::delphes::TOFLayer toflayer;
-  toflayer.setup(tof_radius, tof_length, tof_sigmat);
+  toflayer.setup(tof_radius, tof_length, tof_sigmat, tof_sigmat0);
   // RICH layer
   o2::delphes::RICHdetector richdetector;
   richdetector.setup(rich_radius, rich_length);
