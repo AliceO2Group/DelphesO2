@@ -6,7 +6,6 @@ Handler to run the DelphesO2 framework and to create O2 analysis tables
 
 import argparse
 import configparser
-import subprocess
 import os
 import shutil
 import multiprocessing
@@ -124,6 +123,7 @@ def main(configuration_file,
     # detector configuration
     bField = opt("bField")
     sigmaT = opt("sigmaT")
+    sigmaT0 = opt("sigmaT0")
     radius = opt("radius")
     length = opt("length")
 
@@ -175,10 +175,11 @@ def main(configuration_file,
     msg("  nruns   = ", nruns)
     msg("  nevents = ", nevents)
     msg(" --- with detector configuration", color=bcolors.HEADER)
-    msg("  bField  = ", bField, " [kG] ")
-    msg("  sigmaT  = ", sigmaT, " [ns] ")
-    msg("  radius  = ", radius, " [cm] ")
-    msg("  length  = ", length, " [cm] ")
+    msg("  bField  = ", bField, "\t[kG]")
+    msg("  sigmaT  = ", sigmaT, "\t[ns]")
+    msg("  sigmaT0 = ", sigmaT0, "\t[ns]")
+    msg("  radius  = ", radius, "\t[cm]")
+    msg("  length  = ", length, "\t[cm]")
     msg("  LUT     = ", lut_tag)
     msg("  etaMax  = ", etaMax)
 
@@ -225,6 +226,8 @@ def main(configuration_file,
                f"{sigmaT}""e\-9/")
     set_config("createO2tables.C",
                "const double tof_sigmat =", f"{sigmaT}""\;/")
+    set_config("createO2tables.C",
+               "const double tof_sigmat0 =", f"{sigmaT0}""\;/")
 
     run_list = range(nruns)
 
