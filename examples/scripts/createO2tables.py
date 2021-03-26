@@ -48,17 +48,30 @@ def fatal_msg(*args):
     raise ValueError("Fatal Error!")
 
 
-def run_cmd(cmd, comment=""):
+def run_cmd(cmd, comment="", check_status=True):
+    """
+    Function to run a command in bash, allows to check the status of the command and to log the command output
+    """
     verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
     try:
-        content = os.popen(cmd).read()
+        to_run = cmd
+        if check_status:
+            to_run = f"{cmd} && echo OK"
+        content = os.popen(to_run).read()
         if content:
+            content = content.strip()
             verbose_msg("++", content.strip())
         if "Encountered error" in content:
             msg("[WARNING] Error encountered runtime in",
                 cmd, color=bcolors.BWARNING)
+        if check_status:
+            if "OK" not in content and "root" not in cmd:
+                msg("Error:\n",
+                    content, color=bcolors.FAIL)
+                raise RuntimeError(
+                    "Command", cmd, "does not have the OK tag", content)
     except:
-        fatal_msg("Error while running", cmd)
+        fatal_msg("Error while running", f"'{cmd}'")
 
 
 def process_run(run_number):
@@ -82,14 +95,27 @@ def main(configuration_file,
          verbose,
          qa,
          output_path,
-         clean_delphes_files):
+         clean_delphes_files,
+         create_luts):
     global verbose_mode
     verbose_mode = verbose
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
-    run_cmd("./clean.sh &> /dev/null")
-    running_options = {}  # Dictionary of fetched options
+    run_cmd("./clean.sh &> /dev/null", check_status=False)
+    # Dictionary of fetched options
+    running_options = {
+        "ARG configuration_file": configuration_file,
+        "ARG config_entry": config_entry,
+        "ARG njobs": njobs,
+        "ARG nruns": nruns,
+        "ARG nevents": nevents,
+        "ARG verbose": verbose,
+        "ARG qa": qa,
+        "ARG output_path": output_path,
+        "ARG clean_delphes_files": clean_delphes_files,
+        "ARG create_luts": create_luts
+    }
 
     def opt(entry, require=True):
         try:
@@ -104,8 +130,8 @@ def main(configuration_file,
             return o
         except:
             if require:
-                fatal_msg("Missing entry", entry,
-                          "in file", configuration_file)
+                fatal_msg("Missing entry", f"'{entry}'",
+                          "in configuration file", f"'{configuration_file}'")
             return None
 
     # Config from the config file
@@ -141,18 +167,32 @@ def main(configuration_file,
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
 
+    # Fetching the propagation card
     do_copy(os.path.join(opt("card_path"),
                          opt("propagate_card")),
             "propagate.tcl")
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
-    lut_particles = ["el", "mu", "pi", "ka", "pr"]
-    for i in lut_particles:
-        lut_bg = "{}kG".format(bField).replace(".", "")
-        lut_n = f"lutCovm.{i}.{lut_bg}"
-        do_copy(os.path.join(lut_path, f"{lut_n}.{lut_tag}.dat"),
-                f"{lut_n}.dat")
+    if create_luts:
+        # Creating LUTs
+        verbose_msg("Creating LUTs")
+        lut_path = os.path.join(lut_path, "create_luts.sh")
+        run_cmd(f"{lut_path} {lut_tag} {float(bField)*0.1} {radius} 2>&1",
+                f"Creating the lookup tables with tag {lut_tag} from {lut_path} script")
+    else:
+        # Fetching LUTs
+        verbose_msg(f"Fetching LUTs with tag {lut_tag} from path {lut_path}")
+        for i in ["el", "mu", "pi", "ka", "pr"]:
+            lut_bg = "{}kG".format(bField).replace(".", "")
+            do_copy(os.path.join(lut_path, f"lutCovm.{i}.{lut_bg}.{lut_tag}.dat"),
+                    f"lutCovm.{i}.dat")
+
+    # Checking that we actually have LUTs
+    for i in ["el", "mu", "pi", "ka", "pr"]:
+        i = f"lutCovm.{i}.dat"
+        if not os.path.isfile(i):
+            fatal_msg("Did not find LUT file", i)
 
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
@@ -171,17 +211,18 @@ def main(configuration_file,
 
     # Printing configuration
     msg(" --- running createO2tables.py", color=bcolors.HEADER)
-    msg("  njobs   = ", njobs)
-    msg("  nruns   = ", nruns)
-    msg("  nevents = ", nevents)
+    msg("  njobs    = ", njobs)
+    msg("  nruns    = ", nruns)
+    msg("  nevents  = ", nevents)
+    msg("  lut path = ", lut_path)
     msg(" --- with detector configuration", color=bcolors.HEADER)
-    msg("  bField  = ", bField, "\t[kG]")
-    msg("  sigmaT  = ", sigmaT, "\t[ns]")
-    msg("  sigmaT0 = ", sigmaT0, "\t[ns]")
-    msg("  radius  = ", radius, "\t[cm]")
-    msg("  length  = ", length, "\t[cm]")
-    msg("  LUT     = ", lut_tag)
-    msg("  etaMax  = ", etaMax)
+    msg("  bField   = ", bField, "\t[kG]")
+    msg("  sigmaT   = ", sigmaT, "\t[ns]")
+    msg("  sigmaT0  = ", sigmaT0, "\t[ns]")
+    msg("  radius   = ", radius, "\t[cm]")
+    msg("  length   = ", length, "\t[cm]")
+    msg("  LUT      = ", lut_tag)
+    msg("  etaMax   = ", etaMax)
 
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
@@ -315,7 +356,7 @@ def main(configuration_file,
     run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null 2>&1",
             comment="to compile the table creator only once, before running")
     if not os.path.isfile("createO2tables_C.so"):
-        run_cmd("root -l -b -q 'createO2tables.C+(\"\")'",
+        run_cmd("root -l -b -q 'createO2tables.C+(\"\")' 2>&1",
                 comment="to compile with full log")
         fatal_msg("'createO2tables.C' did not compile!")
     total_processing_time = time.time()
@@ -345,19 +386,19 @@ def main(configuration_file,
         f.write(f"Finished at {dt_string}\n")
         f.write(f"Took {total_processing_time} seconds\n")
 
-        def write_config(entry):
-            f.write(f"{entry[0]} = {entry[1]}\n")
+        def write_config(entry, prefix=""):
+            f.write(prefix + entry.strip("ARG ") +
+                    f" = {running_options[entry]}\n")
 
         f.write("\n## Configuration ##\n")
-        write_config(["- configuration_file", configuration_file])
-        write_config(["- config_entry", config_entry])
-        write_config(["- njobs", njobs])
-        write_config(["- nruns", nruns])
-        write_config(["- nevents", nevents])
+        for i in running_options:
+            if "ARG" in i:
+                write_config(i, prefix=" - ")
 
         f.write("\n## Options ##\n")
         for i in running_options:
-            write_config([i, running_options[i]])
+            if "ARG" not in i:
+                write_config(i, prefix=" * ")
 
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
@@ -397,6 +438,9 @@ if __name__ == "__main__":
     parser.add_argument("--clean-delphes", "-c",
                         action="store_true",
                         help="Option to clean the delphes files in output and keep only the AODs, by default everything is kept.")
+    parser.add_argument("--use-preexisting-luts", "-l",
+                        action="store_true",
+                        help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
     args = parser.parse_args()
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
@@ -406,4 +450,5 @@ if __name__ == "__main__":
          verbose=args.verbose,
          output_path=args.output_path,
          clean_delphes_files=args.clean_delphes,
-         qa=args.qa)
+         qa=args.qa,
+         create_luts=not args.use_preexisting_luts)

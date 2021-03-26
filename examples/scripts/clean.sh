@@ -13,3 +13,6 @@ rm dpl-config.json imgui.ini
 rm *.hepmc
 rm runner*.sh
 rm tmpscript*.sh
+rm lutWrite*.cc
+rm DetectorK.*
+rm -r fwdRes
