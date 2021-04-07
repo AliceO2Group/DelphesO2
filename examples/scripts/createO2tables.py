@@ -227,6 +227,7 @@ def main(configuration_file,
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
     do_copy(os.path.join(aod_path, "createO2tables.C"), ".")
+    do_copy("diagnostic_tools/dpl-config_std.json", ".")
 
     def set_config(config_file, config, value):
         config = config.strip()
@@ -245,12 +246,12 @@ def main(configuration_file,
                     has_it = True
                     break
             if not has_it:
-                fatal_msg(config_file, "does not have", config_string)
+                fatal_msg("Configuration file", config_file, f"does not have config string '{config_string}'")
 
     # set magnetic field
     set_config("propagate.tcl", "set barrel_Bz", f"{bField}""e\-1/")
     set_config("createO2tables.C", "const double Bz = ", f"{bField}""e\-1\;/")
-    set_config("dpl-config_std.json", "\"d_bz\":", "\""f"{bField}""\"\,/")
+    set_config("dpl-config_std.json", "\\\"d_bz\\\":", "\\\""f"{bField}""\\\"\,/")
     # set radius
     set_config("propagate.tcl", "set barrel_Radius", f"{radius}""e\-2/")
     set_config("createO2tables.C",
