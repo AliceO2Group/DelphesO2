@@ -24,6 +24,7 @@ public:
   void setRadiatorLength(float val) { mRadiatorLength = val; };
   void setEfficiency(float val) { mEfficiency = val; };
   void setSigma(float val) { mSigma = val; };
+  void setMinPhotons(int val) { mMinPhotons = val; };
 
   void makePID(const Track &track, std::array<float, 5> &deltaangle, std::array<float, 5> &nsigma) const;
   std::pair<float, float> getMeasuredAngle(const Track &track) const;
@@ -49,7 +50,7 @@ protected:
   float mRadiatorLength = 2.; // [cm]
   float mEfficiency = 0.4;
   float mSigma = 7.e-3; // [rad]
-  float mMinPhotons = 3.;
+  int mMinPhotons = 3;
   
 };
   
