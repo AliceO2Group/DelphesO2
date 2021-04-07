@@ -51,12 +51,12 @@ RICHdetector::getMeasuredAngle(const Track &track) const
   auto angle = cherenkovAngle(particle->P, mass);
   auto nph_av = numberOfPhotons(angle); // average number of photons
   auto nph = gRandom->Poisson(nph_av); // random number of photons
-  if (nph <= 0) return {0., 0.};
+  if (nph < mMinPhotons) return {0., 0.};
   auto nph_el = 0; // number of photo-electrons
   for (int i = 0; i < nph; ++i) {
     if (gRandom->Uniform() < mEfficiency) nph_el++;
   }
-  if (nph_el <= 0) return {0., 0.};
+  if (nph_el < mMinPhotons) return {0., 0.};
   auto sigma = mSigma / sqrt(nph_el);
   angle = gRandom->Gaus(angle, sigma);
   return {angle, sigma};
