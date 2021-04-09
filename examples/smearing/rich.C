@@ -39,7 +39,7 @@ rich(const char *inputFile = "delphes.root",
   smearer.loadTable(2212, "lutCovm.pr.dat");
 
   // logx binning
-  const Int_t nbins = 80;
+  const Int_t nbins = 200;
   double xmin = 1.e-2;
   double xmax = 1.e2;
   double logxmin = std::log10(xmin);
@@ -72,11 +72,11 @@ rich(const char *inputFile = "delphes.root",
     hRecP[i] = new TH1F(Form("hRecP_%s", pname[i]), ";#it{p} (GeV/#it{c})", nbins, xbins);
     hRecPt[i] = new TH1F(Form("hRecPt_%s", pname[i]), ";#it{p} (GeV/#it{c})", nbins, xbins);
     hAngleP_true[i] = new TH2F(Form("hAngleP_true_%s", pname[i]), ";#it{p} (GeV/#it{c});#theta (rad)", nbins, xbins, 250, 0., 0.25);
-    hNsigmaP[i] = new TH2F(Form("hNsigmaP_%s", pname[i]), Form(";#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
-    hNsigmaPt[i] = new TH2F(Form("hNsigmaPt_%s", pname[i]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
+    hNsigmaP[i] = new TH2F(Form("hNsigmaP_%s", pname[i]), Form(";#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 500, -25., 25.);
+    hNsigmaPt[i] = new TH2F(Form("hNsigmaPt_%s", pname[i]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 500, -25., 25.);
     for (int j = 0; j < 5; ++j) {
-      hNsigmaP_true[i][j] = new TH2F(Form("hNsigmaP_%s_true_%s", pname[i], pname[j]), Form(";#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
-      hNsigmaPt_true[i][j] = new TH2F(Form("hNsigmaPt_%s_true_%s", pname[i], pname[j]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 200, -10., 10.);
+      hNsigmaP_true[i][j] = new TH2F(Form("hNsigmaP_%s_true_%s", pname[i], pname[j]), Form(";#it{p} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 500, -25., 25.);
+      hNsigmaPt_true[i][j] = new TH2F(Form("hNsigmaPt_%s_true_%s", pname[i], pname[j]), Form(";#it{p_{T}} (GeV/#it{c});n#sigma_{%s}", plabel[i]), nbins, xbins, 500, -25., 25.);
     }
   }
   
