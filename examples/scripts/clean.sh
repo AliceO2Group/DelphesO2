@@ -10,6 +10,7 @@ rm -f *.dat
 rm *.C *.h
 rm *.pdf *.swp
 rm dpl-config.json imgui.ini
+rm dpl-config_std.json
 rm *.hepmc
 rm runner*.sh
 rm tmpscript*.sh
