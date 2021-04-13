@@ -35,7 +35,7 @@ const double tof_sigmat = 0.02; // [ns] Resolution of the TOF detector
 const double tof_sigmat0 = 0.2; // [ns] Time spread of the vertex
 // RICH
 const double rich_radius = 100.; // [cm] Radius of the RICH detector (used to compute acceptance)
-const double rich_length = 200.; // [cm] Length of the RICH detector  (used to compute acceptance)
+const double rich_length = 200.; // [cm] Length of the RICH detector (used to compute acceptance)
 const double rich_index = 1.03;
 const double rich_radiator_length = 2.;
 const double rich_efficiency = 0.4;
