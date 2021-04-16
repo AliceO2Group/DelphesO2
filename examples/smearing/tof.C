@@ -9,6 +9,12 @@ double tof_sigma0 = 0.20; // [ns]
 double tof_mismatch = 0.01;
 std::string tof_mismatch_fname;
 
+// this part is for the PID of a potential MUON detector
+// it stores the probability for a track to be ID as a muon
+// one should do it nicely with the (eta-pt) dependence and correct numbers
+// this is just an example based on std::map to store flat probability for different input PID
+std::map<int, double> muon_idp = { {11, 0.01 } , {13, 0.95} , {211, 0.10} , {321, 0.15} , {2212, 0.05} };
+
 void
 tof(const char *inputFile = "delphes.root",
    const char *outputFile = "tof.root")
@@ -65,7 +71,9 @@ tof(const char *inputFile = "delphes.root",
     }
   }
   auto hMismatchTemplateOut = new TH1F("hMismatchTemplate", "", 3000., -5., 25.);
-
+  auto hMuonPt[i] = new TH1F("hMuonPt", ";#it{p_{T}} (GeV/#it{c});", nbins, xbins);
+    
+  
   // read mismatch template if requested
   TH1 *hMismatchTemplateIn = nullptr;
   if (!tof_mismatch_fname.empty()) {
@@ -93,6 +101,12 @@ tof(const char *inputFile = "delphes.root",
       // smear track
       if (!smearer.smearTrack(*track)) continue;
 
+      // check if it is identified as a muon by MUON ID
+      auto pdg = std::abs(track->PID);
+      auto muonp = muon_idp[pdg];
+      if (gRandom->Uniform() < muonp)
+	hMuonPt->Fill(track->PT);
+      
       // check if has TOF
       if (!toflayer.hasTOF(*track)) continue;
 
@@ -158,6 +172,7 @@ tof(const char *inputFile = "delphes.root",
       hNsigmaPt_true[i][j]->Write();
     }
   }
+  hMuonPt->Write();
   fout->Close();
 
 }
