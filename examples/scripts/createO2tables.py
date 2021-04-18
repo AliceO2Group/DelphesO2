@@ -11,6 +11,7 @@ import shutil
 import multiprocessing
 import numpy
 import time
+import random
 from datetime import datetime
 
 # Global running flags
@@ -96,13 +97,14 @@ def main(configuration_file,
          qa,
          output_path,
          clean_delphes_files,
-         create_luts):
+         create_luts,
+         turn_off_vertexing):
     global verbose_mode
     verbose_mode = verbose
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
-    run_cmd("./clean.sh &> /dev/null", check_status=False)
+    run_cmd("./clean.sh > /dev/null 2>&1", check_status=False)
     # Dictionary of fetched options
     running_options = {
         "ARG configuration_file": configuration_file,
@@ -227,7 +229,8 @@ def main(configuration_file,
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
     do_copy(os.path.join(aod_path, "createO2tables.C"), ".")
-    do_copy("diagnostic_tools/dpl-config_std.json", ".")
+    if qa:
+        do_copy("diagnostic_tools/dpl-config_std.json", ".")
 
     def set_config(config_file, config, value):
         config = config.strip()
@@ -246,12 +249,18 @@ def main(configuration_file,
                     has_it = True
                     break
             if not has_it:
-                fatal_msg("Configuration file", config_file, f"does not have config string '{config_string}'")
+                fatal_msg("Configuration file", config_file,
+                          f"does not have config string '{config_string}'")
 
     # set magnetic field
     set_config("propagate.tcl", "set barrel_Bz", f"{bField}""e\-1/")
     set_config("createO2tables.C", "const double Bz = ", f"{bField}""e\-1\;/")
-    set_config("dpl-config_std.json", "\\\"d_bz\\\":", "\\\""f"{bField}""\\\"\,/")
+    if turn_off_vertexing:
+        set_config("createO2tables.C",
+                   "const bool do_vertexing = ", "false\;/")
+    if qa:
+        set_config("dpl-config_std.json", "\\\"d_bz\\\":",
+                   "\\\""f"{bField}""\\\"\,/")
     # set radius
     set_config("propagate.tcl", "set barrel_Radius", f"{radius}""e\-2/")
     set_config("createO2tables.C",
@@ -306,10 +315,11 @@ def main(configuration_file,
             delphes_file = f"delphes.{run_number}.root"
             delphes_log_file = delphes_file.replace(".root", ".log")
             hepmc_file = None
+            mc_seed = random.randint(1, 800000000)
             if custom_gen:  # Using HEPMC
                 gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
-                custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {run_number}"
+                custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {mc_seed}"
                 write_to_runner(custom_gen + custom_gen_option,
                                 log_file=gen_log_file)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
@@ -325,7 +335,7 @@ def main(configuration_file,
                     f_cfg.write(f"\n\n\n#### Additional part ###\n\n\n\n")
                     f_cfg.write(f"Main:numberOfEvents {nevents}\n")
                     f_cfg.write(f"Random:setSeed = on\n")
-                    f_cfg.write(f"Random:seed = {run_number + 1}\n")
+                    f_cfg.write(f"Random:seed = {mc_seed}\n")
                     # collision time spread [mm/c]
                     f_cfg.write("Beams:allowVertexSpread on \n")
                     f_cfg.write("Beams:sigmaTime 60.\n")
@@ -354,7 +364,7 @@ def main(configuration_file,
         configure_run(i)
 
     # Compiling the table creator macro once for all
-    run_cmd("root -l -b -q 'createO2tables.C+(\"\")' &> /dev/null 2>&1",
+    run_cmd("root -l -b -q 'createO2tables.C+(\"\")' > /dev/null 2>&1",
             comment="to compile the table creator only once, before running")
     if not os.path.isfile("createO2tables_C.so"):
         run_cmd("root -l -b -q 'createO2tables.C+(\"\")' 2>&1",
@@ -403,7 +413,7 @@ def main(configuration_file,
 
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
-    run_cmd("git rev-parse HEAD >> " + summaryfile)
+    run_cmd("git rev-parse HEAD >> " + summaryfile, check_status=False)
     if os.path.normpath(output_path) != os.getcwd():
         run_cmd(f"mv {summaryfile} {output_path}")
 
@@ -439,6 +449,9 @@ if __name__ == "__main__":
     parser.add_argument("--clean-delphes", "-c",
                         action="store_true",
                         help="Option to clean the delphes files in output and keep only the AODs, by default everything is kept.")
+    parser.add_argument("--no-vertexing",
+                        action="store_true",
+                        help="Option turning off the vertexing.")
     parser.add_argument("--use-preexisting-luts", "-l",
                         action="store_true",
                         help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
@@ -452,4 +465,5 @@ if __name__ == "__main__":
          output_path=args.output_path,
          clean_delphes_files=args.clean_delphes,
          qa=args.qa,
-         create_luts=not args.use_preexisting_luts)
+         create_luts=not args.use_preexisting_luts,
+         turn_off_vertexing=args.no_vertexing)

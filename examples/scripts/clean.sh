@@ -6,7 +6,7 @@ rm *.cfg *.log *.txt
 rm *.so *.d *.pcm
 rm *ACLiC*
 rm *.tcl
-rm -f *.dat
+rm -f lutCovm.el.dat lutCovm.mu.dat lutCovm.pi.dat lutCovm.ka.dat lutCovm.pr.dat
 rm *.C *.h
 rm *.pdf *.swp
 rm dpl-config.json imgui.ini
