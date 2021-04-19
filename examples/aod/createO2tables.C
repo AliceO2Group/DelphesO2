@@ -321,8 +321,24 @@ void createO2tables(const char* inputFile = "delphes.root",
         rich.fRICHNsigmaPi = nsigma[2];
         rich.fRICHNsigmaKa = nsigma[3];
         rich.fRICHNsigmaPr = nsigma[4];
-        FillTree(kRICH);
+      } else {
+	rich.fIndexCollisions = ientry + eventOffset;
+        rich.fIndexTracks = fTrackCounter; // Index in the Track table
+        rich.fRICHSignal = -99999.;
+        rich.fRICHSignalError = -99999.;
+        rich.fRICHDeltaEl = -99999.;
+        rich.fRICHDeltaMu = -99999.;
+        rich.fRICHDeltaPi = -99999.;
+        rich.fRICHDeltaKa = -99999.;
+        rich.fRICHDeltaPr = -99999.;
+        rich.fRICHNsigmaEl = -99999.;
+        rich.fRICHNsigmaMu = -99999.;
+        rich.fRICHNsigmaPi = -99999.;
+        rich.fRICHNsigmaKa = -99999.;
+        rich.fRICHNsigmaPr = -99999.;
       }
+      FillTree(kRICH);
+
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
