@@ -61,7 +61,8 @@ def run_cmd(cmd, comment="", check_status=True):
         content = os.popen(to_run).read()
         if content:
             content = content.strip()
-            verbose_msg("++", content.strip())
+            for i in content.strip().split("\n"):
+                verbose_msg("++", i)
         if "Encountered error" in content:
             msg("[WARNING] Error encountered runtime in",
                 cmd, color=bcolors.BWARNING)
@@ -291,15 +292,21 @@ def main(configuration_file,
                 """
                 Writes commands to runner
                 """
+                log_line = ""
                 if log_file is not None:
-                    line += f" &> {log_file} 2>&1"
+                    log_line = f" &> {log_file} 2>&1"
+                    line += log_line
                 line += "\n"
                 f_run.write(line)
                 if check_status:
                     f_run.write("\nReturnValue=$?\n")
                     f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
-                    f_run.write(
-                        f"  echo \"Encountered error with command '{line.strip()}'\"\n")
+                    f_run.write("  echo \"Encountered error with command: '")
+                    f_run.write(line.replace(log_line, "").replace("\"", "\\\"").strip())
+                    f_run.write("'\"\n")
+                    if log_file is not None:
+                        f_run.write(
+                            f"  echo \"Check log: '{log_file.strip()}'\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
 
@@ -420,7 +427,7 @@ def main(configuration_file,
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
         run_cmd(
-            f"./diagnostic_tools/doanalysis.py TrackQA -i {output_list_file} -M 25 -B 25")
+            f"./diagnostic_tools/doanalysis.py TrackQA RICH TOF -i {output_list_file} -M 25 -B 25")
 
 
 if __name__ == "__main__":
