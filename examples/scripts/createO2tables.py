@@ -154,15 +154,8 @@ def main(configuration_file,
     sigmaT = opt("sigmaT")
     sigmaT0 = opt("sigmaT0")
     radius = opt("radius")
+    etaMax = opt("etamax")
     length = opt("length")
-
-    # calculate max eta from geometry
-    verbose_msg("Computing maximum eta based on detector length and radius")
-    th = numpy.arctan2(float(radius), float(length))*0.5
-    sth = numpy.sin(th)
-    cth = numpy.cos(th)
-    etaMax = -numpy.log(sth/cth)
-    running_options["etaMax"] = etaMax
 
     # copy relevant files in the working directory
     def do_copy(in_file, out_file):
