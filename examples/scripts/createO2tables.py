@@ -192,6 +192,9 @@ def main(configuration_file,
 
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
+        # Checking that the generators are defined
+        if opt("generators", require=False) is None:
+            fatal_msg("Did not find any generator configuration corresponding to the entry", config_entry, "in your configuration file", configuration_file)
         generators = opt("generators").split(" ")
         for i in generators:
             do_copy(i, ".")
@@ -321,9 +324,9 @@ def main(configuration_file,
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
                 custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {mc_seed}"
                 write_to_runner(custom_gen + custom_gen_option,
-                                log_file=gen_log_file)
+                                log_file=gen_log_file, check_status=True)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
-                                log_file=delphes_log_file)
+                                log_file=delphes_log_file, check_status=True)
             else:  # Using DelphesPythia
                 # copy generator configuration
                 generator_cfg = f"generator.{run_number}.cfg"

@@ -19,3 +19,9 @@ target_link_libraries(rpythia8-gun
   ${HepMC_LIBRARIES} ${Boost_LIBRARIES})
 install(TARGETS rpythia8-gun RUNTIME DESTINATION bin)
 
+add_executable(rpythia8-box rpythia8-box.cc)
+target_link_libraries(rpythia8-box
+  ${Pythia_LIBRARIES}
+  ${HepMC_LIBRARIES} ${Boost_LIBRARIES})
+install(TARGETS rpythia8-box RUNTIME DESTINATION bin)
+

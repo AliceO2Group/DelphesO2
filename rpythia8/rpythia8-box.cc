@@ -1,5 +1,7 @@
 #include <boost/program_options.hpp>
+#include <stdlib.h>
 #include <string>
+#include <time.h>
 
 #include "Pythia8/Pythia.h"
 #include "Pythia8Plugins/HepMC2.h"
@@ -11,7 +13,9 @@ int main(int argc, char **argv)
 
   int nevents, pdg, seed;
   std::string config, output, background_config;
-  double px, py, pz;
+  double eta_min, phi_min, p_min;
+  double eta_max, phi_max, p_max;
+  int npart;
   double xProd, yProd, zProd;
   bool verbose, decay;
   
@@ -23,9 +27,13 @@ int main(int argc, char **argv)
       ("help", "Print help messages")
       ("nevents,n", po::value<int>(&nevents)->default_value(10), "Number of events to be generated")
       ("pdg,p", po::value<int>(&pdg)->required(), "PDG code of the particle")
-      ("px", po::value<double>(&px)->default_value(0.), "Momentum in the x-direction")
-      ("py", po::value<double>(&py)->default_value(0.), "Momentum in the y-direction")
-      ("pz", po::value<double>(&pz)->default_value(0.), "Momentum in the z-direction")
+      ("npart", po::value<int>(&npart)->default_value(1), "Number of particles per event in a box")
+      ("etamin", po::value<double>(&eta_min)->default_value(0.), "Minimum eta")
+      ("etamax", po::value<double>(&eta_max)->default_value(0.), "Maximum eta")
+      ("phimin", po::value<double>(&phi_min)->default_value(0.), "Minimum phi")
+      ("phimax", po::value<double>(&phi_max)->default_value(0.), "Maximum phi")
+      ("pmin", po::value<double>(&p_min)->default_value(0.), "Minimum momentum")
+      ("pmax", po::value<double>(&p_max)->default_value(0.), "Maximum momentum")
       ("xProd", po::value<double>(&xProd)->default_value(0.), "Production vertex in the x-direction")
       ("yProd", po::value<double>(&yProd)->default_value(0.), "Production vertex in the y-direction")
       ("zProd", po::value<double>(&zProd)->default_value(0.), "Production vertex in the z-direction")
@@ -62,8 +70,12 @@ int main(int argc, char **argv)
   if (!pythia.particleData.isLepton(pdg) &&
       !pythia.particleData.isHadron(pdg) &&
       !pythia.particleData.isResonance(pdg)) {
-    std::cout << "Error: invalid PDG code \"" << pdg << "\"" << std::endl;
-    return 1;
+    if (abs(pdg) < 1000000000) {
+      std::cout << "Error: invalid PDG code \"" << pdg << "\"" << std::endl;
+      return 1;
+    } else {
+      std::cout << "PDG code \"" << pdg << "\" stands for a nucleous" << std::endl;
+    }
   }
 
   // config
@@ -79,17 +91,12 @@ int main(int argc, char **argv)
   pythia.readString("Random:seed =" + std::to_string(seed));
   // init
   pythia.init();
-  double m = pythia.particleData.m0(pdg);
-  double e = sqrt(px * px + py * py + pz * pz + m * m);
+  const double m = pythia.particleData.m0(pdg);
 
   // the particle
   Particle particle;
   particle.id(pdg);
   particle.status(11);
-  particle.px(px);
-  particle.py(py);
-  particle.pz(pz);
-  particle.e(e);
   particle.m(m);
   particle.xProd(xProd);
   particle.yProd(yProd);
@@ -110,13 +117,27 @@ int main(int argc, char **argv)
 
   
   // event loop
+  double eta, phi, p, pt, pl, e;
+  srand (time(NULL));
   for (int iev = 0; iev < nevents; ++iev) {
 
     // reset, add particle and decay
     pythia.event.reset();
-    pythia.event.append(particle);
-    if (decay) pythia.moreDecays();
-    pythia.next();
+    for(int ipart = 0; ipart < npart; ipart++){
+      eta = eta_min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (eta_max - eta_min)));
+      phi = phi_min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (phi_max - phi_min)));
+      p = p_min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (p_max - p_min)));
+      e = exp(2. * eta);
+      pl = p * (e - 1.) / (1. + e);
+      pt = sqrt(p * p - pl * pl);
+      particle.e(sqrt(p * p + m * m));
+      particle.px(pt * cos(phi));
+      particle.py(pt * sin(phi));
+      particle.pz(pl);
+      pythia.event.append(particle);
+      if (decay) pythia.moreDecays();
+      pythia.next();
+    }
     
     // print verbose
     if (verbose) pythia.event.list(1);
