@@ -49,9 +49,8 @@ void muon(const char *inputFile = "delphes.root",
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
     
-    // loop over tracks, smear and store MID tracks
-    std::vector<Track *> mid_tracks;
-
+    // loop over tracks
+    Int_t multiplicity = tracks->GetEntries();
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) {
       
       auto track = (Track*) tracks->At(itrack);
@@ -62,18 +61,8 @@ void muon(const char *inputFile = "delphes.root",
       // check if has MID
       if (mid.hasMID(*track)) {
 	hPtAll->Fill(track->PT);
-	mid_tracks.push_back(track);
+	if (mid.isMuon(*track, multiplicity)) hPtMuons->Fill(track->PT);
       }
-      
-    }
-
-    // loop over MID tracks and do PID
-
-    int multiplicity = mid_tracks.size();
-    
-    for (auto track : mid_tracks) {
-      
-      if (mid.isMuon(*track, multiplicity)) hPtMuons->Fill(track->PT);
       
     }
 
