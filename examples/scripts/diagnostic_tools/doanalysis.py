@@ -50,31 +50,24 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                     output_files=["AnalysisResults.root",
                                   "AnalysisResults_trees.root",
                                   "QAResults.root"],
-                    dpl_configuration_file=None,
-                    output_path=None
-                    ):
+                    dpl_configuration_file=None):
     """
     Function to prepare everything you need for your O2 analysis.
     From the output folder to the script containing the O2 workflow.
+    The output can be found in the same directory as the input data.
     """
     # Defining log file
     log_file = f"log_{tag.lower()}.log"
     verbose_msg("Configuring the tasks with O2", color=bcolors.BOKBLUE)
     # Creating output directory
-    if output_path is not None:
-        output_path = os.path.join(os.getcwd(), output_path)
-        verbose_msg("Creating new directory", output_path, "for results")
-        if not os.path.isdir(output_path):
-            os.makedirs(output_path)
-    else:
-        output_path = os.getcwd()
+    output_path = os.path.dirname(os.path.abspath(input_file))
     # Checking input file
     verbose_msg("Using", input_file, "as input file")
     if not input_file.endswith(".root"):
         input_file = f"@{os.path.join(os.getcwd(), input_file)}"
 
     # Creating the script to run O2
-    tmp_script_name = f"{output_path}/tmpscript{tag}.sh"
+    tmp_script_name = os.path.join(output_path, f"tmpscript{tag}.sh")
     with open(tmp_script_name, "w") as tmp_script:
 
         verbose_msg("Writing o2 instructions to", f"'{tmp_script_name}'")
@@ -84,11 +77,13 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             tmp_script.write(f"{instructions}")
         write_instructions(f"#!/bin/bash\n\n")
         write_instructions(f"cd {output_path} \n\n")  # Move to run dir
+        write_instructions(f"pwd \n\n")  # Move to run dir
 
         for i in output_files:  # Removing old output
-            write_instructions(f"rm {i} 2> /dev/null \n")
+            write_instructions(f"rm -v {i} 2>&1\n")
         write_instructions("\n\n")
 
+        o2_workflow = ""
         for i in o2_analyses:
             line = f"{i} {o2_arguments}"
             if i == o2_analyses[0]:
@@ -98,28 +93,37 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             if len(o2_analyses) > 1 and i != o2_analyses[-1]:
                 line = f"{line} | \\\n \t"
             else:
-                line = f"{line} > {log_file} \n \t"
-            write_instructions(line)
+                line = f"{line}"
+            o2_workflow += line
+        log_line = "echo \"Running: \n \t"+o2_workflow.replace("\t", "")+"\""
+        log_line += f" > {log_file}"
+        write_instructions(log_line+" \n\n")
+        write_instructions(o2_workflow + f" >> {log_file} \n \t")
         write_instructions("\n\n")
 
         for i in output_files:  # renaming output with tag
             r = i.replace(".root", f"_{tag}.root")
-            write_instructions(f"mv {i} {r} 2> /dev/null\n")
+            write_instructions(f"mv {i} {r} 2>&1\n")
 
         write_instructions("\n\n")
     return tmp_script_name
 
 
-def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
-    msg("> starting run with", tmp_script_name)
-    cmd = f"bash {tmp_script_name}"
+def run_command(cmd):
     verbose_msg(f"Running '{cmd}'")
     try:
         content = os.popen(cmd).read()
         if content:
-            verbose_msg("++", content)
+            for i in content.strip().split("\n"):
+                verbose_msg("++", i)
     except:
         raise ValueError("Error!")
+
+
+def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
+    msg("> starting run with", tmp_script_name)
+    cmd = f"bash {tmp_script_name}"
+    run_command(cmd)
     if remove_tmp_script:
         os.remove(tmp_script_name)
     msg("> end run with", tmp_script_name)
@@ -129,10 +133,13 @@ analyses = {"TrackQA": ["o2-analysis-qa-simple",
                         "o2-analysis-qa-efficiency --make-eff 1 --eta-min -0.8 --eta-max 0.8",
                         "o2-analysis-trackextension",
                         "o2-analysis-alice3-trackselection"],
-            "SpectraTOF": ["o2-analysis-spectra-tof",
-                           "o2-analysis-trackextension",
-                           "o2-analysis-pid-tof --add-qa 1",
-                           "o2-analysis-alice3-trackselection"],
+            "TOF": ["o2-analysis-spectra-tof",
+                    "o2-analysis-trackextension",
+                    "o2-analysis-alice3-pid-tof --add-qa 1",
+                    "o2-analysis-pid-tof-beta --add-qa 1",
+                    "o2-analysis-alice3-trackselection",
+                    "o2-analysis-alice3-trackextension"],
+            "RICH": ["o2-analysis-alice3-pid-rich-qa"],
             "Efficiency": ["o2-analysis-mc-spectra-efficiency",
                            "o2-analysis-trackextension",
                            "o2-analysis-alice3-trackselection"],
@@ -143,16 +150,25 @@ analyses = {"TrackQA": ["o2-analysis-qa-simple",
                        "o2-analysis-hf-candidate-creator-2prong --doMC",
                        "o2-analysis-hf-track-index-skims-creator",
                        "o2-analysis-hf-d0-candidate-selector"],
+            "TreeLC": ["o2-analysis-hf-tree-creator-lc-topkpi --aod-writer-keep AOD/HFCANDP3Full/0,AOD/HFCANDP3FullE/0,AOD/HFCANDP3FullP/0",
+                       "o2-analysis-pid-tpc",
+                       "o2-analysis-pid-tof",
+                       "o2-analysis-hf-candidate-creator-2prong --doMC",
+                       "o2-analysis-hf-track-index-skims-creator",
+                       "o2-analysis-hf-d0-candidate-selector"]
             }
 
 
 def main(mode,
-         input_file="listfiles.txt",
+         input_file,
+         out_path,
          out_tag="",
          batch_size=4,
          n_max_files=100,
          dpl_configuration_file=None,
-         njobs=1):
+         njobs=1,
+         merge_output=False,
+         only_merge=False):
     if len(input_file) == 1:
         input_file = input_file[0]
     else:
@@ -160,7 +176,7 @@ def main(mode,
     msg("Running", f"'{mode}'", "analysis on",
         f"'{input_file}'", color=bcolors.BOKBLUE)
     msg("Maximum", n_max_files, "files with batch size",
-        batch_size, "and", njobs, "jobs", color=bcolors.BOKBLUE)
+        batch_size, "and", njobs, "jobs" if njobs > 1 else "job", color=bcolors.BOKBLUE)
     args = f"-b --shm-segment-size 16000000000 --readers 4"
     if mode not in analyses:
         raise ValueError("Did not find analyses matching mode",
@@ -181,10 +197,11 @@ def main(mode,
         run_list = []
         if len(files_per_batch) > 0:
             for i, lines in enumerate(files_per_batch):
-                if not os.path.isdir(f"AnalysisResults/{i}"):
-                    os.makedirs(f"AnalysisResults/{i}")
-                run_list.append(
-                    f"AnalysisResults/{i}/ListForRun5Analysis.{i}.txt")
+                p = os.path.join(out_path, f"{i}")
+                if not os.path.isdir(p):
+                    os.makedirs(p)
+                run_list.append(os.path.join(
+                    p, f"ListForRun5Analysis.{i}.txt"))
                 with open(run_list[-1], "w") as f:
                     for j in lines:
                         f.write(j.strip() + "\n")
@@ -199,13 +216,15 @@ def main(mode,
     elif not input_file.endswith(".root"):
         with open(input_file, "r") as f:
             lines = f.readlines()
+            if len(lines) > n_max_files:
+                lines = lines[0:n_max_files]
             input_file_list = build_list_of_files(lines)
     else:
         input_file_list = [os.path.join(os.getcwd(), input_file)]
 
     if dpl_configuration_file is not None:
-        dpl_configuration_file = os.path.join(
-            os.getcwd(), dpl_configuration_file)
+        dpl_configuration_file = os.path.join(os.getcwd(),
+                                              dpl_configuration_file)
 
     run_list = []
     for i, j in enumerate(input_file_list):
@@ -213,12 +232,37 @@ def main(mode,
                                         o2_arguments=args,
                                         input_file=j,
                                         tag=tag,
-                                        dpl_configuration_file=dpl_configuration_file,
-                                        output_path=f"AnalysisResults/{i}"))
+                                        dpl_configuration_file=dpl_configuration_file))
+    if not only_merge:
+        with multiprocessing.Pool(processes=njobs) as pool:
+            pool.map(run_o2_analysis, run_list)
+        msg("Analysis completed", color=bcolors.BOKGREEN)
 
-    with multiprocessing.Pool(processes=njobs) as pool:
-        pool.map(run_o2_analysis, run_list)
-    msg("Analysis completed", color=bcolors.BOKGREEN)
+    if merge_output or only_merge:
+        files_to_merge = []
+        for i in input_file_list:
+            p = os.path.dirname(os.path.abspath(i))
+            for j in os.listdir(p):
+                if j.endswith(f"_{tag}.root"):
+                    files_to_merge.append(os.path.join(p, j))
+        if len(files_to_merge) == 0:
+            msg("Warning: Did not find any file to merge for tag",
+                tag, color=bcolors.BWARNING)
+            return
+        files_per_type = {}
+        for i in files_to_merge:
+            fn = os.path.basename(i)
+            files_per_type.setdefault(fn, [])
+            files_per_type[fn].append(i)
+        for i in files_per_type:
+            merged_file = os.path.join(out_path, i)
+            if os.path.isfile(merged_file):
+                msg("Warning: file", merged_file,
+                    "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again",
+                    color=bcolors.BWARNING)
+                continue
+            run_command(f"hadd {merged_file} " + " ".join(files_per_type[i]))
+        msg("Merging completed", color=bcolors.BOKGREEN)
 
 
 if __name__ == "__main__":
@@ -231,7 +275,11 @@ if __name__ == "__main__":
                         type=str,
                         nargs="+",
                         default=["listfiles.txt"],
-                        help="Input file")
+                        help="Input file, can be in form of a list of AODs or a list of text files with the list of AODs")
+    parser.add_argument("--out_path", "-o",
+                        type=str,
+                        default="AnalysisResults",
+                        help="Output path")
     parser.add_argument("--tag", "-t",
                         type=str,
                         default="",
@@ -254,7 +302,10 @@ if __name__ == "__main__":
                         type=str,
                         default=None,
                         help="Name of the dpl configuration file e.g. dpl-config_std.json")
-
+    parser.add_argument("--merge_output", "--merge-output", "--merge",
+                        action="store_true", help="Flag to merge the output files into one")
+    parser.add_argument("--merge_only", "--merge-only", "--mergeonly",
+                        action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
     parser.add_argument("-b",
                         action="store_true", help="Background mode")
     args = parser.parse_args()
@@ -268,4 +319,7 @@ if __name__ == "__main__":
              batch_size=args.batch_size,
              n_max_files=args.max_files,
              njobs=args.njobs,
-             out_tag=args.tag)
+             out_tag=args.tag,
+             merge_output=args.merge_output,
+             out_path=args.out_path,
+             only_merge=args.merge_only)
