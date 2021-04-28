@@ -23,6 +23,7 @@ def main(jdl_file,
          configuration_file,
          config_tag,
          delphes_version,
+         o2dpg_version,
          make_alien_directory):
     """
     Function to create the working environment for GRID job submission
@@ -48,7 +49,8 @@ def main(jdl_file,
                    f"--ev {number_of_events} -e {config_tag} -l -v --no-vertexing\";\n")
         write_line("Requirements = ( other.Type == \"machine\" );\n")
         write_line("Packages = {")
-        write_line(f"\t\"VO_ALICE@{delphes_version}\"")
+        write_line(f"\t\"VO_ALICE@{delphes_version}\",")
+        write_line(f"\t\"VO_ALICE@{o2dpg_version}\"")
         write_line("};\n")
         write_line("JDLVariables = {")
         write_line("\t\"Packages\",")
@@ -124,6 +126,9 @@ if __name__ == "__main__":
     parser.add_argument("--delphes_version", "--delphes",
                         type=str, default="DelphesO2::v20210409-1",
                         help="Version of DelphesO2 to use")
+    parser.add_argument("--o2dpg_version", "--o2dpg",
+                        type=str, default="O2DPG::prod-202104-27-1",
+                        help="Version of O2DPG to use")
     parser.add_argument("--no-vertexing",
                         action="store_true",
                         help="Option turning off the vertexing.")
@@ -141,4 +146,5 @@ if __name__ == "__main__":
          config_tag=args.entry,
          njobs=args.njobs,
          delphes_version=args.delphes_version,
+         o2dpg_version=args.o2dpg_version,
          make_alien_directory=args.make_alien_dir)
