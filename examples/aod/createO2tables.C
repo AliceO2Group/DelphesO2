@@ -155,7 +155,7 @@ void createO2tables(const char* inputFile = "delphes.root",
   richdetector.setSigma(rich_sigma);
   // MID detector
   o2::delphes::MIDdetector mid;
-  mid.setup(inputFileAccMuonPID);
+  bool isMID = mid.setup(inputFileAccMuonPID);
   
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
@@ -332,11 +332,13 @@ void createO2tables(const char* inputFile = "delphes.root",
         FillTree(kRICH);
       }
       // check if it is within the acceptance of the MID
-      if (mid.hasMID(*track)) {
-        mid.fIndexCollisions = ientry + eventOffset;
-        mid.fIndexTracks = fTrackCounter; // Index in the Track table
-        mid.fMIDIsMuon = mid.isMuon(*track,multiplicity);
-        FillTree(kMID);
+      if (isMID) {
+	if (mid.hasMID(*track)) {
+	  mid.fIndexCollisions = ientry + eventOffset;
+	  mid.fIndexTracks = fTrackCounter; // Index in the Track table
+	  mid.fMIDIsMuon = mid.isMuon(*track,multiplicity);
+	  FillTree(kMID);
+	}
       }
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);

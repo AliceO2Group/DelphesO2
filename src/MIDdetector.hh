@@ -25,7 +25,7 @@ namespace o2 {
   
       enum { kElectron, kMuon, kPion, kKaon, kProton, kNPart }; // primary particles with a non-zero muon PID probability
       
-      void setup(const Char_t *nameInputFile);
+      bool setup(const Char_t *nameInputFile);
       bool hasMID(const Track &track);
       bool isMuon(const Track &track, int multiplicity);
 

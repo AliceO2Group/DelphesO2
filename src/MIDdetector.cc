@@ -17,7 +17,7 @@ namespace o2 {
     
     //==========================================================================================================
     
-    void MIDdetector::setup(const Char_t *nameInputFile = "muonAccEffPID.root") {
+    bool MIDdetector::setup(const Char_t *nameInputFile = "muonAccEffPID.root") {
 
       TDatime t;
       gRandom->SetSeed(t.GetDate()+t.GetYear()*t.GetHour()*t.GetMinute()*t.GetSecond());
@@ -25,22 +25,23 @@ namespace o2 {
       mFileAccEffMuonPID = new TFile(nameInputFile);
       if (!mFileAccEffMuonPID) {
 	printf("File %s not found\n",nameInputFile);
-	return;
+	return kFALSE;
       }
       if (!(mFileAccEffMuonPID->IsOpen())) {
 	printf("File %s not open\n",nameInputFile);
-	return;
+	return kFALSE;
       }
 
       for (Int_t iPart=kMuon; iPart<kNPart; iPart++) {
 	mAccEffMuonPID[iPart] = (THnSparse*) mFileAccEffMuonPID->Get(Form("mAccEffMuonPID_%s",partLabel[iPart]));
 	if (!mAccEffMuonPID[iPart]) {
 	  printf("Object %s not found, quitting\n",Form("mAccEffMuonPID_%s",partLabel[iPart]));
-	  return;
+	  return kFALSE;
 	}
       }
 
       printf("Setup of MIDdetector successfully completed\n");
+      return kTRUE;
 	
     }
 
