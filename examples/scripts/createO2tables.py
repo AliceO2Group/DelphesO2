@@ -64,6 +64,9 @@ def main(configuration_file,
     arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
+    if config_entry not in parser.keys():
+        fatal_msg(f"Did not find configuration entry '{config_entry}' in config file",
+                  configuration_file + "\n\t Available entries:\n\t\t" + "\n\t\t".join(list(parser.keys())))
 
     run_cmd("./clean.sh > /dev/null 2>&1", check_status=False)
     # Dictionary of fetched options
