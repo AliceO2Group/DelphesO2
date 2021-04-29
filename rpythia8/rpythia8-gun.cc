@@ -62,8 +62,12 @@ int main(int argc, char **argv)
   if (!pythia.particleData.isLepton(pdg) &&
       !pythia.particleData.isHadron(pdg) &&
       !pythia.particleData.isResonance(pdg)) {
-    std::cout << "Error: invalid PDG code \"" << pdg << "\"" << std::endl;
-    return 1;
+    if (abs(pdg) < 1000000000) {
+      std::cout << "Error: invalid PDG code \"" << pdg << "\"" << std::endl;
+      return 1;
+    } else {
+      std::cout << "PDG code \"" << pdg << "\" stands for a nucleous" << std::endl;
+    }
   }
 
   // config
