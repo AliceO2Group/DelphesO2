@@ -6,14 +6,16 @@ set(SOURCES
   TrackUtils.cc
   TOFLayer.cc
   RICHdetector.cc
+  MIDdetector.cc
   )
 
 set(HEADERS
   VertexFitter.hh
-  TrackSmearer.hh
+  TrackSmearer.hh 
   TrackUtils.hh
   TOFLayer.hh
   RICHdetector.hh
+  MIDdetector.hh 
   )
 
 get_target_property(DELPHES_INCLUDE_DIRECTORIES
