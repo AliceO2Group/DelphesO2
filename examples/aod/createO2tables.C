@@ -7,6 +7,10 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TClonesArray.h"
 #include "TRandom3.h"
 
+#include <algorithm> // std::shuffle
+#include <random>    // std::default_random_engine
+#include <chrono>    // std::chrono::system_clock
+
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
 
@@ -28,7 +32,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "createO2tables.h"
 
 // Detector parameters
-const double Bz = 0.2; // [T]
+const double Bz = 5.e-1;
 // TOF
 const double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
 const double tof_length = 200.; // [cm] Length of the TOF detector (used to compute acceptance)
@@ -108,13 +112,13 @@ bool IsSecondary(const T& particleTree, const int& index)
   return IsSecondary(particleTree, particle->M1);
 }
 
-void createO2tables(const char* inputFile = "delphes.root",
-                    const char* outputFile = "AODRun5.root",
-                    int eventOffset = 0)
+int createO2tables(const char* inputFile = "delphes.root",
+                   const char* outputFile = "AODRun5.root",
+                   int eventOffset = 0)
 {
   if ((inputFile != NULL) && (inputFile[0] == '\0')) {
     Printf("input file is empty, returning");
-    return;
+    return 0;
   }
 
   if (do_vertexing) {
@@ -188,6 +192,9 @@ void createO2tables(const char* inputFile = "delphes.root",
   int fOffsetLabel = 0;
   int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
 
+  // Random generator for reshuffling tracks when reading them
+  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
+  
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
@@ -243,7 +250,28 @@ void createO2tables(const char* inputFile = "delphes.root",
     std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
     Int_t multiplicity = tracks->GetEntries();
+
+    // Build index array of tracks to randomize track writing order
+    Int_t multiplicity = tracks->GetEntries();
+    std::vector<int> tracks_indices(tracks->GetEntries());              // vector with tracks->GetEntries()
     for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) { // Loop over tracks
+    std::iota(std::begin(tracks_indices), std::end(tracks_indices), 0); // Fill with 0, 1, ...
+    std::shuffle(tracks_indices.begin(), tracks_indices.end(), e);
+
+    // Flags to check that all the indices are written
+    bool did_first = tracks->GetEntries() == 0;
+    bool did_last = tracks->GetEntries() == 0;
+    for (Int_t itrack : tracks_indices) { // Loop over tracks
+      if (itrack == 0) {
+        did_first = true;
+      }
+      if (itrack == tracks->GetEntries() - 1) {
+        did_last = true;
+      }
+      if (itrack < 0) {
+        Printf("Got a negative index!");
+        return 1;
+      }
 
       // get track and corresponding particle
       auto track = (Track*)tracks->At(itrack);
@@ -355,12 +383,23 @@ void createO2tables(const char* inputFile = "delphes.root",
     }
     if (eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksCov] || eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksExtra]) {
       Printf("Issue with the counters");
-      return;
+      return 1;
+    }
+    if (!did_first) {
+      Printf("Did not read first track");
+      return 1;
+    }
+    if (!did_last) {
+      Printf("Did not read last track");
+      return 1;
     }
 
     // compute the event time
     std::array<float, 2> tzero;
-    toflayer.eventTime(tof_tracks, tzero);
+    if (!toflayer.eventTime(tof_tracks, tzero) && tof_tracks.size() > 0) {
+      Printf("Issue when evaluating the start time");
+      return 1;
+    }
 
     // fill collision information
     collision.fIndexBCs = ientry + eventOffset;
@@ -475,4 +514,8 @@ void createO2tables(const char* inputFile = "delphes.root",
   }
   fout->ls();
   fout->Close();
+
+  Printf("AOD written!");
+  return 0;
+  
 }
