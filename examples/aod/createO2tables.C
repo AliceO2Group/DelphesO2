@@ -1,15 +1,15 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
+#include <algorithm> // std::shuffle
+#include <random>    // std::default_random_engine
+#include <chrono>    // std::chrono::system_clock
+
 // ROOT includes
 #include "TMath.h"
 #include "TChain.h"
 #include "TClonesArray.h"
 #include "TRandom3.h"
-
-#include <algorithm> // std::shuffle
-#include <random>    // std::default_random_engine
-#include <chrono>    // std::chrono::system_clock
 
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
@@ -193,8 +193,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
 
   // Random generator for reshuffling tracks when reading them
-  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
-  
+  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed: 
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
