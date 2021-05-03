@@ -1,10 +1,6 @@
 R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
-#include <algorithm> // std::shuffle
-#include <random>    // std::default_random_engine
-#include <chrono>    // std::chrono::system_clock
-
 // ROOT includes
 #include "TMath.h"
 #include "TChain.h"
@@ -112,13 +108,13 @@ bool IsSecondary(const T& particleTree, const int& index)
   return IsSecondary(particleTree, particle->M1);
 }
 
-int createO2tables(const char* inputFile = "delphes.root",
-                   const char* outputFile = "AODRun5.root",
-                   int eventOffset = 0)
+void createO2tables(const char* inputFile = "delphes.root",
+                    const char* outputFile = "AODRun5.root",
+                    int eventOffset = 0)
 {
   if ((inputFile != NULL) && (inputFile[0] == '\0')) {
     Printf("input file is empty, returning");
-    return 0;
+    return;
   }
 
   if (do_vertexing) {
@@ -158,8 +154,10 @@ int createO2tables(const char* inputFile = "delphes.root",
   richdetector.setEfficiency(rich_efficiency);
   richdetector.setSigma(rich_sigma);
   // MID detector
-  o2::delphes::MIDdetector mid;
-  bool isMID = mid.setup(inputFileAccMuonPID);
+  o2::delphes::MIDdetector midDetector;
+  printf("creating MID detector...\n");
+  bool isMID = midDetector.setup(inputFileAccMuonPID);
+  printf("isMID = %d\n",isMID);
   
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
@@ -189,9 +187,6 @@ int createO2tables(const char* inputFile = "delphes.root",
   // Counters
   int fOffsetLabel = 0;
   int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
-
-  // Random generator for reshuffling tracks when reading them
-  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
 
   for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
@@ -248,27 +243,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
     Int_t multiplicity = tracks->GetEntries();
-
-    // Build index array of tracks to randomize track writing order
-    std::vector<int> tracks_indices(tracks->GetEntries());              // vector with tracks->GetEntries()
-    std::iota(std::begin(tracks_indices), std::end(tracks_indices), 0); // Fill with 0, 1, ...
-    std::shuffle(tracks_indices.begin(), tracks_indices.end(), e);
-
-    // Flags to check that all the indices are written
-    bool did_first = tracks->GetEntries() == 0;
-    bool did_last = tracks->GetEntries() == 0;
-    
-    for (Int_t itrack : tracks_indices) { // Loop over tracks
-      if (itrack == 0) {
-        did_first = true;
-      }
-      if (itrack == tracks->GetEntries() - 1) {
-        did_last = true;
-      }
-      if (itrack < 0) {
-        Printf("Got a negative index!");
-        return 1;
-      }
+    for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) { // Loop over tracks
 
       // get track and corresponding particle
       auto track = (Track*)tracks->At(itrack);
@@ -360,10 +335,10 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
       // check if it is within the acceptance of the MID
       if (isMID) {
-	if (mid.hasMID(*track)) {
+	if (midDetector.hasMID(*track)) {
 	  mid.fIndexCollisions = ientry + eventOffset;
 	  mid.fIndexTracks = fTrackCounter; // Index in the Track table
-	  mid.fMIDIsMuon = mid.isMuon(*track,multiplicity);
+	  mid.fMIDIsMuon = midDetector.isMuon(*track,multiplicity);
 	  FillTree(kMID);
 	}
       }
@@ -380,23 +355,12 @@ int createO2tables(const char* inputFile = "delphes.root",
     }
     if (eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksCov] || eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksExtra]) {
       Printf("Issue with the counters");
-      return 1;
-    }
-    if (!did_first) {
-      Printf("Did not read first track");
-      return 1;
-    }
-    if (!did_last) {
-      Printf("Did not read last track");
-      return 1;
+      return;
     }
 
     // compute the event time
     std::array<float, 2> tzero;
-    if (!toflayer.eventTime(tof_tracks, tzero) && tof_tracks.size() > 0) {
-      Printf("Issue when evaluating the start time");
-      return 1;
-    }
+    toflayer.eventTime(tof_tracks, tzero);
 
     // fill collision information
     collision.fIndexBCs = ientry + eventOffset;
@@ -511,7 +475,4 @@ int createO2tables(const char* inputFile = "delphes.root",
   }
   fout->ls();
   fout->Close();
-
-  Printf("AOD written!");
-  return 0;
 }
