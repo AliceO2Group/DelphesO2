@@ -251,9 +251,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     Int_t multiplicity = tracks->GetEntries();
 
     // Build index array of tracks to randomize track writing order
-    Int_t multiplicity = tracks->GetEntries();
     std::vector<int> tracks_indices(tracks->GetEntries());              // vector with tracks->GetEntries()
-    for (Int_t itrack = 0; itrack < tracks->GetEntries(); ++itrack) { // Loop over tracks
     std::iota(std::begin(tracks_indices), std::end(tracks_indices), 0); // Fill with 0, 1, ...
     std::shuffle(tracks_indices.begin(), tracks_indices.end(), e);
 
@@ -515,6 +513,5 @@ int createO2tables(const char* inputFile = "delphes.root",
   fout->Close();
 
   Printf("AOD written!");
-  return 0;
-  
+  return 0;  
 }
