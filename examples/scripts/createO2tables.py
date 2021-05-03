@@ -252,6 +252,9 @@ def main(configuration_file,
     if turn_off_vertexing:
         set_config("createO2tables.C",
                    "const bool do_vertexing = ", "false\;/")
+    else: # Check that the geometry file for the vertexing is there
+        if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
+            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -n 1 && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && rm -r tmpo2sim")
     if qa:
         set_config("dpl-config_std.json", "\\\"d_bz\\\":",
                    "\\\""f"{bField}""\\\"\,/")
