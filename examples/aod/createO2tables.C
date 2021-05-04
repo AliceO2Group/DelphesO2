@@ -32,7 +32,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "createO2tables.h"
 
 // Detector parameters
-const double Bz = 5.e-1;
+const double Bz = 0.2; // [T]
 // TOF
 const double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
 const double tof_length = 200.; // [cm] Length of the TOF detector (used to compute acceptance)
@@ -248,7 +248,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
-    Int_t multiplicity = tracks->GetEntries();
+    const int multiplicity = tracks->GetEntries();
 
     // Build index array of tracks to randomize track writing order
     std::vector<int> tracks_indices(tracks->GetEntries());              // vector with tracks->GetEntries()
