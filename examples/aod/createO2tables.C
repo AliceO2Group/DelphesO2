@@ -2,8 +2,8 @@ R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
 #include <algorithm> // std::shuffle
-#include <random>    // std::default_random_engine
-#include <chrono>    // std::chrono::system_clock
+#include <random> // std::default_random_engine
+#include <chrono> // std::chrono::system_clock
 
 // ROOT includes
 #include "TMath.h"
@@ -46,7 +46,7 @@ const double rich_radiator_length = 2.;
 const double rich_efficiency = 0.4;
 const double rich_sigma = 7.e-3;
 // MID
-const char *inputFileAccMuonPID = "muonAccEffPID.root";
+const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
 const bool do_vertexing = true;
@@ -161,8 +161,8 @@ int createO2tables(const char* inputFile = "delphes.root",
   o2::delphes::MIDdetector midDetector;
   printf("creating MID detector...\n");
   bool isMID = midDetector.setup(inputFileAccMuonPID);
-  printf("isMID = %d\n",isMID);
-  
+  printf("isMID = %d\n", isMID);
+
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
   // Make output Trees
@@ -193,8 +193,8 @@ int createO2tables(const char* inputFile = "delphes.root",
   int fTrackCounter = 0; // Counter for the track index, needed for derived tables e.g. RICH. To be incremented at every track filled!
 
   // Random generator for reshuffling tracks when reading them
-  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed: 
-  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
+  std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
+  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {                               // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
       eventextra.fStart[i] += eventextra.fNentries[i];
@@ -360,12 +360,12 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
       // check if it is within the acceptance of the MID
       if (isMID) {
-	if (midDetector.hasMID(*track)) {
-	  mid.fIndexCollisions = ientry + eventOffset;
-	  mid.fIndexTracks = fTrackCounter; // Index in the Track table
-	  mid.fMIDIsMuon = midDetector.isMuon(*track,multiplicity);
-	  FillTree(kMID);
-	}
+        if (midDetector.hasMID(*track)) {
+          mid.fIndexCollisions = ientry + eventOffset;
+          mid.fIndexTracks = fTrackCounter; // Index in the Track table
+          mid.fMIDIsMuon = midDetector.isMuon(*track, multiplicity);
+          FillTree(kMID);
+        }
       }
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);
@@ -513,5 +513,5 @@ int createO2tables(const char* inputFile = "delphes.root",
   fout->Close();
 
   Printf("AOD written!");
-  return 0;  
+  return 0;
 }
