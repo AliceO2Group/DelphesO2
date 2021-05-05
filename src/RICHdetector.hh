@@ -16,6 +16,8 @@ class RICHdetector {
 public:
   RICHdetector() = default;
   ~RICHdetector() = default;
+
+  enum { kBarrel, kForward }; // type of RICH detector
   
   void setup(float radius, float length);  
   bool hasRICH(const Track &track) const;
@@ -25,6 +27,9 @@ public:
   void setEfficiency(float val) { mEfficiency = val; };
   void setSigma(float val) { mSigma = val; };
   void setMinPhotons(int val) { mMinPhotons = val; };
+  
+  void setType(int val) { mType = val; };
+  void setRadiusIn(float val) { mRadiusIn = val; };
 
   void makePID(const Track &track, std::array<float, 5> &deltaangle, std::array<float, 5> &nsigma) const;
   std::pair<float, float> getMeasuredAngle(const Track &track) const;
@@ -42,8 +47,10 @@ public:
     return mSigma / sqrt(numberOfDetectedPhotons(cherenkovAngle(p, m))); }
   
 protected:
-  
+
+  int mType = kBarrel;
   float mRadius = 100.; // [cm]
+  float mRadiusIn = 10.; // [cm]
   float mLength = 200.; // [cm]
 
   float mIndex = 1.03;
