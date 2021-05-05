@@ -12,6 +12,7 @@
 #pragma link C++ class o2::delphes::TrackUtils+;
 #pragma link C++ class o2::delphes::TOFLayer+;
 #pragma link C++ class o2::delphes::RICHdetector+;
+#pragma link C++ class o2::delphes::MIDdetector+;
 #pragma link C++ struct o2::delphes::Vertex+;
 
 #endif

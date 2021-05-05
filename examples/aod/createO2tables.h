@@ -27,14 +27,15 @@ enum TreeIndex { // Index of the output trees
   kRun2BCInfo,
   kHMPID,
   kRICH,
+  kMID,
   kTrees
 };
 
 const int fBasketSizeEvents = 1000000;  // Maximum basket size of the trees for events
 const int fBasketSizeTracks = 10000000; // Maximum basket size of the trees for tracks
 
-const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2hmpid", "O2rich"};
-const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Calorimeter cells", "Calorimeter triggers", "MUON tracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "HMPID info", "RICH info"};
+const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2hmpid", "O2rich","O2mid"};
+const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Calorimeter cells", "Calorimeter triggers", "MUON tracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "HMPID info", "RICH info", "MID info"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -326,6 +327,22 @@ void MakeTreeO2rich()
   t->Branch("fRICHNsigmaPi", &rich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
   t->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
   t->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  t->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
+  // MID data
+  Int_t fIndexCollisions = -1; /// Collision ID
+  Int_t fIndexTracks = -1;     /// Track ID
+  Bool_t fMIDIsMuon = kFALSE;  /// MID response for the muon hypothesis
+} mid;                         //! structure to keep MID info
+
+void MakeTreeO2mid()
+{
+  TTree* t = CreateTree(kMID);
+  t->Branch("fIndexCollisions", &mid.fIndexCollisions, "fIndexCollisions/I");
+  t->Branch("fIndexTracks",     &mid.fIndexTracks,     "fIndexTracks/I");
+  t->Branch("fMIDIsMuon",       &mid.fMIDIsMuon,       "fMIDIsMuon/b");
   t->SetBasketSize("*", fBasketSizeTracks);
 }
 

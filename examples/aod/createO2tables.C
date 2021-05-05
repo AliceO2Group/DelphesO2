@@ -2,8 +2,8 @@ R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
 #include <algorithm> // std::shuffle
-#include <random>    // std::default_random_engine
-#include <chrono>    // std::chrono::system_clock
+#include <random> // std::default_random_engine
+#include <chrono> // std::chrono::system_clock
 
 // ROOT includes
 #include "TMath.h"
@@ -26,6 +26,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TrackSmearer.hh"
 #include "TOFLayer.hh"
 #include "RICHdetector.hh"
+#include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
 #include "createO2tables.h"
@@ -44,6 +45,8 @@ const double rich_index = 1.03;
 const double rich_radiator_length = 2.;
 const double rich_efficiency = 0.4;
 const double rich_sigma = 7.e-3;
+// MID
+const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
 const bool do_vertexing = true;
@@ -154,6 +157,11 @@ int createO2tables(const char* inputFile = "delphes.root",
   richdetector.setRadiatorLength(rich_radiator_length);
   richdetector.setEfficiency(rich_efficiency);
   richdetector.setSigma(rich_sigma);
+  // MID detector
+  o2::delphes::MIDdetector midDetector;
+  printf("creating MID detector...\n");
+  bool isMID = midDetector.setup(inputFileAccMuonPID);
+  printf("isMID = %d\n", isMID);
 
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
@@ -163,6 +171,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2trackCov();
   MakeTreeO2trackExtra();
   MakeTreeO2rich();
+  MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
   MakeTreeO2mccollision();
@@ -185,8 +194,7 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Random generator for reshuffling tracks when reading them
   std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
-
-  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
+  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {                               // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
       eventextra.fStart[i] += eventextra.fNentries[i];
@@ -240,6 +248,8 @@ int createO2tables(const char* inputFile = "delphes.root",
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
     std::vector<Track*> tof_tracks;
+    const int multiplicity = tracks->GetEntries();
+
     // Build index array of tracks to randomize track writing order
     std::vector<int> tracks_indices(tracks->GetEntries());              // vector with tracks->GetEntries()
     std::iota(std::begin(tracks_indices), std::end(tracks_indices), 0); // Fill with 0, 1, ...
@@ -347,6 +357,15 @@ int createO2tables(const char* inputFile = "delphes.root",
         rich.fRICHNsigmaKa = nsigma[3];
         rich.fRICHNsigmaPr = nsigma[4];
         FillTree(kRICH);
+      }
+      // check if it is within the acceptance of the MID
+      if (isMID) {
+        if (midDetector.hasMID(*track)) {
+          mid.fIndexCollisions = ientry + eventOffset;
+          mid.fIndexTracks = fTrackCounter; // Index in the Track table
+          mid.fMIDIsMuon = midDetector.isMuon(*track, multiplicity);
+          FillTree(kMID);
+        }
       }
       if (do_vertexing) {
         o2::InteractionRecord ir(ientry + eventOffset, 0);
