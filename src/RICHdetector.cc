@@ -28,7 +28,15 @@ RICHdetector::hasRICH(const Track &track) const
   auto y = track.YOuter * 0.1; // [cm]
   auto z = track.ZOuter * 0.1; // [cm]
   /** check if hit **/
-  bool ishit = (fabs(hypot(x, y) - mRadius) < 0.001 && fabs(z) < mLength);
+  bool ishit = false;
+  if (mType == kBarrel) {
+    auto r = hypot(x, y);
+    ishit = (fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
+  }
+  if (mType == kForward) {
+    auto r = hypot(x, y);
+    ishit = (r > mRadiusIn) && (r < mRadius) && (fabs(fabs(z) - mLength) < 0.001);
+  }
   if (!ishit) return false;
   /** check if above threshold **/
   auto particle = (GenParticle *)track.Particle.GetObject();
