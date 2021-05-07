@@ -10,6 +10,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TChain.h"
 #include "TClonesArray.h"
 #include "TRandom3.h"
+#include "TDatabasePDG.h"
 
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
@@ -120,6 +121,9 @@ int createO2tables(const char* inputFile = "delphes.root",
     Printf("input file is empty, returning");
     return 0;
   }
+
+  TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 1, "Nucleus", 1000010020);
+  TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
 
   if (do_vertexing) {
     o2::base::GeometryManager::loadGeometry();
@@ -494,7 +498,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     FillTree(kEventsExtra);
   }
 
-  Printf("Writing tables for %i events", eventextra.fStart[kEvents]);
+  Printf("Writing tables for %i events", eventextra.fStart[kEvents] + 1);
   TString out_dir = outputFile;
   out_dir.ReplaceAll(".root", "");
   out_dir.ReplaceAll("AODRun5.", "");
