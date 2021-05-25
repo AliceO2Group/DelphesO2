@@ -2,8 +2,8 @@ R__LOAD_LIBRARY(libDelphes)
 R__LOAD_LIBRARY(libDelphesO2)
 
 #include <algorithm> // std::shuffle
-#include <random> // std::default_random_engine
-#include <chrono> // std::chrono::system_clock
+#include <random>    // std::default_random_engine
+#include <chrono>    // std::chrono::system_clock
 
 // ROOT includes
 #include "TMath.h"
@@ -55,18 +55,16 @@ const bool do_vertexing = true;
 // Class to hold the information for the O2 vertexing
 class TrackAlice3 : public o2::track::TrackParCov
 {
-  using timeEst = o2::dataformats::TimeStampWithError<float, float>;
+  using TimeEst = o2::dataformats::TimeStampWithError<float, float>;
 
  public:
   TrackAlice3() = default;
   ~TrackAlice3() = default;
   TrackAlice3(const TrackAlice3& src) = default;
-  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), mTimeMUS{t, te}, mLabel{label} {}
-  const timeEst& getTimeMUS() const { return mTimeMUS; }
+  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), timeEst{t, te}, mLabel{label} {}
+  const TimeEst& getTimeMUS() const { return timeEst; }
   const int mLabel;
-
- private:
-  timeEst mTimeMUS; ///< time estimate in ns
+  TimeEst timeEst; ///< time estimate in ns
 };
 
 template <typename T>
@@ -426,7 +424,7 @@ int createO2tables(const char* inputFile = "delphes.root",
         idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
       }
       vertexer.setStartIR({0, 0});
-      const int n_vertices = vertexer.process(gsl::span<const TrackAlice3>{tracks_for_vertexing},
+      const int n_vertices = vertexer.process(tracks_for_vertexing,
                                               idxVec,
                                               gsl::span<o2::InteractionRecord>{bcData},
                                               vertices,

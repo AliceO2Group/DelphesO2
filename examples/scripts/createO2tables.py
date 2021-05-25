@@ -353,7 +353,7 @@ def main(configuration_file,
                                 check_status=True)
             aod_file = f"AODRun5.{run_number}.root"
             aod_log_file = aod_file.replace(".root", ".log")
-            write_to_runner(f"root -b -q -l 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
+            write_to_runner(f"root -l -b -q 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
                             log_file=aod_log_file,
                             check_status=True)
             if not clean_delphes_files:
@@ -373,7 +373,7 @@ def main(configuration_file,
     run_cmd("root -l -b -q 'createO2tables.C+(\"\")' > /dev/null 2>&1",
             comment="to compile the table creator only once, before running")
     if not os.path.isfile("createO2tables_C.so"):
-        run_cmd("root -l -b -q 'createO2tables.C+(\"\")' 2>&1",
+        run_cmd("root -l -b -q 'createO2tables.C+(\"\")'",
                 comment="to compile with full log")
         fatal_msg("'createO2tables.C' did not compile!")
     total_processing_time = time.time()
