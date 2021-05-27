@@ -9,7 +9,6 @@ import configparser
 import os
 import shutil
 import multiprocessing
-import numpy
 import time
 import random
 from datetime import datetime
@@ -153,9 +152,9 @@ def main(configuration_file,
     bField = opt("bField")
     sigmaT = opt("sigmaT")
     sigmaT0 = opt("sigmaT0")
-    radius = opt("radius")
+    barrel_radius = opt("barrel_radius")
     etaMax = opt("etamax")
-    length = opt("length")
+    barrel_half_length = opt("barrel_half_length")
 
     # copy relevant files in the working directory
     def do_copy(in_file, out_file):
@@ -172,9 +171,10 @@ def main(configuration_file,
     lut_tag = opt("lut_tag")
     if create_luts:
         # Creating LUTs
+        minimum_track_radius = opt("minimum_track_radius")
         verbose_msg("Creating LUTs")
         lut_path = os.path.join(lut_path, "create_luts.sh")
-        run_cmd(f"{lut_path} {lut_tag} {float(bField)*0.1} {radius} 2>&1",
+        run_cmd(f"{lut_path} {lut_tag} {float(bField)*0.1} {minimum_track_radius} 2>&1",
                 f"Creating the lookup tables with tag {lut_tag} from {lut_path} script")
     else:
         # Fetching LUTs
@@ -194,7 +194,8 @@ def main(configuration_file,
     if custom_gen is None:
         # Checking that the generators are defined
         if opt("generators", require=False) is None:
-            fatal_msg("Did not find any generator configuration corresponding to the entry", config_entry, "in your configuration file", configuration_file)
+            fatal_msg("Did not find any generator configuration corresponding to the entry",
+                      config_entry, "in your configuration file", configuration_file)
         generators = opt("generators").split(" ")
         for i in generators:
             do_copy(i, ".")
@@ -210,18 +211,20 @@ def main(configuration_file,
 
     # Printing configuration
     msg(" --- running createO2tables.py", color=bcolors.HEADER)
-    msg("  njobs    = ", njobs)
-    msg("  nruns    = ", nruns)
-    msg("  nevents  = ", nevents)
-    msg("  lut path = ", lut_path)
+    msg("  njobs    =", njobs)
+    msg("  nruns    =", nruns)
+    msg("  nevents  =", nevents)
+    msg("  lut path =", lut_path)
     msg(" --- with detector configuration", color=bcolors.HEADER)
-    msg("  bField   = ", bField, "\t[kG]")
-    msg("  sigmaT   = ", sigmaT, "\t[ns]")
-    msg("  sigmaT0  = ", sigmaT0, "\t[ns]")
-    msg("  radius   = ", radius, "\t[cm]")
-    msg("  length   = ", length, "\t[cm]")
-    msg("  LUT      = ", lut_tag)
-    msg("  etaMax   = ", etaMax)
+    msg("  bField               =", bField, "[kG]")
+    msg("  sigmaT               =", sigmaT, "[ns]")
+    msg("  sigmaT0              =", sigmaT0, "[ns]")
+    msg("  barrel_radius        =", barrel_radius, "[cm]")
+    msg("  barrel_half_length   =", barrel_half_length, "[cm]")
+    if create_luts:
+        msg("  minimum_track_radius =", minimum_track_radius, "[cm]")
+    msg("  LUT                  =", lut_tag)
+    msg("  etaMax               =", etaMax)
 
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
@@ -255,20 +258,21 @@ def main(configuration_file,
     if turn_off_vertexing:
         set_config("createO2tables.C",
                    "const bool do_vertexing = ", "false\;/")
-    else: # Check that the geometry file for the vertexing is there
+    else:  # Check that the geometry file for the vertexing is there
         if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
-            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -n 1 && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && rm -r tmpo2sim")
+            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
     if qa:
         set_config("dpl-config_std.json", "\\\"d_bz\\\":",
                    "\\\""f"{bField}""\\\"\,/")
-    # set radius
-    set_config("propagate.tcl", "set barrel_Radius", f"{radius}""e\-2/")
+    # set barrel_radius
+    set_config("propagate.tcl", "set barrel_Radius", f"{barrel_radius}""e\-2/")
     set_config("createO2tables.C",
-               "const double tof_radius =", f"{radius}""\;/")
-    # set length
-    set_config("propagate.tcl", "set barrel_HalfLength", f"{length}""e\-2/")
+               "const double tof_radius =", f"{barrel_radius}""\;/")
+    # set barrel_half_length
+    set_config("propagate.tcl", "set barrel_HalfLength",
+               f"{barrel_half_length}""e\-2/")
     set_config("createO2tables.C",
-               "const double tof_length =", f"{length}""\;/")
+               "const double tof_length =", f"{barrel_half_length}""\;/")
     # # set acceptance
     set_config("propagate.tcl", "set barrel_Acceptance",
                "\{ 0.0 + 1.0 * fabs(eta) < "f"{etaMax}"" \}/")
@@ -301,11 +305,12 @@ def main(configuration_file,
                     f_run.write("\nReturnValue=$?\n")
                     f_run.write("if [[ $ReturnValue != 0 ]]; then\n")
                     f_run.write("  echo \"Encountered error with command: '")
-                    f_run.write(line.replace(log_line, "").replace("\"", "\\\"").strip())
+                    line = line.replace(log_line, "")
+                    f_run.write(line.replace("\"", "\\\"").strip())
                     f_run.write("'\"\n")
                     if log_file is not None:
-                        f_run.write(
-                            f"  echo \"Check log: '{log_file.strip()}'\"\n")
+                        f_run.write("  echo \"Check log: '")
+                        f_run.write(log_file.strip() + "'\"\n")
                     f_run.write("  exit $ReturnValue\n")
                     f_run.write("fi\n")
 

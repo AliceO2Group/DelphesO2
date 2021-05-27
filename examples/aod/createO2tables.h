@@ -6,9 +6,10 @@ enum TreeIndex { // Index of the output trees
   kTracks,
   kTracksCov,
   kTracksExtra,
+  kFwdTrack,
+  kFwdTrackCov,
   kCalo,
   kCaloTrigger,
-  kMuon,
   kMuonCls,
   kZdc,
   kFV0A,
@@ -25,17 +26,20 @@ enum TreeIndex { // Index of the output trees
   kMcCollisionLabel,
   kBC,
   kRun2BCInfo,
+  kOrigin,
   kHMPID,
   kRICH,
   kMID,
+  kFTOF,
   kTrees
 };
 
 const int fBasketSizeEvents = 1000000;  // Maximum basket size of the trees for events
 const int fBasketSizeTracks = 10000000; // Maximum basket size of the trees for tracks
 
-const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2calo", "O2calotrigger", "O2muon", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2hmpid", "O2rich","O2mid"};
-const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Calorimeter cells", "Calorimeter triggers", "MUON tracks", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "HMPID info", "RICH info", "MID info"};
+const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2fwdtrack", "O2fwdtrackcov", "O2calo", "O2calotrigger", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2origin", "O2hmpid", "O2rich", "O2mid", "O2ftof"};
+
+const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Forward tracks Parameters", "Forward tracks Covariances", "Calorimeter cells", "Calorimeter triggers", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "DF ids", "HMPID info", "RICH info", "MID info", "Forward TOF info"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -226,20 +230,20 @@ struct {
   // Track extrapolation to EMCAL surface
   Float_t fTrackEtaEMCAL = -999.f; /// Track eta at the EMCAL surface
   Float_t fTrackPhiEMCAL = -999.f; /// Track phi at the EMCAL surface
-} mytracks;                        //! structure to keep track information
+} aod_track;                       //! structure to keep track information
 
 void MakeTreeO2track()
 {
   TTree* tTracks = CreateTree(kTracks);
-  tTracks->Branch("fIndexCollisions", &mytracks.fIndexCollisions, "fIndexCollisions/I");
-  tTracks->Branch("fTrackType", &mytracks.fTrackType, "fTrackType/b");
-  tTracks->Branch("fX", &mytracks.fX, "fX/F");
-  tTracks->Branch("fAlpha", &mytracks.fAlpha, "fAlpha/F");
-  tTracks->Branch("fY", &mytracks.fY, "fY/F");
-  tTracks->Branch("fZ", &mytracks.fZ, "fZ/F");
-  tTracks->Branch("fSnp", &mytracks.fSnp, "fSnp/F");
-  tTracks->Branch("fTgl", &mytracks.fTgl, "fTgl/F");
-  tTracks->Branch("fSigned1Pt", &mytracks.fSigned1Pt, "fSigned1Pt/F");
+  tTracks->Branch("fIndexCollisions", &aod_track.fIndexCollisions, "fIndexCollisions/I");
+  tTracks->Branch("fTrackType", &aod_track.fTrackType, "fTrackType/b");
+  tTracks->Branch("fX", &aod_track.fX, "fX/F");
+  tTracks->Branch("fAlpha", &aod_track.fAlpha, "fAlpha/F");
+  tTracks->Branch("fY", &aod_track.fY, "fY/F");
+  tTracks->Branch("fZ", &aod_track.fZ, "fZ/F");
+  tTracks->Branch("fSnp", &aod_track.fSnp, "fSnp/F");
+  tTracks->Branch("fTgl", &aod_track.fTgl, "fTgl/F");
+  tTracks->Branch("fSigned1Pt", &aod_track.fSigned1Pt, "fSigned1Pt/F");
   tTracks->SetBasketSize("*", fBasketSizeTracks);
 }
 
@@ -247,21 +251,21 @@ void MakeTreeO2trackCov()
 {
   TTree* tTracksCov = CreateTree(kTracksCov);
   // Modified covariance matrix
-  tTracksCov->Branch("fSigmaY", &mytracks.fSigmaY, "fSigmaY/F");
-  tTracksCov->Branch("fSigmaZ", &mytracks.fSigmaZ, "fSigmaZ/F");
-  tTracksCov->Branch("fSigmaSnp", &mytracks.fSigmaSnp, "fSigmaSnp/F");
-  tTracksCov->Branch("fSigmaTgl", &mytracks.fSigmaTgl, "fSigmaTgl/F");
-  tTracksCov->Branch("fSigma1Pt", &mytracks.fSigma1Pt, "fSigma1Pt/F");
-  tTracksCov->Branch("fRhoZY", &mytracks.fRhoZY, "fRhoZY/B");
-  tTracksCov->Branch("fRhoSnpY", &mytracks.fRhoSnpY, "fRhoSnpY/B");
-  tTracksCov->Branch("fRhoSnpZ", &mytracks.fRhoSnpZ, "fRhoSnpZ/B");
-  tTracksCov->Branch("fRhoTglY", &mytracks.fRhoTglY, "fRhoTglY/B");
-  tTracksCov->Branch("fRhoTglZ", &mytracks.fRhoTglZ, "fRhoTglZ/B");
-  tTracksCov->Branch("fRhoTglSnp", &mytracks.fRhoTglSnp, "fRhoTglSnp/B");
-  tTracksCov->Branch("fRho1PtY", &mytracks.fRho1PtY, "fRho1PtY/B");
-  tTracksCov->Branch("fRho1PtZ", &mytracks.fRho1PtZ, "fRho1PtZ/B");
-  tTracksCov->Branch("fRho1PtSnp", &mytracks.fRho1PtSnp, "fRho1PtSnp/B");
-  tTracksCov->Branch("fRho1PtTgl", &mytracks.fRho1PtTgl, "fRho1PtTgl/B");
+  tTracksCov->Branch("fSigmaY", &aod_track.fSigmaY, "fSigmaY/F");
+  tTracksCov->Branch("fSigmaZ", &aod_track.fSigmaZ, "fSigmaZ/F");
+  tTracksCov->Branch("fSigmaSnp", &aod_track.fSigmaSnp, "fSigmaSnp/F");
+  tTracksCov->Branch("fSigmaTgl", &aod_track.fSigmaTgl, "fSigmaTgl/F");
+  tTracksCov->Branch("fSigma1Pt", &aod_track.fSigma1Pt, "fSigma1Pt/F");
+  tTracksCov->Branch("fRhoZY", &aod_track.fRhoZY, "fRhoZY/B");
+  tTracksCov->Branch("fRhoSnpY", &aod_track.fRhoSnpY, "fRhoSnpY/B");
+  tTracksCov->Branch("fRhoSnpZ", &aod_track.fRhoSnpZ, "fRhoSnpZ/B");
+  tTracksCov->Branch("fRhoTglY", &aod_track.fRhoTglY, "fRhoTglY/B");
+  tTracksCov->Branch("fRhoTglZ", &aod_track.fRhoTglZ, "fRhoTglZ/B");
+  tTracksCov->Branch("fRhoTglSnp", &aod_track.fRhoTglSnp, "fRhoTglSnp/B");
+  tTracksCov->Branch("fRho1PtY", &aod_track.fRho1PtY, "fRho1PtY/B");
+  tTracksCov->Branch("fRho1PtZ", &aod_track.fRho1PtZ, "fRho1PtZ/B");
+  tTracksCov->Branch("fRho1PtSnp", &aod_track.fRho1PtSnp, "fRho1PtSnp/B");
+  tTracksCov->Branch("fRho1PtTgl", &aod_track.fRho1PtTgl, "fRho1PtTgl/B");
   tTracksCov->SetBasketSize("*", fBasketSizeTracks);
 }
 
@@ -269,25 +273,25 @@ void MakeTreeO2trackExtra()
 {
   TTree* tTracksExtra = CreateTree(kTracksExtra);
   //Extra
-  tTracksExtra->Branch("fTPCInnerParam", &mytracks.fTPCinnerP, "fTPCInnerParam/F");
-  tTracksExtra->Branch("fFlags", &mytracks.fFlags, "fFlags/i");
-  tTracksExtra->Branch("fITSClusterMap", &mytracks.fITSClusterMap, "fITSClusterMap/b");
-  tTracksExtra->Branch("fTPCNClsFindable", &mytracks.fTPCNClsFindable, "fTPCNClsFindable/b");
-  tTracksExtra->Branch("fTPCNClsFindableMinusFound", &mytracks.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
-  tTracksExtra->Branch("fTPCNClsFindableMinusCrossedRows", &mytracks.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
-  tTracksExtra->Branch("fTPCNClsShared", &mytracks.fTPCNClsShared, "fTPCNClsShared/b");
-  tTracksExtra->Branch("fTRDPattern", &mytracks.fTRDPattern, "fTRDPattern/b");
-  tTracksExtra->Branch("fITSChi2NCl", &mytracks.fITSChi2NCl, "fITSChi2NCl/F");
-  tTracksExtra->Branch("fTPCChi2NCl", &mytracks.fTPCChi2NCl, "fTPCChi2NCl/F");
-  tTracksExtra->Branch("fTRDChi2", &mytracks.fTRDChi2, "fTRDChi2/F");
-  tTracksExtra->Branch("fTOFChi2", &mytracks.fTOFChi2, "fTOFChi2/F");
-  tTracksExtra->Branch("fTPCSignal", &mytracks.fTPCSignal, "fTPCSignal/F");
-  tTracksExtra->Branch("fTRDSignal", &mytracks.fTRDSignal, "fTRDSignal/F");
-  tTracksExtra->Branch("fTOFSignal", &mytracks.fTOFSignal, "fTOFSignal/F");
-  tTracksExtra->Branch("fLength", &mytracks.fLength, "fLength/F");
-  tTracksExtra->Branch("fTOFExpMom", &mytracks.fTOFExpMom, "fTOFExpMom/F");
-  tTracksExtra->Branch("fTrackEtaEMCAL", &mytracks.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
-  tTracksExtra->Branch("fTrackPhiEMCAL", &mytracks.fTrackPhiEMCAL, "fTrackPhiEMCAL/F");
+  tTracksExtra->Branch("fTPCInnerParam", &aod_track.fTPCinnerP, "fTPCInnerParam/F");
+  tTracksExtra->Branch("fFlags", &aod_track.fFlags, "fFlags/i");
+  tTracksExtra->Branch("fITSClusterMap", &aod_track.fITSClusterMap, "fITSClusterMap/b");
+  tTracksExtra->Branch("fTPCNClsFindable", &aod_track.fTPCNClsFindable, "fTPCNClsFindable/b");
+  tTracksExtra->Branch("fTPCNClsFindableMinusFound", &aod_track.fTPCNClsFindableMinusFound, "fTPCNClsFindableMinusFound/B");
+  tTracksExtra->Branch("fTPCNClsFindableMinusCrossedRows", &aod_track.fTPCNClsFindableMinusCrossedRows, "fTPCNClsFindableMinusCrossedRows/B");
+  tTracksExtra->Branch("fTPCNClsShared", &aod_track.fTPCNClsShared, "fTPCNClsShared/b");
+  tTracksExtra->Branch("fTRDPattern", &aod_track.fTRDPattern, "fTRDPattern/b");
+  tTracksExtra->Branch("fITSChi2NCl", &aod_track.fITSChi2NCl, "fITSChi2NCl/F");
+  tTracksExtra->Branch("fTPCChi2NCl", &aod_track.fTPCChi2NCl, "fTPCChi2NCl/F");
+  tTracksExtra->Branch("fTRDChi2", &aod_track.fTRDChi2, "fTRDChi2/F");
+  tTracksExtra->Branch("fTOFChi2", &aod_track.fTOFChi2, "fTOFChi2/F");
+  tTracksExtra->Branch("fTPCSignal", &aod_track.fTPCSignal, "fTPCSignal/F");
+  tTracksExtra->Branch("fTRDSignal", &aod_track.fTRDSignal, "fTRDSignal/F");
+  tTracksExtra->Branch("fTOFSignal", &aod_track.fTOFSignal, "fTOFSignal/F");
+  tTracksExtra->Branch("fLength", &aod_track.fLength, "fLength/F");
+  tTracksExtra->Branch("fTOFExpMom", &aod_track.fTOFExpMom, "fTOFExpMom/F");
+  tTracksExtra->Branch("fTrackEtaEMCAL", &aod_track.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
+  tTracksExtra->Branch("fTrackPhiEMCAL", &aod_track.fTrackPhiEMCAL, "fTrackPhiEMCAL/F");
   tTracksExtra->SetBasketSize("*", fBasketSizeTracks);
 }
 
@@ -341,8 +345,47 @@ void MakeTreeO2mid()
 {
   TTree* t = CreateTree(kMID);
   t->Branch("fIndexCollisions", &mid.fIndexCollisions, "fIndexCollisions/I");
-  t->Branch("fIndexTracks",     &mid.fIndexTracks,     "fIndexTracks/I");
-  t->Branch("fMIDIsMuon",       &mid.fMIDIsMuon,       "fMIDIsMuon/b");
+  t->Branch("fIndexTracks", &mid.fIndexTracks, "fIndexTracks/I");
+  t->Branch("fMIDIsMuon", &mid.fMIDIsMuon, "fMIDIsMuon/b");
+  t->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
+  // Forward TOF data
+  Int_t fIndexCollisions = -1; /// Collision ID
+  Int_t fIndexTracks = -1;     /// Track ID
+
+  Float_t fFTOFLength = -999.f;   /// Forward TOF signal
+  Float_t fFTOFSignal = -999.f;   /// Forward TOF signal
+  Float_t fFTOFDeltaEl = -999.f;  /// Delta for El
+  Float_t fFTOFDeltaMu = -999.f;  /// Delta for Mu
+  Float_t fFTOFDeltaPi = -999.f;  /// Delta for Pi
+  Float_t fFTOFDeltaKa = -999.f;  /// Delta for Ka
+  Float_t fFTOFDeltaPr = -999.f;  /// Delta for Pr
+  Float_t fFTOFNsigmaEl = -999.f; /// Nsigma for El
+  Float_t fFTOFNsigmaMu = -999.f; /// Nsigma for Mu
+  Float_t fFTOFNsigmaPi = -999.f; /// Nsigma for Pi
+  Float_t fFTOFNsigmaKa = -999.f; /// Nsigma for Ka
+  Float_t fFTOFNsigmaPr = -999.f; /// Nsigma for Pr
+} ftof;                           //! structure to keep Forward TOF info
+
+void MakeTreeO2ftof()
+{
+  TTree* t = CreateTree(kFTOF);
+  t->Branch("fIndexCollisions", &ftof.fIndexCollisions, "fIndexCollisions/I");
+  t->Branch("fIndexTracks", &ftof.fIndexTracks, "fIndexTracks/I");
+  t->Branch("fFTOFLength", &ftof.fFTOFLength, "fFTOFLength/F");
+  t->Branch("fFTOFSignal", &ftof.fFTOFSignal, "fFTOFSignal/F");
+  t->Branch("fFTOFDeltaEl", &ftof.fFTOFDeltaEl, "fFTOFDeltaEl/F");
+  t->Branch("fFTOFDeltaMu", &ftof.fFTOFDeltaMu, "fFTOFDeltaMu/F");
+  t->Branch("fFTOFDeltaPi", &ftof.fFTOFDeltaPi, "fFTOFDeltaPi/F");
+  t->Branch("fFTOFDeltaKa", &ftof.fFTOFDeltaKa, "fFTOFDeltaKa/F");
+  t->Branch("fFTOFDeltaPr", &ftof.fFTOFDeltaPr, "fFTOFDeltaPr/F");
+  t->Branch("fFTOFNsigmaEl", &ftof.fFTOFNsigmaEl, "fFTOFNsigmaEl/F");
+  t->Branch("fFTOFNsigmaMu", &ftof.fFTOFNsigmaMu, "fFTOFNsigmaMu/F");
+  t->Branch("fFTOFNsigmaPi", &ftof.fFTOFNsigmaPi, "fFTOFNsigmaPi/F");
+  t->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
+  t->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
   t->SetBasketSize("*", fBasketSizeTracks);
 }
 
@@ -432,4 +475,64 @@ void FillTree(TreeIndex t)
 {
   Trees[t]->Fill();
   eventextra.fNentries[t]++;
+}
+
+// Class to hold the track information for the O2 vertexing
+class TrackAlice3 : public o2::track::TrackParCov
+{
+  using TimeEst = o2::dataformats::TimeStampWithError<float, float>;
+
+ public:
+  TrackAlice3() = default;
+  ~TrackAlice3() = default;
+  TrackAlice3(const TrackAlice3& src) = default;
+  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), timeEst{t, te}, mLabel{label} {}
+  const TimeEst& getTimeMUS() const { return timeEst; }
+  const int mLabel;
+  TimeEst timeEst; ///< time estimate in ns
+};
+
+// Function to check if a particle is a secondary based on its history
+template <typename T>
+bool IsSecondary(const T& particleTree, const int& index)
+{
+  auto particle = (GenParticle*)particleTree->At(index);
+  if (particle->M1 < 0) {
+    return false;
+  }
+
+  auto mother = (GenParticle*)particleTree->At(particle->M1);
+  if (!mother) {
+    return false;
+  }
+  // Ancore di salvezza :)
+  if ((particle->M1 == particle->M2) && (particle->M1 == 0)) {
+    return false;
+  }
+  if (abs(mother->PID) <= 8) {
+    return false;
+  }
+  // 100% secondaries if true here
+  switch (abs(mother->PID)) {
+    // K0S
+    case 310:
+    // Lambda
+    case 3122:
+    // Sigma0
+    case 3212:
+    // Sigma-
+    case 3112:
+    // Sigma+
+    case 3222:
+    // Xi-
+    case 3312:
+    // Xi0
+    case 3322:
+    // Omega-
+    case 3334:
+      return true;
+      break;
+  }
+
+  return IsSecondary(particleTree, particle->M1);
 }

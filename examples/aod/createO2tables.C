@@ -39,6 +39,12 @@ const double tof_radius = 100.; // [cm] Radius of the TOF detector (used to comp
 const double tof_length = 200.; // [cm] Length of the TOF detector (used to compute acceptance)
 const double tof_sigmat = 0.02; // [ns] Resolution of the TOF detector
 const double tof_sigmat0 = 0.2; // [ns] Time spread of the vertex
+// Forward TOF
+const double forward_tof_radius = 100.;   // [cm] Radius of the Forward TOF detector (used to compute acceptance)
+const double forward_tof_radius_in = 10.; // [cm] Inner radius of the Forward TOF detector (used to compute acceptance)
+const double forward_tof_length = 200.;   // [cm] Length of the Forward TOF detector (used to compute acceptance)
+const double forward_tof_sigmat = 0.02;   // [ns] Resolution of the Forward TOF detector
+const double forward_tof_sigmat0 = 0.2;   // [ns] Time spread of the vertex
 // RICH
 const double rich_radius = 100.; // [cm] Radius of the RICH detector (used to compute acceptance)
 const double rich_length = 200.; // [cm] Length of the RICH detector (used to compute acceptance)
@@ -51,65 +57,6 @@ const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
 const bool do_vertexing = true;
-
-// Class to hold the information for the O2 vertexing
-class TrackAlice3 : public o2::track::TrackParCov
-{
-  using TimeEst = o2::dataformats::TimeStampWithError<float, float>;
-
- public:
-  TrackAlice3() = default;
-  ~TrackAlice3() = default;
-  TrackAlice3(const TrackAlice3& src) = default;
-  TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), timeEst{t, te}, mLabel{label} {}
-  const TimeEst& getTimeMUS() const { return timeEst; }
-  const int mLabel;
-  TimeEst timeEst; ///< time estimate in ns
-};
-
-template <typename T>
-bool IsSecondary(const T& particleTree, const int& index)
-{
-  auto particle = (GenParticle*)particleTree->At(index);
-  if (particle->M1 < 0) {
-    return false;
-  }
-
-  auto mother = (GenParticle*)particleTree->At(particle->M1);
-  if (!mother) {
-    return false;
-  }
-  // Ancore di salvezza :)
-  if ((particle->M1 == particle->M2) && (particle->M1 == 0)) {
-    return false;
-  }
-  if (abs(mother->PID) <= 8) {
-    return false;
-  }
-  // 100% secondaries if true here
-  switch (abs(mother->PID)) {
-    // K0S
-    case 310:
-    // Lambda
-    case 3122:
-    // Sigma0
-    case 3212:
-    // Sigma-
-    case 3112:
-    // Sigma+
-    case 3222:
-    // Xi-
-    case 3312:
-    // Xi0
-    case 3322:
-    // Omega-
-    case 3334:
-      return true;
-      break;
-  }
-
-  return IsSecondary(particleTree, particle->M1);
-}
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -150,20 +97,29 @@ int createO2tables(const char* inputFile = "delphes.root",
   smearer.loadTable(2212, "lutCovm.pr.dat");
 
   // TOF layer
-  o2::delphes::TOFLayer toflayer;
-  toflayer.setup(tof_radius, tof_length, tof_sigmat, tof_sigmat0);
+  o2::delphes::TOFLayer tof_layer;
+  tof_layer.setup(tof_radius, tof_length, tof_sigmat, tof_sigmat0);
+
+  // Forward TOF layer
+  o2::delphes::TOFLayer forward_tof_layer;
+  forward_tof_layer.setup(forward_tof_radius, forward_tof_length, forward_tof_sigmat, forward_tof_sigmat0);
+  forward_tof_layer.setType(o2::delphes::TOFLayer::kForward);
+  forward_tof_layer.setRadiusIn(forward_tof_radius_in);
+
   // RICH layer
-  o2::delphes::RICHdetector richdetector;
-  richdetector.setup(rich_radius, rich_length);
-  richdetector.setIndex(rich_index);
-  richdetector.setRadiatorLength(rich_radiator_length);
-  richdetector.setEfficiency(rich_efficiency);
-  richdetector.setSigma(rich_sigma);
+  o2::delphes::RICHdetector rich_detector;
+  rich_detector.setup(rich_radius, rich_length);
+  rich_detector.setIndex(rich_index);
+  rich_detector.setRadiatorLength(rich_radiator_length);
+  rich_detector.setEfficiency(rich_efficiency);
+  rich_detector.setSigma(rich_sigma);
+
   // MID detector
-  o2::delphes::MIDdetector midDetector;
-  printf("creating MID detector...\n");
-  bool isMID = midDetector.setup(inputFileAccMuonPID);
-  printf("isMID = %d\n", isMID);
+  o2::delphes::MIDdetector mid_detector;
+  const bool isMID = mid_detector.setup(inputFileAccMuonPID);
+  if (isMID) {
+    Printf("creating MID detector");
+  }
 
   // create output
   auto fout = TFile::Open(outputFile, "RECREATE");
@@ -172,6 +128,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2track();
   MakeTreeO2trackCov();
   MakeTreeO2trackExtra();
+  MakeTreeO2ftof();
   MakeTreeO2rich();
   MakeTreeO2mid();
   MakeTreeO2collision();
@@ -290,64 +247,65 @@ int createO2tables(const char* inputFile = "delphes.root",
       FillTree(kMcTrackLabel);
 
       // set track information
-      mytracks.fIndexCollisions = ientry + eventOffset;
-      mytracks.fX = o2track.getX();
-      mytracks.fAlpha = o2track.getAlpha();
-      mytracks.fY = o2track.getY();
-      mytracks.fZ = o2track.getZ();
-      mytracks.fSnp = o2track.getSnp();
-      mytracks.fTgl = o2track.getTgl();
-      mytracks.fSigned1Pt = o2track.getQ2Pt();
+      aod_track.fIndexCollisions = ientry + eventOffset;
+      aod_track.fX = o2track.getX();
+      aod_track.fAlpha = o2track.getAlpha();
+      aod_track.fY = o2track.getY();
+      aod_track.fZ = o2track.getZ();
+      aod_track.fSnp = o2track.getSnp();
+      aod_track.fTgl = o2track.getTgl();
+      aod_track.fSigned1Pt = o2track.getQ2Pt();
 
       // Modified covariance matrix
       // First sigmas on the diagonal
-      mytracks.fSigmaY = TMath::Sqrt(o2track.getSigmaY2());
-      mytracks.fSigmaZ = TMath::Sqrt(o2track.getSigmaZ2());
-      mytracks.fSigmaSnp = TMath::Sqrt(o2track.getSigmaSnp2());
-      mytracks.fSigmaTgl = TMath::Sqrt(o2track.getSigmaTgl2());
-      mytracks.fSigma1Pt = TMath::Sqrt(o2track.getSigma1Pt2());
+      aod_track.fSigmaY = TMath::Sqrt(o2track.getSigmaY2());
+      aod_track.fSigmaZ = TMath::Sqrt(o2track.getSigmaZ2());
+      aod_track.fSigmaSnp = TMath::Sqrt(o2track.getSigmaSnp2());
+      aod_track.fSigmaTgl = TMath::Sqrt(o2track.getSigmaTgl2());
+      aod_track.fSigma1Pt = TMath::Sqrt(o2track.getSigma1Pt2());
 
-      mytracks.fRhoZY = (Char_t)(128. * o2track.getSigmaZY() / mytracks.fSigmaZ / mytracks.fSigmaY);
-      mytracks.fRhoSnpY = (Char_t)(128. * o2track.getSigmaSnpY() / mytracks.fSigmaSnp / mytracks.fSigmaY);
-      mytracks.fRhoSnpZ = (Char_t)(128. * o2track.getSigmaSnpZ() / mytracks.fSigmaSnp / mytracks.fSigmaZ);
-      mytracks.fRhoTglY = (Char_t)(128. * o2track.getSigmaTglY() / mytracks.fSigmaTgl / mytracks.fSigmaY);
-      mytracks.fRhoTglZ = (Char_t)(128. * o2track.getSigmaTglZ() / mytracks.fSigmaTgl / mytracks.fSigmaZ);
-      mytracks.fRhoTglSnp = (Char_t)(128. * o2track.getSigmaTglSnp() / mytracks.fSigmaTgl / mytracks.fSigmaSnp);
-      mytracks.fRho1PtY = (Char_t)(128. * o2track.getSigma1PtY() / mytracks.fSigma1Pt / mytracks.fSigmaY);
-      mytracks.fRho1PtZ = (Char_t)(128. * o2track.getSigma1PtZ() / mytracks.fSigma1Pt / mytracks.fSigmaZ);
-      mytracks.fRho1PtSnp = (Char_t)(128. * o2track.getSigma1PtSnp() / mytracks.fSigma1Pt / mytracks.fSigmaSnp);
-      mytracks.fRho1PtTgl = (Char_t)(128. * o2track.getSigma1PtTgl() / mytracks.fSigma1Pt / mytracks.fSigmaTgl);
+      aod_track.fRhoZY = (Char_t)(128. * o2track.getSigmaZY() / aod_track.fSigmaZ / aod_track.fSigmaY);
+      aod_track.fRhoSnpY = (Char_t)(128. * o2track.getSigmaSnpY() / aod_track.fSigmaSnp / aod_track.fSigmaY);
+      aod_track.fRhoSnpZ = (Char_t)(128. * o2track.getSigmaSnpZ() / aod_track.fSigmaSnp / aod_track.fSigmaZ);
+      aod_track.fRhoTglY = (Char_t)(128. * o2track.getSigmaTglY() / aod_track.fSigmaTgl / aod_track.fSigmaY);
+      aod_track.fRhoTglZ = (Char_t)(128. * o2track.getSigmaTglZ() / aod_track.fSigmaTgl / aod_track.fSigmaZ);
+      aod_track.fRhoTglSnp = (Char_t)(128. * o2track.getSigmaTglSnp() / aod_track.fSigmaTgl / aod_track.fSigmaSnp);
+      aod_track.fRho1PtY = (Char_t)(128. * o2track.getSigma1PtY() / aod_track.fSigma1Pt / aod_track.fSigmaY);
+      aod_track.fRho1PtZ = (Char_t)(128. * o2track.getSigma1PtZ() / aod_track.fSigma1Pt / aod_track.fSigmaZ);
+      aod_track.fRho1PtSnp = (Char_t)(128. * o2track.getSigma1PtSnp() / aod_track.fSigma1Pt / aod_track.fSigmaSnp);
+      aod_track.fRho1PtTgl = (Char_t)(128. * o2track.getSigma1PtTgl() / aod_track.fSigma1Pt / aod_track.fSigmaTgl);
 
       //FIXME this needs to be fixed
-      mytracks.fITSClusterMap = 3;
-      mytracks.fFlags = 4;
+      aod_track.fITSClusterMap = 3;
+      aod_track.fFlags = 4;
 
       //FIXME this also needs to be fixed
-      mytracks.fTrackEtaEMCAL = 0; //track->GetTrackEtaOnEMCal();
-      mytracks.fTrackPhiEMCAL = 0; //track->GetTrackPhiOnEMCal();
+      aod_track.fTrackEtaEMCAL = 0; //track->GetTrackEtaOnEMCal();
+      aod_track.fTrackPhiEMCAL = 0; //track->GetTrackPhiOnEMCal();
 
       // check if has hit the TOF
-      if (toflayer.hasTOF(*track)) {
-        mytracks.fLength = track->L * 0.1;           // [cm]
-        mytracks.fTOFSignal = track->TOuter * 1.e12; // [ps]
-        mytracks.fTOFExpMom = track->P * 0.029979246;
+      if (tof_layer.hasTOF(*track)) {
+        aod_track.fLength = track->L * 0.1;           // [cm]
+        aod_track.fTOFSignal = track->TOuter * 1.e12; // [ps]
+        aod_track.fTOFExpMom = track->P * 0.029979246;
         // if primary push to TOF tracks
-        if (fabs(mytracks.fY) < 3. * mytracks.fSigmaY && fabs(mytracks.fZ) < 3. * mytracks.fSigmaZ)
+        if (fabs(aod_track.fY) < 3. * aod_track.fSigmaY && fabs(aod_track.fZ) < 3. * aod_track.fSigmaZ)
           tof_tracks.push_back(track);
       } else {
-        mytracks.fLength = -999.f;
-        mytracks.fTOFSignal = -999.f;
-        mytracks.fTOFExpMom = -999.f;
+        aod_track.fLength = -999.f;
+        aod_track.fTOFSignal = -999.f;
+        aod_track.fTOFExpMom = -999.f;
       }
+
       // check if has hit on RICH
-      if (richdetector.hasRICH(*track)) {
-        const auto measurement = richdetector.getMeasuredAngle(*track);
+      if (rich_detector.hasRICH(*track)) {
+        const auto measurement = rich_detector.getMeasuredAngle(*track);
         rich.fIndexCollisions = ientry + eventOffset;
         rich.fIndexTracks = fTrackCounter; // Index in the Track table
         rich.fRICHSignal = measurement.first;
         rich.fRICHSignalError = measurement.second;
         std::array<float, 5> deltaangle, nsigma;
-        richdetector.makePID(*track, deltaangle, nsigma);
+        rich_detector.makePID(*track, deltaangle, nsigma);
         rich.fRICHDeltaEl = deltaangle[0];
         rich.fRICHDeltaMu = deltaangle[1];
         rich.fRICHDeltaPi = deltaangle[2];
@@ -360,12 +318,36 @@ int createO2tables(const char* inputFile = "delphes.root",
         rich.fRICHNsigmaPr = nsigma[4];
         FillTree(kRICH);
       }
+
+      // check if has Forward TOF
+      if (forward_tof_layer.hasTOF(*track)) {
+        ftof.fIndexCollisions = ientry + eventOffset;
+        ftof.fIndexTracks = fTrackCounter; // Index in the Track table
+
+        ftof.fFTOFLength = track->L * 0.1;        // [cm]
+        ftof.fFTOFSignal = track->TOuter * 1.e12; // [ps]
+
+        std::array<float, 5> deltat, nsigma;
+        forward_tof_layer.makePID(*track, deltat, nsigma);
+        ftof.fFTOFDeltaEl = deltat[0];
+        ftof.fFTOFDeltaMu = deltat[1];
+        ftof.fFTOFDeltaPi = deltat[2];
+        ftof.fFTOFDeltaKa = deltat[3];
+        ftof.fFTOFDeltaPr = deltat[4];
+        ftof.fFTOFNsigmaEl = nsigma[0];
+        ftof.fFTOFNsigmaMu = nsigma[1];
+        ftof.fFTOFNsigmaPi = nsigma[2];
+        ftof.fFTOFNsigmaKa = nsigma[3];
+        ftof.fFTOFNsigmaPr = nsigma[4];
+        FillTree(kFTOF);
+      }
+
       // check if it is within the acceptance of the MID
       if (isMID) {
-        if (midDetector.hasMID(*track)) {
+        if (mid_detector.hasMID(*track)) {
           mid.fIndexCollisions = ientry + eventOffset;
           mid.fIndexTracks = fTrackCounter; // Index in the Track table
-          mid.fMIDIsMuon = midDetector.isMuon(*track, multiplicity);
+          mid.fMIDIsMuon = mid_detector.isMuon(*track, multiplicity);
           FillTree(kMID);
         }
       }
@@ -395,7 +377,7 @@ int createO2tables(const char* inputFile = "delphes.root",
 
     // compute the event time
     std::array<float, 2> tzero;
-    if (!toflayer.eventTime(tof_tracks, tzero) && tof_tracks.size() > 0) {
+    if (!tof_layer.eventTime(tof_tracks, tzero) && tof_tracks.size() > 0) {
       Printf("Issue when evaluating the start time");
       return 1;
     }
