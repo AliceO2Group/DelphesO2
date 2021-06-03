@@ -518,19 +518,20 @@ void DetectorK::PlotLayout(Int_t plotDead) {
 
 
 
-void DetectorK::AddTPC(Float_t phiResMean, Float_t zResMean, Int_t skip, float xrhoIC) {
+void DetectorK::AddTPC(Float_t phiResMean, Float_t zResMean, Int_t skip) {
   //
   // Emulates the TPC
   // 
   // skip=1: Use every padrow, skip=2: Signal in every 2nd padrow 
 
 
-  AddLayer((char*)"tpcIFC",   77.8, 0.01367, xrhoIC); // Inner Field cage
-  AddLayer((char*)"tpcOFC",   254.0, 0.01367, xrhoIC); // Outer Field cage
+  AddLayer((char*)"tpcIFC",   77.8, 9.279967e-02, 3.325701e+00); // Inner Field cage
+  AddLayer((char*)"tpcOFC",   254.0, 9.279967e-02, 3.325701e+00); // Outer Field cage
 
   // % Radiation Lengths ... Average per TPC row  (i.e. total/159 )
   const int kNPassiveBound = 2;
-  const Float_t radLBoubdary[kNPassiveBound] = {0.05, 0.0165};
+  const Float_t radLBoundary[kNPassiveBound] = {1.692612e-01, 8.711904e-02};
+  const Float_t xrhoBoundary[kNPassiveBound] = {6.795774e+00, 3.111401e+00};
   const Float_t rBoundary[kNPassiveBound] = {50, 70.0}; // cm
 
   Float_t radLPerRow = 0.000036;
@@ -551,7 +552,7 @@ void DetectorK::AddTPC(Float_t phiResMean, Float_t zResMean, Int_t skip, float x
  
   // add boundaries between ITS and TPC
   for (int i=0;i<kNPassiveBound;i++) {
-    AddLayer(Form("tpc_boundary%d",i),rBoundary[i],radLBoubdary[i]); // dummy errors
+    AddLayer(Form("tpc_boundary%d",i),rBoundary[i],radLBoundary[i], xrhoBoundary[i]); // dummy errors
   }
 
   for ( Int_t k = 0 ; k < tpcRows ; k++ ) {
