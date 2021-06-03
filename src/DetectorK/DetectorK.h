@@ -141,7 +141,7 @@ class DetectorK : public TNamed {
   
   void MakeAliceAllNew(Bool_t flagTPC =1,Bool_t flagMon=1);
   void MakeAliceCurrent(Int_t AlignResiduals = 0, Bool_t flagTPC =1);
-  void AddTPC(Float_t phiResMean=0.1, Float_t zResMean=0.1, Int_t skip=1);
+  void AddTPC(Float_t phiResMean=0.1, Float_t zResMean=0.1, Int_t skip=1, Float_t xrhoIC=0);
   void AddTRD(Float_t phiResMean=0.02, Float_t zResMean=2.5, Float_t lrEff=0.9);
   void RemoveTPC();
 
