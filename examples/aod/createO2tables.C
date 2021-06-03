@@ -206,7 +206,10 @@ int createO2tables(const char* inputFile = "delphes.root",
     // loop over tracks
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
+    // Tracks used for the T0 evaluation
     std::vector<Track*> tof_tracks;
+    std::vector<Track*> ftof_tracks;
+    std::vector<std::pair<int, int>> ftof_tracks_indices;
     const int multiplicity = tracks->GetEntries();
 
     // Build index array of tracks to randomize track writing order
@@ -321,6 +324,13 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       // check if has Forward TOF
       if (forward_tof_layer.hasTOF(*track)) {
+        // ftof_tracks.push_back(track);
+        // ftof_tracks_indices.push_back(std::pair<int, int>{ientry + eventOffset, fTrackCounter});
+
+        std::vector<Track*> v{track};
+        std::array<float, 2> ftzero;
+        forward_tof_layer.eventTime(v, ftzero);
+
         ftof.fIndexCollisions = ientry + eventOffset;
         ftof.fIndexTracks = fTrackCounter; // Index in the Track table
 
@@ -362,6 +372,35 @@ int createO2tables(const char* inputFile = "delphes.root",
       fTrackCounter++;
       // fill histograms
     }
+
+    // if (1) { // Filling the fTOF tree after computing its T0
+    //   std::array<float, 2> ftzero;
+
+    //   forward_tof_layer.eventTime(ftof_tracks, ftzero);
+    //   for (int i = 0; i < ftof_tracks.size(); i++) {
+    //     auto track = ftof_tracks[i];
+    //     ftof.fIndexCollisions = ftof_tracks_indices[i].first;
+    //     ftof.fIndexTracks = ftof_tracks_indices[i].second; // Index in the Track table
+
+    //     ftof.fFTOFLength = track->L * 0.1;        // [cm]
+    //     ftof.fFTOFSignal = track->TOuter * 1.e12; // [ps]
+
+    //     std::array<float, 5> deltat, nsigma;
+    //     forward_tof_layer.makePID(*track, deltat, nsigma);
+    //     ftof.fFTOFDeltaEl = deltat[0];
+    //     ftof.fFTOFDeltaMu = deltat[1];
+    //     ftof.fFTOFDeltaPi = deltat[2];
+    //     ftof.fFTOFDeltaKa = deltat[3];
+    //     ftof.fFTOFDeltaPr = deltat[4];
+    //     ftof.fFTOFNsigmaEl = nsigma[0];
+    //     ftof.fFTOFNsigmaMu = nsigma[1];
+    //     ftof.fFTOFNsigmaPi = nsigma[2];
+    //     ftof.fFTOFNsigmaKa = nsigma[3];
+    //     ftof.fFTOFNsigmaPr = nsigma[4];
+    //     FillTree(kFTOF);
+    //   }
+    // }
+
     if (eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksCov] || eventextra.fNentries[kTracks] != eventextra.fNentries[kTracksExtra]) {
       Printf("Issue with the counters");
       return 1;
