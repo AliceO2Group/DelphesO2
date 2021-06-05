@@ -34,6 +34,8 @@ namespace o2 {
       TFile *mFileAccEffMuonPID;
       THnSparse *mAccEffMuonPID[kNPart];
       const double mEtaMax = 1.6;
+      double mMomMin[kNPart];
+      double mMomMax[kNPart];
       const char *partLabel[kNPart] = {"electron","muon","pion","kaon","proton"};
       std::map<int, int> pidmap = { {11, kElectron}, {13, kMuon}, {211, kPion}, {321, kKaon}, {2212, kProton} };
   
