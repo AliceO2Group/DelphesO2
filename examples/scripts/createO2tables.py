@@ -98,7 +98,9 @@ def main(configuration_file,
          output_path,
          clean_delphes_files,
          create_luts,
-         turn_off_vertexing):
+         turn_off_vertexing,
+         append_production):
+    arguments = locals()
     global verbose_mode
     verbose_mode = verbose
     parser = configparser.RawConfigParser()
@@ -106,18 +108,9 @@ def main(configuration_file,
 
     run_cmd("./clean.sh > /dev/null 2>&1", check_status=False)
     # Dictionary of fetched options
-    running_options = {
-        "ARG configuration_file": configuration_file,
-        "ARG config_entry": config_entry,
-        "ARG njobs": njobs,
-        "ARG nruns": nruns,
-        "ARG nevents": nevents,
-        "ARG verbose": verbose,
-        "ARG qa": qa,
-        "ARG output_path": output_path,
-        "ARG clean_delphes_files": clean_delphes_files,
-        "ARG create_luts": create_luts
-    }
+    running_options = {}
+    for i in arguments:
+        running_options["ARG "+i] = arguments[i]
 
     def opt(entry, require=True):
         try:
@@ -211,18 +204,19 @@ def main(configuration_file,
 
     # Printing configuration
     msg(" --- running createO2tables.py", color=bcolors.HEADER)
-    msg("  njobs    =", njobs)
-    msg("  nruns    =", nruns)
-    msg("  nevents  =", nevents)
-    msg("  lut path =", lut_path)
+    msg("  n. jobs        =", njobs)
+    msg("  n. runs        =", nruns)
+    msg("  events per run =", nevents)
+    msg("  tot. events    =", "{:.0e}".format(nevents*nruns))
+    msg("  LUT path       =", f"'{lut_path}'")
     msg(" --- with detector configuration", color=bcolors.HEADER)
-    msg("  bField               =", bField, "[kG]")
+    msg("  B field              =", bField, "[kG]")
     msg("  sigmaT               =", sigmaT, "[ns]")
     msg("  sigmaT0              =", sigmaT0, "[ns]")
-    msg("  barrel_radius        =", barrel_radius, "[cm]")
-    msg("  barrel_half_length   =", barrel_half_length, "[cm]")
+    msg("  Barrel radius        =", barrel_radius, "[cm]")
+    msg("  Barrel half length   =", barrel_half_length, "[cm]")
     if create_luts:
-        msg("  minimum_track_radius =", minimum_track_radius, "[cm]")
+        msg("  Minimum track radius =", minimum_track_radius, "[cm]")
     msg("  LUT                  =", lut_tag)
     msg("  etaMax               =", etaMax)
 
@@ -283,8 +277,20 @@ def main(configuration_file,
                "const double tof_sigmat =", f"{sigmaT}""\;/")
     set_config("createO2tables.C",
                "const double tof_sigmat0 =", f"{sigmaT0}""\;/")
-
     run_list = range(nruns)
+    if append_production:
+        if output_path is None:
+            fatal_msg("Output path is not defined, cannot append")
+        last_preexisting_aod = [each for each in os.listdir(output_path)
+                                if each.endswith('.root') and "AODRun5" in each]
+        if len(last_preexisting_aod) == 0:
+            fatal_msg("Appending to a non existing production")
+        last_preexisting_aod = sorted([int(each.replace("AODRun5.", "").replace(".root", ""))
+                                       for each in last_preexisting_aod])[-1] + 1
+        msg(f" Appending to production with {last_preexisting_aod} AODs",
+            color=bcolors.BWARNING)
+        run_list = range(last_preexisting_aod,
+                         last_preexisting_aod + nruns)
 
     def configure_run(run_number):
         # Create executable that runs Generation, Delphes and analysis
@@ -422,11 +428,28 @@ def main(configuration_file,
             if "ARG" not in i:
                 write_config(i, prefix=" * ")
 
+        output_size = sum(os.path.getsize(os.path.join(output_path, f))
+                          for f in os.listdir(output_path)
+                          if os.path.isfile(os.path.join(output_path, f)))
+        f.write("\n##  Size of the ouput ##\n")
+        f.write(f" - {output_size} bytes\n")
+        f.write(f" - {output_size/1e6} MB\n")
+        f.write(f" - {output_size/1e9} GB\n")
     run_cmd("echo  >> " + summaryfile)
     run_cmd("echo + DelphesO2 Version + >> " + summaryfile)
     run_cmd("git rev-parse HEAD >> " + summaryfile, check_status=False)
+
     if os.path.normpath(output_path) != os.getcwd():
-        run_cmd(f"mv {summaryfile} {output_path}")
+        if append_production:
+            s = os.path.join(output_path, summaryfile)
+            run_cmd(f"echo '' >> {s}")
+            run_cmd(f"echo '  **' >> {s}")
+            run_cmd(f"echo 'Appended production' >> {s}")
+            run_cmd(f"echo '  **' >> {s}")
+            run_cmd(f"echo '' >> {s}")
+            run_cmd(f"cat {summaryfile} >> {s}")
+        else:
+            run_cmd(f"mv {summaryfile} {output_path}")
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
@@ -441,7 +464,7 @@ if __name__ == "__main__":
     parser.add_argument("--entry", "-e", type=str,
                         default="DEFAULT",
                         help="Entry in the configuration file, e.g. the INEL or CCBAR entries in the configuration file.")
-    parser.add_argument("--output-path", "-o", type=str,
+    parser.add_argument("--output-path", "--output_path", "-o", type=str,
                         default=None,
                         help="Output path, by default the current path is used as output.")
     parser.add_argument("--njobs", "-j", type=int,
@@ -463,10 +486,18 @@ if __name__ == "__main__":
     parser.add_argument("--no-vertexing",
                         action="store_true",
                         help="Option turning off the vertexing.")
+    parser.add_argument("--append", "-a",
+                        action="store_true",
+                        help="Option to append the results instead of starting over by shifting the AOD indexing. N.B. the user is responsible of the compatibility between appended AODs. Only works in conjuction by specifying an output path (option '-o')")
     parser.add_argument("--use-preexisting-luts", "-l",
                         action="store_true",
                         help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
     args = parser.parse_args()
+    # Check arguments
+    if args.append and args.output_path is None:
+        fatal_msg(
+            "Asked to append production but did not specify output path (option '-o')")
+
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
          njobs=args.njobs,
@@ -477,4 +508,5 @@ if __name__ == "__main__":
          clean_delphes_files=args.clean_delphes,
          qa=args.qa,
          create_luts=not args.use_preexisting_luts,
-         turn_off_vertexing=args.no_vertexing)
+         turn_off_vertexing=args.no_vertexing,
+         append_production=args.append)

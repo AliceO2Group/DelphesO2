@@ -168,16 +168,24 @@ def main(mode,
          dpl_configuration_file=None,
          njobs=1,
          merge_output=False,
-         only_merge=False):
+         merge_only=False,
+         shm_mem_size=16000000000,
+         readers=1,
+         extra_arguments=""):
     if len(input_file) == 1:
         input_file = input_file[0]
     else:
         input_file = input_file[0:n_max_files]
-    msg("Running", f"'{mode}'", "analysis on",
-        f"'{input_file}'", color=bcolors.BOKBLUE)
-    msg("Maximum", n_max_files, "files with batch size",
-        batch_size, "and", njobs, "jobs" if njobs > 1 else "job", color=bcolors.BOKBLUE)
-    args = f"-b --shm-segment-size 16000000000 --readers 4"
+    if not merge_only:
+        msg("Running", f"'{mode}'", "analysis on",
+            f"'{input_file}'", color=bcolors.BOKBLUE)
+        msg("Maximum", n_max_files, "files with batch size",
+            batch_size, "and", njobs, "jobs" if njobs > 1 else "job", color=bcolors.BOKBLUE)
+    else:
+        msg("Merging output of", f"'{mode}'",
+            "analysis", color=bcolors.BOKBLUE)
+    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --readers {readers}"
+    o2_arguments += extra_arguments
     if mode not in analyses:
         raise ValueError("Did not find analyses matching mode",
                          mode, ", please choose in", ", ".join(analyses.keys()))
@@ -229,16 +237,16 @@ def main(mode,
     run_list = []
     for i, j in enumerate(input_file_list):
         run_list.append(set_o2_analysis(an,
-                                        o2_arguments=args,
+                                        o2_arguments=o2_arguments,
                                         input_file=j,
                                         tag=tag,
                                         dpl_configuration_file=dpl_configuration_file))
-    if not only_merge:
+    if not merge_only:
         with multiprocessing.Pool(processes=njobs) as pool:
             pool.map(run_o2_analysis, run_list)
-        msg("Analysis completed", color=bcolors.BOKGREEN)
 
-    if merge_output or only_merge:
+    if merge_output or merge_only:
+        msg("Merging results", color=bcolors.BOKBLUE)
         files_to_merge = []
         for i in input_file_list:
             p = os.path.dirname(os.path.abspath(i))
@@ -304,10 +312,17 @@ if __name__ == "__main__":
                         help="Name of the dpl configuration file e.g. dpl-config_std.json")
     parser.add_argument("--merge_output", "--merge-output", "--merge",
                         action="store_true", help="Flag to merge the output files into one")
+    parser.add_argument("--readers", "-r",
+                        default=1, type=int,
+                        help="Number of parallel readers")
+    parser.add_argument("--mem", "-m",
+                        default=16000000000, type=int,
+                        help="Size of the shared memory to allocate")
+    parser.add_argument("--extra_arguments", "-e",
+                        default="", type=str,
+                        help="Extra arguments to feed to the workflow")
     parser.add_argument("--merge_only", "--merge-only", "--mergeonly",
                         action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
-    parser.add_argument("-b",
-                        action="store_true", help="Background mode")
     args = parser.parse_args()
     if args.verbose:
         verbose_mode = False,
@@ -322,4 +337,7 @@ if __name__ == "__main__":
              out_tag=args.tag,
              merge_output=args.merge_output,
              out_path=args.out_path,
-             only_merge=args.merge_only)
+             merge_only=args.merge_only,
+             readers=args.readers,
+             extra_arguments=args.extra_arguments,
+             shm_mem_size=args.mem)
