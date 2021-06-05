@@ -12,6 +12,7 @@
 #include "TFile.h"
 #include "TVector3.h"
 #include "TMath.h"
+#include "TAxis.h"
 
 namespace o2 {
   namespace delphes {
