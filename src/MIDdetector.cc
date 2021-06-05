@@ -11,6 +11,8 @@
 #include "TDatime.h"
 #include "TFile.h"
 #include "TVector3.h"
+#include "TMath.h"
+#include "TAxis.h"
 
 namespace o2 {
   namespace delphes {
@@ -38,6 +40,8 @@ namespace o2 {
 	  printf("Object %s not found, quitting\n",Form("mAccEffMuonPID_%s",partLabel[iPart]));
 	  return kFALSE;
 	}
+	mMomMin[iPart] = TMath::Max(1.2, mAccEffMuonPID[iPart]->GetAxis(1)->GetXmin());
+	mMomMax[iPart] = mAccEffMuonPID[iPart]->GetAxis(1)->GetXmax();
       }
 
       printf("Setup of MIDdetector successfully completed\n");
@@ -49,8 +53,10 @@ namespace o2 {
 
     bool MIDdetector::hasMID(const Track &track) {
 
+      auto pdg  = std::abs(track.PID);
+      auto part = pidmap[pdg];
       TVector3 v(track.XOuter, track.YOuter, track.ZOuter);
-      return (TMath::Abs(v.Eta()) < mEtaMax);
+      return ((TMath::Abs(v.Eta()) < mEtaMax) && (track.P > mMomMin[part]));
 
     }
 
@@ -64,7 +70,9 @@ namespace o2 {
 
       auto particle = (GenParticle*) track.Particle.GetObject();
 
-      Double_t var[4] = {track.P, track.Eta, particle->Z, double(multiplicity)};
+      Double_t mom = TMath::Min(track.P, mMomMax[part]);
+      
+      Double_t var[4] = {track.Eta, mom, particle->Z, double(multiplicity)};
       Double_t probMuonPID = mAccEffMuonPID[part]->GetBinContent(mAccEffMuonPID[part]->GetBin(var));
       return (gRandom->Uniform() < probMuonPID);
 
