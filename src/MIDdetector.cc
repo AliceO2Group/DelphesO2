@@ -70,7 +70,7 @@ namespace o2 {
 
       auto particle = (GenParticle*) track.Particle.GetObject();
 
-      Double_t mom = TMath::Min(track.P, mMomMax[part]);
+      Double_t mom = TMath::Min(Double_t(track.P), Double_t(mMomMax[part]));
       
       Double_t var[4] = {track.Eta, mom, particle->Z, double(multiplicity)};
       Double_t probMuonPID = mAccEffMuonPID[part]->GetBinContent(mAccEffMuonPID[part]->GetBin(var));
