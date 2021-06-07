@@ -223,7 +223,7 @@ def main(configuration_file,
     aod_path = opt("aod_path")
     do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
     do_copy(os.path.join(aod_path, "createO2tables.C"), ".")
-    do_copy(os.path.join(aod_path, "muonAccEffPID.root"), ".")
+    do_copy("../aod/muonAccEffPID.root", ".")
     if qa:
         do_copy("diagnostic_tools/dpl-config_std.json", ".")
 
