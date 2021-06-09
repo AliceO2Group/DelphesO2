@@ -12,6 +12,11 @@ import multiprocessing
 import time
 import random
 from datetime import datetime
+import sys
+try:
+    import tqdm
+except ImportError as e:
+    print("Module tqdm is not imported. Progress bar will not be available (you can install tqdm for the progress bar)")
 
 # Global running flags
 verbose_mode = False
@@ -77,12 +82,12 @@ def run_cmd(cmd, comment="", check_status=True):
 
 def process_run(run_number):
     processing_time = time.time()
-    msg("> starting run", run_number)
+    verbose_msg("> starting run", run_number)
     run_cmd(f"bash runner{run_number}.sh")
     if not os.path.isfile(f"AODRun5.{run_number}.root"):
         msg("++ something went wrong for run", run_number, ", no output table found. Please check:",
             f"AODRun5.{run_number}.log", color=bcolors.FAIL)
-    msg("< complete run", run_number)
+    verbose_msg("< complete run", run_number)
     processing_time = time.time() - processing_time
     verbose_msg(f"-- took {processing_time} seconds --",
                 color=bcolors.BOKGREEN)
@@ -391,7 +396,14 @@ def main(configuration_file,
     total_processing_time = time.time()
     msg(" --- start processing the runs ", color=bcolors.HEADER)
     with multiprocessing.Pool(processes=njobs) as pool:
-        pool.map(process_run, run_list)
+        msg("Running production")
+        if "tqdm" not in sys.modules:
+            for i in enumerate(pool.imap(process_run, run_list)):
+                msg(f"Done: {i[0]+1},", len(run_list)-i[0]-1, "to go")
+        else:
+            r = list(tqdm.tqdm(pool.imap(process_run, run_list),
+                               total=len(run_list),
+                               bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
 
     # merge runs when all done
     msg(" --- all runs are processed, so long", color=bcolors.HEADER)

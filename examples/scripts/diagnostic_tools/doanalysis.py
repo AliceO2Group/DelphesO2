@@ -13,6 +13,12 @@ import argparse
 import multiprocessing
 from itertools import islice
 import os
+import sys
+try:
+    import tqdm
+except ImportError as e:
+    print("Module tqdm is not imported. Progress bar will not be available (you can install tqdm for the progress bar)")
+from ROOT import TFile
 
 # Global running flags
 verbose_mode = False
@@ -41,6 +47,11 @@ def verbose_msg(*args, color=bcolors.OKBLUE):
 
 def msg(*args, color=bcolors.BOKBLUE):
     print(color, *args, bcolors.ENDC)
+
+
+def fatal_msg(*args):
+    msg("[FATAL]", *args, color=bcolors.BFAIL)
+    raise RuntimeError("Fatal Error!")
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -121,16 +132,16 @@ def run_command(cmd):
 
 
 def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
-    msg("> starting run with", tmp_script_name)
+    verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
     run_command(cmd)
     if remove_tmp_script:
         os.remove(tmp_script_name)
-    msg("> end run with", tmp_script_name)
+    verbose_msg("< end run with", tmp_script_name)
 
 
-analyses = {"TrackQA": ["o2-analysis-qa-simple",
-                        "o2-analysis-qa-efficiency --make-eff 1 --eta-min -0.8 --eta-max 0.8",
+analyses = {"TrackQA": ["o2-analysis-qa-track-event",
+                        "o2-analysis-qa-efficiency --make-eff 1 --eff-pi 1 --eff-el 1 --eff-ka 1 --eff-pr 1 --eta-min -0.8 --eta-max 0.8",
                         "o2-analysis-trackextension",
                         "o2-analysis-alice3-trackselection"],
             "TOF": ["o2-analysis-spectra-tof",
@@ -195,6 +206,20 @@ def main(mode,
     input_file_list = []
 
     def build_list_of_files(file_list):
+        if len(file_list) != len(set(file_list)):  # Check that runlist does not have duplicates
+            fatal_msg("Runlist has duplicated entries, fix runlist!")
+        not_readable = []
+        for i in file_list:  # Check that input files can be open
+            f = TFile(i.strip(), "READ")
+            if not f.IsOpen():
+                verbose_msg("Cannot open AOD file:", i, color=bcolors.WARNING)
+                not_readable.append(i)
+        if len(not_readable) > 0:
+            msg(len(not_readable), "files cannot be read and will be skipped",
+                color=bcolors.BWARNING)
+            for i in not_readable:
+                file_list.remove(i)
+
         files_per_batch = []
         iter_file_list = iter(file_list)
         for i in range(0, len(file_list)):
@@ -213,6 +238,7 @@ def main(mode,
                 with open(run_list[-1], "w") as f:
                     for j in lines:
                         f.write(j.strip() + "\n")
+        msg("Number or runs:", len(run_list))
         return run_list
 
     if type(input_file) is list:
@@ -220,10 +246,11 @@ def main(mode,
             input_file_list = os.path.join(os.getcwd(), input_file)
         else:
             input_file_list = build_list_of_files(input_file)
-
     elif not input_file.endswith(".root"):
         with open(input_file, "r") as f:
             lines = f.readlines()
+            msg("Building input list from", len(lines),
+                "inputs, limiting to", n_max_files)
             if len(lines) > n_max_files:
                 lines = lines[0:n_max_files]
             input_file_list = build_list_of_files(lines)
@@ -243,10 +270,16 @@ def main(mode,
                                         dpl_configuration_file=dpl_configuration_file))
     if not merge_only:
         with multiprocessing.Pool(processes=njobs) as pool:
-            pool.map(run_o2_analysis, run_list)
+            msg("Running analysis")
+            if "tqdm" not in sys.modules:
+                for i in enumerate(pool.imap(run_o2_analysis, run_list)):
+                    msg(f"Done: {i[0]+1},", len(run_list)-i[0]-1, "to go")
+            else:
+                r = list(tqdm.tqdm(pool.imap(run_o2_analysis, run_list),
+                                   total=len(run_list),
+                                   bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
 
     if merge_output or merge_only:
-        msg("Merging results", color=bcolors.BOKBLUE)
         files_to_merge = []
         for i in input_file_list:
             p = os.path.dirname(os.path.abspath(i))
@@ -257,11 +290,13 @@ def main(mode,
             msg("Warning: Did not find any file to merge for tag",
                 tag, color=bcolors.BWARNING)
             return
+        msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
         files_per_type = {}
         for i in files_to_merge:
             fn = os.path.basename(i)
             files_per_type.setdefault(fn, [])
             files_per_type[fn].append(i)
+        merged_files = []
         for i in files_per_type:
             merged_file = os.path.join(out_path, i)
             if os.path.isfile(merged_file):
@@ -269,8 +304,9 @@ def main(mode,
                     "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again",
                     color=bcolors.BWARNING)
                 continue
+            merged_files.append(merged_file)
             run_command(f"hadd {merged_file} " + " ".join(files_per_type[i]))
-        msg("Merging completed", color=bcolors.BOKGREEN)
+        msg("Merging completed, merged:", *merged_files, color=bcolors.BOKGREEN)
 
 
 if __name__ == "__main__":
