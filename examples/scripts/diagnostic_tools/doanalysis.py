@@ -270,6 +270,7 @@ def main(mode,
                                         dpl_configuration_file=dpl_configuration_file))
     if not merge_only:
         with multiprocessing.Pool(processes=njobs) as pool:
+            msg("Running analysis")
             if "tqdm" not in sys.modules:
                 for i in enumerate(pool.imap(run_o2_analysis, run_list)):
                     msg(f"Done: {i[0]+1},", len(run_list)-i[0]-1, "to go")
