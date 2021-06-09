@@ -13,6 +13,7 @@ import argparse
 import multiprocessing
 from itertools import islice
 import os
+from ROOT import TFile
 
 # Global running flags
 verbose_mode = False
@@ -42,6 +43,10 @@ def verbose_msg(*args, color=bcolors.OKBLUE):
 def msg(*args, color=bcolors.BOKBLUE):
     print(color, *args, bcolors.ENDC)
 
+
+def fatal_msg(*args):
+    msg("[FATAL]", *args, color=bcolors.BFAIL)
+    raise RuntimeError("Fatal Error!")
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
                     o2_arguments="--shm-segment-size 16000000000 --readers 4 --configuration json://$PWD/dpl-config_std.json",
@@ -195,6 +200,20 @@ def main(mode,
     input_file_list = []
 
     def build_list_of_files(file_list):
+        if len(file_list) != len(set(file_list)): # Check that runlist does not have duplicates
+            fatal_msg("Runlist has duplicated entries, fix runlist!")
+        not_readable = []
+        for i in file_list:  # Check that input files can be open
+            f = TFile(i.strip(), "READ")
+            if not f.IsOpen():
+                verbose_msg("Cannot open AOD file:", i, color=bcolors.WARNING)
+                not_readable.append(i)
+        if len(not_readable) > 0:
+            msg(len(not_readable), "files cannot be read and will be skipped",
+                color=bcolors.BWARNING)
+            for i in not_readable:
+                file_list.remove(i)
+
         files_per_batch = []
         iter_file_list = iter(file_list)
         for i in range(0, len(file_list)):
