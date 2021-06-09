@@ -129,8 +129,8 @@ def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
     msg("> end run with", tmp_script_name)
 
 
-analyses = {"TrackQA": ["o2-analysis-qa-simple",
-                        "o2-analysis-qa-efficiency --make-eff 1 --eta-min -0.8 --eta-max 0.8",
+analyses = {"TrackQA": ["o2-analysis-qa-track-event",
+                        "o2-analysis-qa-efficiency --make-eff 1 --eff-pi 1 --eff-el 1 --eff-ka 1 --eff-pr 1 --eta-min -0.8 --eta-max 0.8",
                         "o2-analysis-trackextension",
                         "o2-analysis-alice3-trackselection"],
             "TOF": ["o2-analysis-spectra-tof",
@@ -213,6 +213,7 @@ def main(mode,
                 with open(run_list[-1], "w") as f:
                     for j in lines:
                         f.write(j.strip() + "\n")
+        msg("Number or runs:", len(run_list))
         return run_list
 
     if type(input_file) is list:
@@ -220,10 +221,11 @@ def main(mode,
             input_file_list = os.path.join(os.getcwd(), input_file)
         else:
             input_file_list = build_list_of_files(input_file)
-
     elif not input_file.endswith(".root"):
         with open(input_file, "r") as f:
             lines = f.readlines()
+            msg("Building input list from", len(lines),
+                "inputs, limiting to", n_max_files)
             if len(lines) > n_max_files:
                 lines = lines[0:n_max_files]
             input_file_list = build_list_of_files(lines)
