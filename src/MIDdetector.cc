@@ -55,8 +55,7 @@ namespace o2 {
 
       auto pdg  = std::abs(track.PID);
       auto part = pidmap[pdg];
-      TVector3 v(track.XOuter, track.YOuter, track.ZOuter);
-      return ((TMath::Abs(v.Eta()) < mEtaMax) && (track.P > mMomMin[part]));
+      return ((TMath::Abs(track.Eta) < mEtaMax) && (track.P > mMomMin[part]));
 
     }
 
@@ -79,8 +78,7 @@ namespace o2 {
     }
 
     //==========================================================================================================
-  
-  
+   
   } /** namespace delphes **/
 
 } /** namespace o2 **/
