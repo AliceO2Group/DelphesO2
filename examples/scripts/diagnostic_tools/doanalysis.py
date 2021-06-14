@@ -10,48 +10,10 @@ You can check the help of the script (i.e. `./doanalysis.py --h`) to have inform
 """
 
 import argparse
-import multiprocessing
 from itertools import islice
 import os
-import sys
-try:
-    import tqdm
-except ImportError as e:
-    print("Module tqdm is not imported. Progress bar will not be available (you can install tqdm for the progress bar)")
 from ROOT import TFile
-
-# Global running flags
-verbose_mode = False
-
-
-class bcolors:
-    # Colors for bash
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    BOKBLUE = BOLD + OKBLUE
-    OKGREEN = "\033[92m"
-    BOKGREEN = BOLD + OKGREEN
-    WARNING = "\033[93m"
-    BWARNING = BOLD + WARNING
-    FAIL = "\033[91m"
-    BFAIL = BOLD + FAIL
-    ENDC = "\033[0m"
-
-
-def verbose_msg(*args, color=bcolors.OKBLUE):
-    if verbose_mode:
-        print("** ", color, *args, bcolors.ENDC)
-
-
-def msg(*args, color=bcolors.BOKBLUE):
-    print(color, *args, bcolors.ENDC)
-
-
-def fatal_msg(*args):
-    msg("[FATAL]", *args, color=bcolors.BFAIL)
-    raise RuntimeError("Fatal Error!")
+from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -140,7 +102,7 @@ def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
     verbose_msg("< end run with", tmp_script_name)
 
 
-analyses = {"TrackQA": ["o2-analysis-qa-track-event",
+analyses = {"TrackQA": ["o2-analysis-qa-event-track",
                         "o2-analysis-qa-efficiency --make-eff 1 --eff-pi 1 --eff-el 1 --eff-ka 1 --eff-pr 1 --eta-min -0.8 --eta-max 0.8",
                         "o2-analysis-trackextension",
                         "o2-analysis-alice3-trackselection"],
@@ -215,8 +177,8 @@ def main(mode,
                 verbose_msg("Cannot open AOD file:", i, color=bcolors.WARNING)
                 not_readable.append(i)
         if len(not_readable) > 0:
-            msg(len(not_readable), "files cannot be read and will be skipped",
-                color=bcolors.BWARNING)
+            warning_msg(len(not_readable),
+                        "files cannot be read and will be skipped")
             for i in not_readable:
                 file_list.remove(i)
 
@@ -269,15 +231,8 @@ def main(mode,
                                         tag=tag,
                                         dpl_configuration_file=dpl_configuration_file))
     if not merge_only:
-        with multiprocessing.Pool(processes=njobs) as pool:
-            msg("Running analysis")
-            if "tqdm" not in sys.modules:
-                for i in enumerate(pool.imap(run_o2_analysis, run_list)):
-                    msg(f"Done: {i[0]+1},", len(run_list)-i[0]-1, "to go")
-            else:
-                r = list(tqdm.tqdm(pool.imap(run_o2_analysis, run_list),
-                                   total=len(run_list),
-                                   bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
+        run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
+                        job_arguments=run_list, job_message="Running analysis")
 
     if merge_output or merge_only:
         files_to_merge = []
@@ -287,8 +242,7 @@ def main(mode,
                 if j.endswith(f"_{tag}.root"):
                     files_to_merge.append(os.path.join(p, j))
         if len(files_to_merge) == 0:
-            msg("Warning: Did not find any file to merge for tag",
-                tag, color=bcolors.BWARNING)
+            warning_msg("Did not find any file to merge for tag", tag)
             return
         msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
         files_per_type = {}
@@ -300,17 +254,20 @@ def main(mode,
         for i in files_per_type:
             merged_file = os.path.join(out_path, i)
             if os.path.isfile(merged_file):
-                msg("Warning: file", merged_file,
-                    "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again",
-                    color=bcolors.BWARNING)
+                warning_msg("file", merged_file,
+                            "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again")
                 continue
             merged_files.append(merged_file)
             run_command(f"hadd {merged_file} " + " ".join(files_per_type[i]))
-        msg("Merging completed, merged:", *merged_files, color=bcolors.BOKGREEN)
+        if len(merged_files) > 0:
+            warning_msg("Merged no files")
+        else:
+            msg("Merging completed, merged:", *merged_files,
+                color=bcolors.BOKGREEN)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Runner for O2 analyses")
+    parser = get_default_parser(description="Runner for O2 analyses")
     parser.add_argument("modes",
                         type=str,
                         nargs="+",
@@ -328,8 +285,6 @@ if __name__ == "__main__":
                         type=str,
                         default="",
                         help="Tag for output files")
-    parser.add_argument("--verbose", "-v",
-                        action="store_true", help="Verbose mode")
     parser.add_argument("--batch-size", "-B",
                         type=int,
                         default=10,
@@ -338,10 +293,6 @@ if __name__ == "__main__":
                         type=int,
                         default=10,
                         help="Maximum files to process")
-    parser.add_argument("--njobs", "-j",
-                        type=int,
-                        default=1,
-                        help="Number of jobs to use")
     parser.add_argument("--configuration", "--dpl", "-D",
                         type=str,
                         default=None,
@@ -359,11 +310,16 @@ if __name__ == "__main__":
                         help="Extra arguments to feed to the workflow")
     parser.add_argument("--merge_only", "--merge-only", "--mergeonly",
                         action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
+    parser.add_argument("--show", "-s",
+                        action="store_true", help="Flag to show the workflow of the current tag")
     args = parser.parse_args()
-    if args.verbose:
-        verbose_mode = False,
+    set_verbose_mode(args)
 
     for i in args.modes:
+        if args.show:
+            msg(i, "workflow:")
+            for j in enumerate(analyses[i]):
+                msg(" - ", *j)
         main(mode=i,
              input_file=args.input,
              dpl_configuration_file=args.configuration,
