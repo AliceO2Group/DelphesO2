@@ -200,7 +200,7 @@ def main(mode,
                 with open(run_list[-1], "w") as f:
                     for j in lines:
                         f.write(j.strip() + "\n")
-        msg("Number or runs:", len(run_list))
+        msg("Number of runs:", len(run_list))
         return run_list
 
     if type(input_file) is list:
@@ -259,7 +259,7 @@ def main(mode,
                 continue
             merged_files.append(merged_file)
             run_command(f"hadd {merged_file} " + " ".join(files_per_type[i]))
-        if len(merged_files) > 0:
+        if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:
             msg("Merging completed, merged:", *merged_files,
