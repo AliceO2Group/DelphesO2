@@ -4,53 +4,13 @@
 Handler to run the DelphesO2 framework and to create O2 analysis tables
 """
 
-import argparse
 import configparser
 import os
 import shutil
-import multiprocessing
 import time
 import random
 from datetime import datetime
-import sys
-try:
-    import tqdm
-except ImportError as e:
-    print("Module tqdm is not imported. Progress bar will not be available (you can install tqdm for the progress bar)")
-
-# Global running flags
-verbose_mode = False
-metric_mode = False
-
-
-class bcolors:
-    # Colors for bash
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    BOKBLUE = BOLD + OKBLUE
-    OKGREEN = "\033[92m"
-    BOKGREEN = BOLD + OKGREEN
-    WARNING = "\033[93m"
-    BWARNING = BOLD + WARNING
-    FAIL = "\033[91m"
-    BFAIL = BOLD + FAIL
-    ENDC = "\033[0m"
-
-
-def verbose_msg(*args, color=bcolors.OKBLUE):
-    if verbose_mode:
-        print("** ", color, *args, bcolors.ENDC)
-
-
-def msg(*args, color=bcolors.BOKBLUE):
-    print(color, *args, bcolors.ENDC)
-
-
-def fatal_msg(*args):
-    msg("[FATAL]", *args, color=bcolors.BFAIL)
-    raise ValueError("Fatal Error!")
+from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg
 
 
 def run_cmd(cmd, comment="", check_status=True):
@@ -68,14 +28,10 @@ def run_cmd(cmd, comment="", check_status=True):
             for i in content.strip().split("\n"):
                 verbose_msg("++", i)
         if "Encountered error" in content:
-            msg("[WARNING] Error encountered runtime in",
-                cmd, color=bcolors.BWARNING)
+            warning_msg("Error encountered runtime in", cmd)
         if check_status:
             if "OK" not in content and "root" not in cmd:
-                msg("Error:\n",
-                    content, color=bcolors.FAIL)
-                raise RuntimeError(
-                    "Command", cmd, "does not have the OK tag", content)
+                fatal_msg("Command", cmd, "does not have the OK tag", content)
     except:
         fatal_msg("Error while running", f"'{cmd}'")
 
@@ -85,8 +41,8 @@ def process_run(run_number):
     verbose_msg("> starting run", run_number)
     run_cmd(f"bash runner{run_number}.sh")
     if not os.path.isfile(f"AODRun5.{run_number}.root"):
-        msg("++ something went wrong for run", run_number, ", no output table found. Please check:",
-            f"AODRun5.{run_number}.log", color=bcolors.FAIL)
+        msg(f"++ something went wrong for run {run_number}, no output table found. Please check: 'AODRun5.{run_number}.log'",
+            color=bcolors.FAIL)
     verbose_msg("< complete run", run_number)
     processing_time = time.time() - processing_time
     verbose_msg(f"-- took {processing_time} seconds --",
@@ -98,16 +54,13 @@ def main(configuration_file,
          njobs,
          nruns,
          nevents,
-         verbose,
          qa,
          output_path,
          clean_delphes_files,
          create_luts,
          turn_off_vertexing,
          append_production):
-    arguments = locals()
-    global verbose_mode
-    verbose_mode = verbose
+    arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
 
@@ -343,8 +296,18 @@ def main(configuration_file,
                 gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
                 custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {mc_seed}"
-                write_to_runner(custom_gen + custom_gen_option,
-                                log_file=gen_log_file, check_status=True)
+                if "INPUT_FILES" in custom_gen:
+                    input_hepmc_file = custom_gen.replace("INPUT_FILES",
+                                                          "").strip().split(" ")
+                    if run_number < len(input_hepmc_file):
+                        input_hepmc_file = input_hepmc_file[run_number]
+                    else:
+                        return
+                    write_to_runner(f"ln -s {input_hepmc_file}"
+                                    f" {hepmc_file} \n")
+                else:
+                    write_to_runner(custom_gen + custom_gen_option,
+                                    log_file=gen_log_file, check_status=True)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
                                 log_file=delphes_log_file, check_status=True)
             else:  # Using DelphesPythia
@@ -370,8 +333,10 @@ def main(configuration_file,
                                 check_status=True)
             aod_file = f"AODRun5.{run_number}.root"
             aod_log_file = aod_file.replace(".root", ".log")
-            write_to_runner(f"root -l -b -q 'createO2tables.C+(\"{delphes_file}\", \"{aod_file}\", 0)'",
+            write_to_runner(f"root -l -b -q 'createO2tables.C+(\"{delphes_file}\", \"tmp_{aod_file}\", 0)'",
                             log_file=aod_log_file,
+                            check_status=True)
+            write_to_runner(f"mv tmp_{aod_file} {aod_file}",
                             check_status=True)
             if not clean_delphes_files:
                 copy_and_link(delphes_file)
@@ -383,6 +348,8 @@ def main(configuration_file,
                 if hepmc_file is not None:
                     write_to_runner(f"rm {hepmc_file}")
             write_to_runner("exit 0\n")
+
+    # Configuring all the runs
     for i in run_list:
         configure_run(i)
 
@@ -395,15 +362,8 @@ def main(configuration_file,
         fatal_msg("'createO2tables.C' did not compile!")
     total_processing_time = time.time()
     msg(" --- start processing the runs ", color=bcolors.HEADER)
-    with multiprocessing.Pool(processes=njobs) as pool:
-        msg("Running production")
-        if "tqdm" not in sys.modules:
-            for i in enumerate(pool.imap(process_run, run_list)):
-                msg(f"Done: {i[0]+1},", len(run_list)-i[0]-1, "to go")
-        else:
-            r = list(tqdm.tqdm(pool.imap(process_run, run_list),
-                               total=len(run_list),
-                               bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
+    run_in_parallel(processes=njobs, job_runner=process_run,
+                    job_arguments=run_list, job_message="Running production")
 
     # merge runs when all done
     msg(" --- all runs are processed, so long", color=bcolors.HEADER)
@@ -471,7 +431,7 @@ def main(configuration_file,
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = get_default_parser(description=__doc__)
     parser.add_argument("configuration_file", type=str,
                         help="Input configuration file e.g. you can use the provided default_configfile.ini or variations of it.")
     parser.add_argument("--entry", "-e", type=str,
@@ -480,9 +440,6 @@ if __name__ == "__main__":
     parser.add_argument("--output-path", "--output_path", "-o", type=str,
                         default=None,
                         help="Output path, by default the current path is used as output.")
-    parser.add_argument("--njobs", "-j", type=int,
-                        default=10,
-                        help="Number of concurrent jobs, by default 10.")
     parser.add_argument("--nevents", "--ev", type=int,
                         default=1000,
                         help="Number of simulated events, by default 1000.")
@@ -491,8 +448,6 @@ if __name__ == "__main__":
                         help="Number of runs, by default 10.")
     parser.add_argument("--qa", "-qa", action="store_true",
                         help="QA mode: runs basic tasks at the end to assess QA.")
-    parser.add_argument("--verbose", "-v",
-                        action="store_true", help="Verbose mode.")
     parser.add_argument("--clean-delphes", "-c",
                         action="store_true",
                         help="Option to clean the delphes files in output and keep only the AODs, by default everything is kept.")
@@ -506,17 +461,17 @@ if __name__ == "__main__":
                         action="store_true",
                         help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
     args = parser.parse_args()
+    set_verbose_mode(args)
+
     # Check arguments
     if args.append and args.output_path is None:
         fatal_msg(
             "Asked to append production but did not specify output path (option '-o')")
-
     main(configuration_file=args.configuration_file,
          config_entry=args.entry,
          njobs=args.njobs,
          nevents=args.nevents,
          nruns=args.nruns,
-         verbose=args.verbose,
          output_path=args.output_path,
          clean_delphes_files=args.clean_delphes,
          qa=args.qa,
