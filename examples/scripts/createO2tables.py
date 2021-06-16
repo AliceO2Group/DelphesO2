@@ -28,7 +28,7 @@ def run_cmd(cmd, comment="", check_status=True):
             for i in content.strip().split("\n"):
                 verbose_msg("++", i)
         if "Encountered error" in content:
-            warning_msg("Error encountered runtime in", cmd)
+            warning_msg("Error encountered runtime error in", cmd)
         if check_status:
             if "OK" not in content and "root" not in cmd:
                 fatal_msg("Command", cmd, "does not have the OK tag", content)
@@ -293,9 +293,7 @@ def main(configuration_file,
             hepmc_file = None
             mc_seed = random.randint(1, 800000000)
             if custom_gen:  # Using HEPMC
-                gen_log_file = f"gen.{run_number}.log"
                 hepmc_file = f"hepmcfile.{run_number}.hepmc"
-                custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {mc_seed}"
                 if "INPUT_FILES" in custom_gen:
                     input_hepmc_file = custom_gen.replace("INPUT_FILES",
                                                           "").strip().split(" ")
@@ -306,6 +304,8 @@ def main(configuration_file,
                     write_to_runner(f"ln -s {input_hepmc_file}"
                                     f" {hepmc_file} \n")
                 else:
+                    gen_log_file = f"gen.{run_number}.log"
+                    custom_gen_option = f" --output {hepmc_file} --nevents {nevents} --seed {mc_seed}"
                     write_to_runner(custom_gen + custom_gen_option,
                                     log_file=gen_log_file, check_status=True)
                 write_to_runner(f"DelphesHepMC propagate.tcl {delphes_file} {hepmc_file}",
