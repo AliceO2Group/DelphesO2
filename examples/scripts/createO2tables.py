@@ -8,6 +8,7 @@ import configparser
 import os
 import shutil
 import time
+import glob
 import random
 from datetime import datetime
 from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg
@@ -158,7 +159,28 @@ def main(configuration_file,
                           "as it will be automatically set")
         for i in ["--output", "-o", "--nevents", "-n"]:
             check_duplicate(i)
-        msg("Using custom generator", custom_gen)
+        if "INPUT_FILES" in custom_gen:
+            input_hepmc_files = custom_gen.replace("INPUT_FILES",
+                                                   "").strip().split(" ")
+            input_hepmc_file_list = []
+            for i in input_hepmc_files:
+                input_hepmc_file_list += glob.glob(os.path.normpath(i))
+
+            if len(input_hepmc_file_list) >= nruns:
+                input_hepmc_file_list = input_hepmc_file_list[0:nruns]
+            else:
+                nruns = len(input_hepmc_file_list)
+
+            if len(input_hepmc_file_list) <= 0:
+                fatal_msg("Did not find any input file matching to the request:",
+                          custom_gen)
+            custom_gen = f"INPUT_FILES "+" ".join(input_hepmc_file_list)
+            msg("Using", len(input_hepmc_file_list),
+                "input HepMC file" +
+                ("" if len(input_hepmc_file_list) == 1 else "s"),
+                input_hepmc_file_list)
+        else:
+            msg("Using custom generator", custom_gen)
 
     # Printing configuration
     msg(" --- running createO2tables.py", color=bcolors.HEADER)
@@ -297,10 +319,7 @@ def main(configuration_file,
                 if "INPUT_FILES" in custom_gen:
                     input_hepmc_file = custom_gen.replace("INPUT_FILES",
                                                           "").strip().split(" ")
-                    if run_number < len(input_hepmc_file):
-                        input_hepmc_file = input_hepmc_file[run_number]
-                    else:
-                        return
+                    input_hepmc_file = input_hepmc_file[run_number]
                     write_to_runner(f"ln -s {input_hepmc_file}"
                                     f" {hepmc_file} \n")
                 else:

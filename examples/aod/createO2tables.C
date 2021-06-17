@@ -67,8 +67,11 @@ int createO2tables(const char* inputFile = "delphes.root",
     return 0;
   }
 
-  TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 1, "Nucleus", 1000010020);
+  TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 3, "Nucleus", 1000010020);
   TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
+
+  TDatabasePDG::Instance()->AddParticle("helium3", "helium3", 2.80839160743, kTRUE, 0.0, 6, "Nucleus", 1000020030);
+  TDatabasePDG::Instance()->AddAntiParticle("anti-helium3", -1000020030);
 
   if (do_vertexing) {
     o2::base::GeometryManager::loadGeometry();
