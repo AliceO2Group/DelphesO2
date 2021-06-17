@@ -40,8 +40,8 @@ namespace o2 {
 	  printf("Object %s not found, quitting\n",Form("mAccEffMuonPID_%s",partLabel[iPart]));
 	  return kFALSE;
 	}
-	mMomMin[iPart] = TMath::Max(1.2, mAccEffMuonPID[iPart]->GetAxis(1)->GetXmin());
-	mMomMax[iPart] = mAccEffMuonPID[iPart]->GetAxis(1)->GetXmax();
+	mMomMin[iPart] = TMath::Max(1.2, mAccEffMuonPID[iPart]->GetAxis(1)->GetBinCenter(1));
+	mMomMax[iPart] = mAccEffMuonPID[iPart]->GetAxis(1)->GetBinCenter(mAccEffMuonPID[iPart]->GetAxis(1)->GetNbins());
       }
 
       printf("Setup of MIDdetector successfully completed\n");
