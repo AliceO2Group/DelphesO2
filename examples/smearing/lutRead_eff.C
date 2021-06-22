@@ -23,18 +23,25 @@ lutRead_eff(const char *filename = "lutCovm.dat", double eta = 0.)
   for (int inch = 0; inch < nnch; ++inch) {
     for (int irad = 0; irad < nrad; ++irad) {
       for (int ieta = 0; ieta < neta; ++ieta) {
-	for (int ipt = 0; ipt < npt; ++ipt) {
-	  lutFile.read(reinterpret_cast<char *>(&lutTable[inch][irad][ieta][ipt]), sizeof(lutEntry_t));
-	  //	    lutTable[inch][irad][ieta][ipt].print();
-	}}}}
-  
+        for (int ipt = 0; ipt < npt; ++ipt) {
+          lutFile.read(reinterpret_cast<char *>(&lutTable[inch][irad][ieta][ipt]), sizeof(lutEntry_t));
+          // lutTable[inch][irad][ieta][ipt].print();
+        }
+      }
+    }
+  }
+
   lutFile.close();
 
   // create graph of pt resolution at eta = 0
   auto inch = lutHeader.nchmap.find(0.);
-  auto irad = lutHeader.nchmap.find(0.);
+  auto irad = lutHeader.radmap.find(0.);
   auto ieta = lutHeader.etamap.find(eta);
   auto gpt = new TGraph();
+  gpt->SetName(filename);
+  gpt->SetTitle(filename);
+  gpt->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+  gpt->GetYaxis()->SetTitle("efficiency (%)");
   for (int ipt = 0; ipt < npt; ++ipt) {
     auto lutEntry = &lutTable[inch][irad][ieta][ipt];
     if (!lutEntry->valid) {
