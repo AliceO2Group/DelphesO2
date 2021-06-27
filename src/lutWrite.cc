@@ -8,9 +8,8 @@ DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
 
 bool
-fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int layer = 0, int what = 0, int efftype = 0)
+fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int layer = 0, int what = 0, int efftype = 0, int q = 1)
 {
-  int q = 1;
   TrackSol tr(1, pt, eta, q, mass);
   bool retval = fat.SolveTrack(tr);
   if (!retval) return false;
@@ -61,6 +60,11 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   // pid
   lutHeader.pdg = pdg;
   lutHeader.mass = TDatabasePDG::Instance()->GetParticle(pdg)->Mass();
+  const int q = TDatabasePDG::Instance()->GetParticle(pdg)->Charge() / 3;
+  if (q <= 0) {
+    Printf("Negative or null charge for %i. Fix the charge!", pdg);
+    return;
+  }
   lutHeader.field = field;
   // nch
   lutHeader.nchmap.log   = true;
@@ -102,7 +106,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  lutEntry.valid = true;
 	  if (fabs(eta) < 2.) {
 	    //	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, layer, what, efftype)) {
+	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, layer, what, efftype, q)) {
 	      //	      printf(" --- fatSolve: error \n");
 	      lutEntry.valid = false;
 	      for (int i = 0; i < 15; ++i)
