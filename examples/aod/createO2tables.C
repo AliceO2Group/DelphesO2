@@ -178,18 +178,18 @@ int createO2tables(const char* inputFile = "delphes.root",
       if (IsSecondary(particles, iparticle)) {
         mcparticle.fFlags |= 1;
       }
-      mcparticle.fMother0 = particle->M1;
-      if (mcparticle.fMother0 > -1)
-        mcparticle.fMother0 += fOffsetLabel;
-      mcparticle.fMother1 = particle->M2;
-      if (mcparticle.fMother1 > -1)
-        mcparticle.fMother1 += fOffsetLabel;
-      mcparticle.fDaughter0 = particle->D1;
-      if (mcparticle.fDaughter0 > -1)
-        mcparticle.fDaughter0 += fOffsetLabel;
-      mcparticle.fDaughter1 = particle->D2;
-      if (mcparticle.fDaughter1 > -1)
-        mcparticle.fDaughter1 += fOffsetLabel;
+      mcparticle.fIndexMcParticles_Mother0 = particle->M1;
+      if (mcparticle.fIndexMcParticles_Mother0 > -1)
+        mcparticle.fIndexMcParticles_Mother0 += fOffsetLabel;
+      mcparticle.fIndexMcParticles_Mother1 = particle->M2;
+      if (mcparticle.fIndexMcParticles_Mother1 > -1)
+        mcparticle.fIndexMcParticles_Mother1 += fOffsetLabel;
+      mcparticle.fIndexMcParticles_Daughter0 = particle->D1;
+      if (mcparticle.fIndexMcParticles_Daughter0 > -1)
+        mcparticle.fIndexMcParticles_Daughter0 += fOffsetLabel;
+      mcparticle.fIndexMcParticles_Daughter1 = particle->D2;
+      if (mcparticle.fIndexMcParticles_Daughter1 > -1)
+        mcparticle.fIndexMcParticles_Daughter1 += fOffsetLabel;
       mcparticle.fWeight = 1.;
 
       mcparticle.fPx = particle->Px;
