@@ -37,9 +37,67 @@ enum TreeIndex { // Index of the output trees
 const int fBasketSizeEvents = 1000000;  // Maximum basket size of the trees for events
 const int fBasketSizeTracks = 10000000; // Maximum basket size of the trees for tracks
 
-const TString TreeName[kTrees] = {"O2collision", "DbgEventExtra", "O2track", "O2trackcov", "O2trackextra", "O2fwdtrack", "O2fwdtrackcov", "O2calo", "O2calotrigger", "O2muoncluster", "O2zdc", "O2fv0a", "O2fv0c", "O2ft0", "O2fdd", "O2v0", "O2cascade", "O2tof", "O2mcparticle", "O2mccollision", "O2mctracklabel", "O2mccalolabel", "O2mccollisionlabel", "O2bc", "O2run2bcinfo", "O2origin", "O2hmpid", "O2rich", "O2mid", "O2ftof"};
+const TString TreeName[kTrees] = {"O2collision",
+                                  "DbgEventExtra",
+                                  "O2track",
+                                  "O2trackcov",
+                                  "O2trackextra",
+                                  "O2fwdtrack",
+                                  "O2fwdtrackcov",
+                                  "O2calo",
+                                  "O2calotrigger",
+                                  "O2muoncluster",
+                                  "O2zdc",
+                                  "O2fv0a",
+                                  "O2fv0c",
+                                  "O2ft0",
+                                  "O2fdd",
+                                  "O2v0",
+                                  "O2cascade",
+                                  "O2tof",
+                                  "O2mcparticle",
+                                  "O2mccollision",
+                                  "O2mctracklabel",
+                                  "O2mccalolabel",
+                                  "O2mccollisionlabel",
+                                  "O2bc",
+                                  "O2run2bcinfo",
+                                  "O2origin",
+                                  "O2hmpid",
+                                  "O2rich",
+                                  "O2mid",
+                                  "O2ftof"};
 
-const TString TreeTitle[kTrees] = {"Collision tree", "Collision extra", "Barrel tracks Parameters", "Barrel tracks Covariance", "Barrel tracks Extra", "Forward tracks Parameters", "Forward tracks Covariances", "Calorimeter cells", "Calorimeter triggers", "MUON clusters", "ZDC", "FV0A", "FV0C", "FT0", "FDD", "V0s", "Cascades", "TOF hits", "Kinematics", "MC collisions", "MC track labels", "MC calo labels", "MC collision labels", "BC info", "Run 2 BC Info", "DF ids", "HMPID info", "RICH info", "MID info", "Forward TOF info"};
+const TString TreeTitle[kTrees] = {"Collision tree",
+                                   "Collision extra",
+                                   "Barrel tracks Parameters",
+                                   "Barrel tracks Covariance",
+                                   "Barrel tracks Extra",
+                                   "Forward tracks Parameters",
+                                   "Forward tracks Covariances",
+                                   "Calorimeter cells",
+                                   "Calorimeter triggers",
+                                   "MUON clusters",
+                                   "ZDC",
+                                   "FV0A",
+                                   "FV0C",
+                                   "FT0",
+                                   "FDD",
+                                   "V0s",
+                                   "Cascades",
+                                   "TOF hits",
+                                   "Kinematics",
+                                   "MC collisions",
+                                   "MC track labels",
+                                   "MC calo labels",
+                                   "MC collision labels",
+                                   "BC info",
+                                   "Run 2 BC Info",
+                                   "DF ids",
+                                   "HMPID info",
+                                   "RICH info",
+                                   "MID info",
+                                   "Forward TOF info"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -316,22 +374,22 @@ struct {
 
 void MakeTreeO2rich()
 {
-  TTree* t = CreateTree(kRICH);
-  t->Branch("fIndexCollisions", &rich.fIndexCollisions, "fIndexCollisions/I");
-  t->Branch("fIndexTracks", &rich.fIndexTracks, "fIndexTracks/I");
-  t->Branch("fRICHSignal", &rich.fRICHSignal, "fRICHSignal/F");
-  t->Branch("fRICHSignalError", &rich.fRICHSignalError, "fRICHSignalError/F");
-  t->Branch("fRICHDeltaEl", &rich.fRICHDeltaEl, "fRICHDeltaEl/F");
-  t->Branch("fRICHDeltaMu", &rich.fRICHDeltaMu, "fRICHDeltaMu/F");
-  t->Branch("fRICHDeltaPi", &rich.fRICHDeltaPi, "fRICHDeltaPi/F");
-  t->Branch("fRICHDeltaKa", &rich.fRICHDeltaKa, "fRICHDeltaKa/F");
-  t->Branch("fRICHDeltaPr", &rich.fRICHDeltaPr, "fRICHDeltaPr/F");
-  t->Branch("fRICHNsigmaEl", &rich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
-  t->Branch("fRICHNsigmaMu", &rich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
-  t->Branch("fRICHNsigmaPi", &rich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
-  t->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
-  t->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
-  t->SetBasketSize("*", fBasketSizeTracks);
+  TTree* tRICH = CreateTree(kRICH);
+  tRICH->Branch("fIndexCollisions", &rich.fIndexCollisions, "fIndexCollisions/I");
+  tRICH->Branch("fIndexTracks", &rich.fIndexTracks, "fIndexTracks/I");
+  tRICH->Branch("fRICHSignal", &rich.fRICHSignal, "fRICHSignal/F");
+  tRICH->Branch("fRICHSignalError", &rich.fRICHSignalError, "fRICHSignalError/F");
+  tRICH->Branch("fRICHDeltaEl", &rich.fRICHDeltaEl, "fRICHDeltaEl/F");
+  tRICH->Branch("fRICHDeltaMu", &rich.fRICHDeltaMu, "fRICHDeltaMu/F");
+  tRICH->Branch("fRICHDeltaPi", &rich.fRICHDeltaPi, "fRICHDeltaPi/F");
+  tRICH->Branch("fRICHDeltaKa", &rich.fRICHDeltaKa, "fRICHDeltaKa/F");
+  tRICH->Branch("fRICHDeltaPr", &rich.fRICHDeltaPr, "fRICHDeltaPr/F");
+  tRICH->Branch("fRICHNsigmaEl", &rich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
+  tRICH->Branch("fRICHNsigmaMu", &rich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
+  tRICH->Branch("fRICHNsigmaPi", &rich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
+  tRICH->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
+  tRICH->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  tRICH->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
@@ -343,11 +401,11 @@ struct {
 
 void MakeTreeO2mid()
 {
-  TTree* t = CreateTree(kMID);
-  t->Branch("fIndexCollisions", &mid.fIndexCollisions, "fIndexCollisions/I");
-  t->Branch("fIndexTracks", &mid.fIndexTracks, "fIndexTracks/I");
-  t->Branch("fMIDIsMuon", &mid.fMIDIsMuon, "fMIDIsMuon/b");
-  t->SetBasketSize("*", fBasketSizeTracks);
+  TTree* tMID = CreateTree(kMID);
+  tMID->Branch("fIndexCollisions", &mid.fIndexCollisions, "fIndexCollisions/I");
+  tMID->Branch("fIndexTracks", &mid.fIndexTracks, "fIndexTracks/I");
+  tMID->Branch("fMIDIsMuon", &mid.fMIDIsMuon, "fMIDIsMuon/b");
+  tMID->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
@@ -371,22 +429,22 @@ struct {
 
 void MakeTreeO2ftof()
 {
-  TTree* t = CreateTree(kFTOF);
-  t->Branch("fIndexCollisions", &ftof.fIndexCollisions, "fIndexCollisions/I");
-  t->Branch("fIndexTracks", &ftof.fIndexTracks, "fIndexTracks/I");
-  t->Branch("fFTOFLength", &ftof.fFTOFLength, "fFTOFLength/F");
-  t->Branch("fFTOFSignal", &ftof.fFTOFSignal, "fFTOFSignal/F");
-  t->Branch("fFTOFDeltaEl", &ftof.fFTOFDeltaEl, "fFTOFDeltaEl/F");
-  t->Branch("fFTOFDeltaMu", &ftof.fFTOFDeltaMu, "fFTOFDeltaMu/F");
-  t->Branch("fFTOFDeltaPi", &ftof.fFTOFDeltaPi, "fFTOFDeltaPi/F");
-  t->Branch("fFTOFDeltaKa", &ftof.fFTOFDeltaKa, "fFTOFDeltaKa/F");
-  t->Branch("fFTOFDeltaPr", &ftof.fFTOFDeltaPr, "fFTOFDeltaPr/F");
-  t->Branch("fFTOFNsigmaEl", &ftof.fFTOFNsigmaEl, "fFTOFNsigmaEl/F");
-  t->Branch("fFTOFNsigmaMu", &ftof.fFTOFNsigmaMu, "fFTOFNsigmaMu/F");
-  t->Branch("fFTOFNsigmaPi", &ftof.fFTOFNsigmaPi, "fFTOFNsigmaPi/F");
-  t->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
-  t->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
-  t->SetBasketSize("*", fBasketSizeTracks);
+  TTree* tFTOF = CreateTree(kFTOF);
+  tFTOF->Branch("fIndexCollisions", &ftof.fIndexCollisions, "fIndexCollisions/I");
+  tFTOF->Branch("fIndexTracks", &ftof.fIndexTracks, "fIndexTracks/I");
+  tFTOF->Branch("fFTOFLength", &ftof.fFTOFLength, "fFTOFLength/F");
+  tFTOF->Branch("fFTOFSignal", &ftof.fFTOFSignal, "fFTOFSignal/F");
+  tFTOF->Branch("fFTOFDeltaEl", &ftof.fFTOFDeltaEl, "fFTOFDeltaEl/F");
+  tFTOF->Branch("fFTOFDeltaMu", &ftof.fFTOFDeltaMu, "fFTOFDeltaMu/F");
+  tFTOF->Branch("fFTOFDeltaPi", &ftof.fFTOFDeltaPi, "fFTOFDeltaPi/F");
+  tFTOF->Branch("fFTOFDeltaKa", &ftof.fFTOFDeltaKa, "fFTOFDeltaKa/F");
+  tFTOF->Branch("fFTOFDeltaPr", &ftof.fFTOFDeltaPr, "fFTOFDeltaPr/F");
+  tFTOF->Branch("fFTOFNsigmaEl", &ftof.fFTOFNsigmaEl, "fFTOFNsigmaEl/F");
+  tFTOF->Branch("fFTOFNsigmaMu", &ftof.fFTOFNsigmaMu, "fFTOFNsigmaMu/F");
+  tFTOF->Branch("fFTOFNsigmaPi", &ftof.fFTOFNsigmaPi, "fFTOFNsigmaPi/F");
+  tFTOF->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
+  tFTOF->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
+  tFTOF->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
@@ -395,13 +453,13 @@ struct {
   Int_t fIndexMcCollisions = -1; /// The index of the MC collision vertex
 
   // MC information (modified version of TParticle
-  Int_t fPdgCode = -99999;    /// PDG code of the particle
-  Int_t fStatusCode = -99999; /// generation status code
-  uint8_t fFlags = 0;         /// See enum MCParticleFlags
-  Int_t fMother0 = 0;         /// Indices of the mother particles
-  Int_t fMother1 = 0;
-  Int_t fDaughter0 = 0; /// Indices of the daughter particles
-  Int_t fDaughter1 = 0;
+  Int_t fPdgCode = -99999;             /// PDG code of the particle
+  Int_t fStatusCode = -99999;          /// generation status code
+  uint8_t fFlags = 0;                  /// See enum MCParticleFlags
+  Int_t fIndexMcParticles_Mother0 = 0; /// Indices of the mother particles
+  Int_t fIndexMcParticles_Mother1 = 0;
+  Int_t fIndexMcParticles_Daughter0 = 0; /// Indices of the daughter particles
+  Int_t fIndexMcParticles_Daughter1 = 0;
   Float_t fWeight = 1; /// particle weight from the generator or ML
 
   Float_t fPx = -999.f; /// x component of momentum
@@ -418,25 +476,25 @@ struct {
 
 void MakeTreeO2mcparticle()
 {
-  TTree* tKinematics = CreateTree(kMcParticle);
-  tKinematics->Branch("fIndexMcCollisions", &mcparticle.fIndexMcCollisions, "fIndexMcCollisions/I");
-  tKinematics->Branch("fPdgCode", &mcparticle.fPdgCode, "fPdgCode/I");
-  tKinematics->Branch("fStatusCode", &mcparticle.fStatusCode, "fStatusCode/I");
-  tKinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");
-  tKinematics->Branch("fMother0", &mcparticle.fMother0, "fMother0/I");
-  tKinematics->Branch("fMother1", &mcparticle.fMother1, "fMother1/I");
-  tKinematics->Branch("fDaughter0", &mcparticle.fDaughter0, "fDaughter0/I");
-  tKinematics->Branch("fDaughter1", &mcparticle.fDaughter1, "fDaughter1/I");
-  tKinematics->Branch("fWeight", &mcparticle.fWeight, "fWeight/F");
-  tKinematics->Branch("fPx", &mcparticle.fPx, "fPx/F");
-  tKinematics->Branch("fPy", &mcparticle.fPy, "fPy/F");
-  tKinematics->Branch("fPz", &mcparticle.fPz, "fPz/F");
-  tKinematics->Branch("fE", &mcparticle.fE, "fE/F");
-  tKinematics->Branch("fVx", &mcparticle.fVx, "fVx/F");
-  tKinematics->Branch("fVy", &mcparticle.fVy, "fVy/F");
-  tKinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
-  tKinematics->Branch("fVt", &mcparticle.fVt, "fVt/F");
-  tKinematics->SetBasketSize("*", fBasketSizeTracks);
+  TTree* Kinematics = CreateTree(kMcParticle);
+  Kinematics->Branch("fIndexMcCollisions", &mcparticle.fIndexMcCollisions, "fIndexMcCollisions/I");
+  Kinematics->Branch("fPdgCode", &mcparticle.fPdgCode, "fPdgCode/I");
+  Kinematics->Branch("fStatusCode", &mcparticle.fStatusCode, "fStatusCode/I");
+  Kinematics->Branch("fFlags", &mcparticle.fFlags, "fFlags/b");
+  Kinematics->Branch("fIndexMcParticles_Mother0", &mcparticle.fIndexMcParticles_Mother0, "fIndexMcParticles_Mother0/I");
+  Kinematics->Branch("fIndexMcParticles_Mother1", &mcparticle.fIndexMcParticles_Mother1, "fIndexMcParticles_Mother1/I");
+  Kinematics->Branch("fIndexMcParticles_Daughter0", &mcparticle.fIndexMcParticles_Daughter0, "fIndexMcParticles_Daughter0/I");
+  Kinematics->Branch("fIndexMcParticles_Daughter1", &mcparticle.fIndexMcParticles_Daughter1, "fIndexMcParticles_Daughter1/I");
+  Kinematics->Branch("fWeight", &mcparticle.fWeight, "fWeight/F");
+  Kinematics->Branch("fPx", &mcparticle.fPx, "fPx/F");
+  Kinematics->Branch("fPy", &mcparticle.fPy, "fPy/F");
+  Kinematics->Branch("fPz", &mcparticle.fPz, "fPz/F");
+  Kinematics->Branch("fE", &mcparticle.fE, "fE/F");
+  Kinematics->Branch("fVx", &mcparticle.fVx, "fVx/F");
+  Kinematics->Branch("fVy", &mcparticle.fVy, "fVy/F");
+  Kinematics->Branch("fVz", &mcparticle.fVz, "fVz/F");
+  Kinematics->Branch("fVt", &mcparticle.fVt, "fVt/F");
+  Kinematics->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
