@@ -109,15 +109,16 @@ def main(configuration_file,
     barrel_half_length = opt("barrel_half_length")
 
     # copy relevant files in the working directory
-    def do_copy(in_file, out_file):
+    def do_copy(in_file, out_file=".", in_path=None):
+        """Function to copy files"""
+        if in_path is not None:
+            in_file = os.path.join(in_path, in_file)
         in_file = os.path.expanduser(os.path.expandvars(in_file))
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
 
     # Fetching the propagation card
-    do_copy(os.path.join(opt("card_path"),
-                         opt("propagate_card")),
-            "propagate.tcl")
+    do_copy(opt("propagate_card"), "propagate.tcl", in_path=opt("card_path"))
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
@@ -133,8 +134,7 @@ def main(configuration_file,
         verbose_msg(f"Fetching LUTs with tag {lut_tag} from path {lut_path}")
         for i in ["el", "mu", "pi", "ka", "pr"]:
             lut_bg = "{}kG".format(bField).replace(".", "")
-            do_copy(os.path.join(lut_path, f"lutCovm.{i}.{lut_bg}.{lut_tag}.dat"),
-                    f"lutCovm.{i}.dat")
+            do_copy(f"lutCovm.{i}.{lut_bg}.{lut_tag}.dat", f"lutCovm.{i}.dat", in_path=lut_path)
 
     # Checking that we actually have LUTs
     for i in ["el", "mu", "pi", "ka", "pr"]:
@@ -150,7 +150,7 @@ def main(configuration_file,
                       config_entry, "in your configuration file", configuration_file)
         generators = opt("generators").split(" ")
         for i in generators:
-            do_copy(i, ".")
+            do_copy(i)
         msg("Using pythia with configuration", generators)
     else:
         def check_duplicate(option_name):
@@ -201,11 +201,11 @@ def main(configuration_file,
     msg("  etaMax               =", etaMax)
 
     aod_path = opt("aod_path")
-    do_copy(os.path.join(aod_path, "createO2tables.h"), ".")
-    do_copy(os.path.join(aod_path, "createO2tables.C"), ".")
-    do_copy("../aod/muonAccEffPID.root", ".")
+    do_copy("createO2tables.h", in_path=aod_path)
+    do_copy("createO2tables.C", in_path=aod_path)
+    do_copy("muonAccEffPID.root", in_path=aod_path)
     if qa:
-        do_copy("diagnostic_tools/dpl-config_std.json", ".")
+        do_copy("diagnostic_tools/dpl-config_std.json")
 
     def set_config(config_file, config, value):
         config = config.strip()
@@ -355,8 +355,10 @@ def main(configuration_file,
             write_to_runner(f"root -l -b -q 'createO2tables.C+(\"{delphes_file}\", \"tmp_{aod_file}\", 0)'",
                             log_file=aod_log_file,
                             check_status=True)
-            write_to_runner(f"mv tmp_{aod_file} {aod_file}",
-                            check_status=True)
+            # Check that there were no O2 errors
+            write_to_runner(f"if grep -q \"\[ERROR\]\" {aod_log_file}; then echo \": got some errors in '{aod_log_file}'\" && exit 1; fi")
+            # Rename the temporary AODs to standard AODs
+            write_to_runner(f"mv tmp_{aod_file} {aod_file}", check_status=True)
             if not clean_delphes_files:
                 copy_and_link(delphes_file)
                 if hepmc_file is not None:

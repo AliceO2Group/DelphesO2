@@ -60,9 +60,9 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   // pid
   lutHeader.pdg = pdg;
   lutHeader.mass = TDatabasePDG::Instance()->GetParticle(pdg)->Mass();
-  const int q = TDatabasePDG::Instance()->GetParticle(pdg)->Charge() / 3;
+  const int q = std::abs(TDatabasePDG::Instance()->GetParticle(pdg)->Charge()) / 3;
   if (q <= 0) {
-    Printf("Negative or null charge for %i. Fix the charge!", pdg);
+    Printf("Negative or null charge (%f) for pdg code %i. Fix the charge!", TDatabasePDG::Instance()->GetParticle(pdg)->Charge(), pdg);
     return;
   }
   lutHeader.field = field;
