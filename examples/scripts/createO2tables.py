@@ -235,7 +235,7 @@ def main(configuration_file,
                    "const bool do_vertexing = ", "false\;/")
     else:  # Check that the geometry file for the vertexing is there
         if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
-            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
+            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
     if qa:
         set_config("dpl-config_std.json", "\\\"d_bz\\\":",
                    "\\\""f"{bField}""\\\"\,/")
