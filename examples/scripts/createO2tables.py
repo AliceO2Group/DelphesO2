@@ -11,30 +11,7 @@ import time
 import glob
 import random
 from datetime import datetime
-from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg
-
-
-def run_cmd(cmd, comment="", check_status=True):
-    """
-    Function to run a command in bash, allows to check the status of the command and to log the command output
-    """
-    verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
-    try:
-        to_run = cmd
-        if check_status:
-            to_run = f"{cmd} && echo OK"
-        content = os.popen(to_run).read()
-        if content:
-            content = content.strip()
-            for i in content.strip().split("\n"):
-                verbose_msg("++", i)
-        if "Encountered error" in content:
-            warning_msg("Error encountered runtime error in", cmd)
-        if check_status:
-            if "OK" not in content and "root" not in cmd:
-                fatal_msg("Command", cmd, "does not have the OK tag", content)
-    except:
-        fatal_msg("Error while running", f"'{cmd}'")
+from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, run_cmd
 
 
 def process_run(run_number):
@@ -60,7 +37,8 @@ def main(configuration_file,
          clean_delphes_files,
          create_luts,
          turn_off_vertexing,
-         append_production):
+         append_production,
+         use_nuclei):
     arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
@@ -125,6 +103,9 @@ def main(configuration_file,
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
+    lut_particles = ["el", "mu", "pi", "ka", "pr"]
+    if use_nuclei:
+        lut_particles += ["de", "he3"]
     if create_luts:
         # Creating LUTs
         minimum_track_radius = opt("minimum_track_radius")
@@ -135,12 +116,13 @@ def main(configuration_file,
     else:
         # Fetching LUTs
         verbose_msg(f"Fetching LUTs with tag {lut_tag} from path {lut_path}")
-        for i in ["el", "mu", "pi", "ka", "pr"]:
+        for i in lut_particles:
             lut_bg = "{}kG".format(bField).replace(".", "")
-            do_copy(f"lutCovm.{i}.{lut_bg}.{lut_tag}.dat", f"lutCovm.{i}.dat", in_path=lut_path)
+            do_copy(f"lutCovm.{i}.{lut_bg}.{lut_tag}.dat",
+                    f"lutCovm.{i}.dat", in_path=lut_path)
 
     # Checking that we actually have LUTs
-    for i in ["el", "mu", "pi", "ka", "pr"]:
+    for i in lut_particles:
         i = f"lutCovm.{i}.dat"
         if not os.path.isfile(i):
             fatal_msg("Did not find LUT file", i)
@@ -236,6 +218,9 @@ def main(configuration_file,
     if turn_off_vertexing:
         set_config("createO2tables.C",
                    "const bool do_vertexing = ", "false\;/")
+    if use_nuclei:
+        set_config("createO2tables.C",
+                   "const bool enable_nuclei = ", "true\;/")
     else:  # Check that the geometry file for the vertexing is there
         if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
             run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
@@ -359,7 +344,10 @@ def main(configuration_file,
                             log_file=aod_log_file,
                             check_status=True)
             # Check that there were no O2 errors
-            write_to_runner(f"if grep -q \"\[ERROR\]\" {aod_log_file}; then echo \": got some errors in '{aod_log_file}'\" && exit 1; fi")
+            write_to_runner(
+                f"if grep -q \"\[ERROR\]\" {aod_log_file}; then echo \": got some errors in '{aod_log_file}'\" && exit 1; fi")
+            write_to_runner(
+                f"if grep -q \"\[FATAL\]\" {aod_log_file}; then echo \": got some fatals in '{aod_log_file}'\" && exit 1; fi")
             # Rename the temporary AODs to standard AODs
             write_to_runner(f"mv tmp_{aod_file} {aod_file}", check_status=True)
             if not clean_delphes_files:
@@ -481,6 +469,9 @@ if __name__ == "__main__":
     parser.add_argument("--append", "-a",
                         action="store_true",
                         help="Option to append the results instead of starting over by shifting the AOD indexing. N.B. the user is responsible of the compatibility between appended AODs. Only works in conjuction by specifying an output path (option '-o')")
+    parser.add_argument("--nuclei",
+                        action="store_true",
+                        help="Option use nuclei LUTs")
     parser.add_argument("--use-preexisting-luts", "-l",
                         action="store_true",
                         help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
@@ -501,4 +492,5 @@ if __name__ == "__main__":
          qa=args.qa,
          create_luts=not args.use_preexisting_luts,
          turn_off_vertexing=args.no_vertexing,
-         append_production=args.append)
+         append_production=args.append,
+         use_nuclei=args.nuclei)

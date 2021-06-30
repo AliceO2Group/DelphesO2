@@ -9,11 +9,11 @@ Results will be available for each batch of files in the `AnalysisResults` direc
 You can check the help of the script (i.e. `./doanalysis.py --h`) to have information on the available options and workflows.
 """
 
-import argparse
+import configparser
 from itertools import islice
 import os
 from ROOT import TFile
-from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg
+from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -40,21 +40,32 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         input_file = f"@{os.path.join(os.getcwd(), input_file)}"
 
     # Creating the script to run O2
-    tmp_script_name = os.path.join(output_path, f"tmpscript{tag}.sh")
+    tmp_script_name = os.path.join(output_path, f"tmpscript_{tag.lower()}.sh")
     with open(tmp_script_name, "w") as tmp_script:
 
         verbose_msg("Writing o2 instructions to", f"'{tmp_script_name}'")
 
-        def write_instructions(instructions):
+        def write_instructions(instructions, n=1, check_status=False):
             verbose_msg("--\t", instructions.strip())
-            tmp_script.write(f"{instructions}")
-        write_instructions(f"#!/bin/bash\n\n")
-        write_instructions(f"cd {output_path} \n\n")  # Move to run dir
-        write_instructions(f"pwd \n\n")  # Move to run dir
+            tmp_script.write(f"{instructions}" + "".join(["\n"]*n))
+            if check_status:
+                tmp_script.write("\nReturnValue=$?\n")
+                tmp_script.write("if [[ $ReturnValue != 0 ]]; then\n")
+                tmp_script.write("  echo \"Encountered error with command: '")
+                tmp_script.write(instructions.replace("\"", "\\\"").strip())
+                tmp_script.write("'\"\n")
+                tmp_script.write("  exit $ReturnValue\n")
+                tmp_script.write("fi\n")
+
+        write_instructions(f"#!/bin/bash", n=2)
+        write_instructions(f"cd {output_path}", n=2)  # Move to run dir
+        write_instructions(f"pwd", n=2)  # Move to run dir
 
         for i in output_files:  # Removing old output
-            write_instructions(f"rm -v {i} 2>&1\n")
-        write_instructions("\n\n")
+            write_instructions(f"rm -v {i} 2>&1")
+            i = i.replace(".root", f"_{tag}")
+            write_instructions(f"rm -v {i}.root 2>&1")
+        write_instructions("\n")
 
         o2_workflow = ""
         for i in o2_analyses:
@@ -70,66 +81,36 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             o2_workflow += line
         log_line = "echo \"Running: \n \t"+o2_workflow.replace("\t", "")+"\""
         log_line += f" > {log_file}"
-        write_instructions(log_line+" \n\n")
-        write_instructions(o2_workflow + f" >> {log_file} \n \t")
-        write_instructions("\n\n")
+        write_instructions(log_line, n=2)
+        write_instructions(
+            o2_workflow + f" >> {log_file} \n \t", check_status=True)
+        write_instructions("\n")
+
+        write_instructions(
+            f"if grep -q \"\[ERROR\]\" {log_file}; then echo \": got some errors in '{log_file}'\" && exit 1; fi")
+        write_instructions(
+            f"if grep -q \"\[FATAL\]\" {log_file}; then echo \": got some fatals in '{log_file}'\" && exit 1; fi")
+        write_instructions("\n")
 
         for i in output_files:  # renaming output with tag
             r = i.replace(".root", f"_{tag}.root")
-            write_instructions(f"mv {i} {r} 2>&1\n")
+            write_instructions(f"mv {i} {r} 2>&1")
 
-        write_instructions("\n\n")
+        write_instructions("\n")
+        write_instructions("exit 0")
     return tmp_script_name
-
-
-def run_command(cmd):
-    verbose_msg(f"Running '{cmd}'")
-    try:
-        content = os.popen(cmd).read()
-        if content:
-            for i in content.strip().split("\n"):
-                verbose_msg("++", i)
-    except:
-        raise ValueError("Error!")
 
 
 def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
     verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
-    run_command(cmd)
+    run_cmd(cmd)
     if remove_tmp_script:
         os.remove(tmp_script_name)
     verbose_msg("< end run with", tmp_script_name)
 
 
-analyses = {"TrackQA": ["o2-analysis-qa-event-track",
-                        "o2-analysis-qa-efficiency --make-eff 1 --eff-pi 1 --eff-el 1 --eff-ka 1 --eff-pr 1 --eta-min -0.8 --eta-max 0.8",
-                        "o2-analysis-trackextension",
-                        "o2-analysis-alice3-trackselection"],
-            "TOF": ["o2-analysis-spectra-tof",
-                    "o2-analysis-trackextension",
-                    "o2-analysis-alice3-pid-tof --add-qa 1",
-                    "o2-analysis-pid-tof-beta --add-qa 1",
-                    "o2-analysis-alice3-trackselection",
-                    "o2-analysis-alice3-trackextension"],
-            "RICH": ["o2-analysis-alice3-pid-rich-qa"],
-            "Efficiency": ["o2-analysis-mc-spectra-efficiency",
-                           "o2-analysis-trackextension",
-                           "o2-analysis-alice3-trackselection"],
-            "TPC": ["o2-analysis-pid-tpc --add-qa 1"],
-            "TreeD0": ["o2-analysis-hf-tree-creator-d0-tokpi --aod-writer-keep AOD/HFCANDP2Full/0,AOD/HFCANDP2FullE/0,AOD/HFCANDP2FullP/0",
-                       "o2-analysis-pid-tpc",
-                       "o2-analysis-pid-tof",
-                       "o2-analysis-hf-candidate-creator-2prong --doMC",
-                       "o2-analysis-hf-track-index-skims-creator",
-                       "o2-analysis-hf-d0-candidate-selector"],
-            "TreeLC": ["o2-analysis-hf-tree-creator-lc-topkpi --aod-writer-keep AOD/HFCANDP3Full/0,AOD/HFCANDP3FullE/0,AOD/HFCANDP3FullP/0",
-                       "o2-analysis-pid-tpc",
-                       "o2-analysis-pid-tof",
-                       "o2-analysis-hf-candidate-creator-2prong --doMC",
-                       "o2-analysis-hf-track-index-skims-creator",
-                       "o2-analysis-hf-d0-candidate-selector"]
-            }
+analyses = {}  # List of all known analyses, taken from configuration file
 
 
 def main(mode,
@@ -144,6 +125,7 @@ def main(mode,
          merge_only=False,
          shm_mem_size=16000000000,
          readers=1,
+         avoid_overwriting_merge=False,
          extra_arguments=""):
     if len(input_file) == 1:
         input_file = input_file[0]
@@ -253,12 +235,13 @@ def main(mode,
         merged_files = []
         for i in files_per_type:
             merged_file = os.path.join(out_path, i)
-            if os.path.isfile(merged_file):
+            if avoid_overwriting_merge and os.path.isfile(merged_file):
                 warning_msg("file", merged_file,
                             "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again")
                 continue
             merged_files.append(merged_file)
-            run_command(f"hadd {merged_file} " + " ".join(files_per_type[i]))
+            run_cmd(f"hadd -f {merged_file} " +
+                    " ".join(files_per_type[i]))
         if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:
@@ -271,7 +254,7 @@ if __name__ == "__main__":
     parser.add_argument("modes",
                         type=str,
                         nargs="+",
-                        help="Running modes, can be chosen among: " + ", ".join(analyses.keys()))
+                        help="Running modes, as defined in the input configuration file")
     parser.add_argument("--input", "-i",
                         type=str,
                         nargs="+",
@@ -297,8 +280,12 @@ if __name__ == "__main__":
                         type=str,
                         default=None,
                         help="Name of the dpl configuration file e.g. dpl-config_std.json")
-    parser.add_argument("--merge_output", "--merge-output", "--merge",
-                        action="store_true", help="Flag to merge the output files into one")
+    parser.add_argument("--workflows", "-w",
+                        type=str,
+                        nargs="+",
+                        default=[os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                              "o2_analysis_workflows.ini")],
+                        help="Configuration file with all the known workflows")
     parser.add_argument("--readers", "-r",
                         default=1, type=int,
                         help="Number of parallel readers")
@@ -308,6 +295,10 @@ if __name__ == "__main__":
     parser.add_argument("--extra_arguments", "-e",
                         default="", type=str,
                         help="Extra arguments to feed to the workflow")
+    parser.add_argument("--merge_output", "--merge-output", "--merge",
+                        action="store_true", help="Flag to merge the output files into one")
+    parser.add_argument("--avoid_overwriting_merge", "--no_overwrite", "-a",
+                        action="store_true", help="Flag to check that the old merged files are not overwritten")
     parser.add_argument("--merge_only", "--merge-only", "--mergeonly",
                         action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
     parser.add_argument("--show", "-s",
@@ -315,7 +306,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
     set_verbose_mode(args)
 
+    # Load analysis workflows
+    workflows = configparser.RawConfigParser()
+    msg("Analysis configuration from", args.workflows)
+    for i in args.workflows:
+        if not os.path.isfile(i):
+            fatal_msg(f"Did not fid configuration file '{i}'")
+        workflows.read(i)
+    for i in workflows.sections():
+        analyses[i] = workflows.get(i, "w").split("\n")
+
     for i in args.modes:
+        if i not in analyses.keys():
+            fatal_msg("Analysis", i, "not in",
+                      " ".join(workflows.sections()), "from configuration files:", args.workflows)
         if args.show:
             msg(i, "workflow:")
             for j in enumerate(analyses[i]):
@@ -332,4 +336,5 @@ if __name__ == "__main__":
              merge_only=args.merge_only,
              readers=args.readers,
              extra_arguments=args.extra_arguments,
+             avoid_overwriting_merge=args.avoid_overwriting_merge,
              shm_mem_size=args.mem)

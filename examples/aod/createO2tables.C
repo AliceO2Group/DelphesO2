@@ -57,6 +57,7 @@ const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
 const bool do_vertexing = true;
+const bool enable_nuclei = false;
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -98,6 +99,10 @@ int createO2tables(const char* inputFile = "delphes.root",
   smearer.loadTable(211, "lutCovm.pi.dat");
   smearer.loadTable(321, "lutCovm.ka.dat");
   smearer.loadTable(2212, "lutCovm.pr.dat");
+  if (enable_nuclei) {
+    smearer.loadTable(1000010020, "lutCovm.de.dat");
+    smearer.loadTable(1000020030, "lutCovm.he3.dat");
+  }
 
   // TOF layer
   o2::delphes::TOFLayer tof_layer;
@@ -356,7 +361,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     std::array<float, 2> ftzero;
 
     forward_tof_layer.eventTime(ftof_tracks, ftzero);
-    for (int i = 0; i < ftof_tracks.size(); i++) {
+    for (unsigned int i = 0; i < ftof_tracks.size(); i++) {
       auto track = ftof_tracks[i];
       ftof.fIndexCollisions = ftof_tracks_indices[i].first;
       ftof.fIndexTracks = ftof_tracks_indices[i].second; // Index in the Track table
