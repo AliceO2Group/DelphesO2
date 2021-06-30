@@ -39,9 +39,10 @@ def main(reader_name,
 
     style()
 
-    p = {"el": "e", "pi": "#pi", "ka": "K", "pr": "p"}
+    p = {"el": "e", "pi": "#pi", "ka": "K", "pr": "p", "de": "d", "he3": "^{3}He"}
     p_colors = {"el": "#e41a1c", "pi": "#377eb8",
-                "ka": "#4daf4a", "pr": "#984ea3"}
+                "ka": "#4daf4a", "pr": "#984ea3",
+                "de": "#ff7f00", "he3": "#a65628"}
     if particles is not None:
         to_remove = []
         for i in p:
@@ -119,7 +120,7 @@ def main(reader_name,
                 return
             g = reader(lut, eta)
             if g.GetN() <= 0:
-                print("Skipping", g.GetName())
+                print("Skipping", g.GetName(), "because empty graph")
                 continue
             if len(g_list) == 0:
                 frame.GetXaxis().SetTitle(g.GetXaxis().GetTitle())
