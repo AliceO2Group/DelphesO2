@@ -30,6 +30,8 @@ file(GLOB AOD
   aod/*.C
   aod/*.h
   aod/*.root
+  scripts/common.py
+  scripts/createO2tables.py
   )
 
 install(FILES    ${PYTHIA8}       DESTINATION examples/pythia8)
