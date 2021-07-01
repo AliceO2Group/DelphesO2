@@ -7,6 +7,7 @@ Common header for AOD python scripts
 import argparse
 import multiprocessing
 import sys
+import os
 try:
     import tqdm
 except ImportError as e:
@@ -79,3 +80,26 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
             r = list(tqdm.tqdm(pool.imap(job_runner, job_arguments),
                                total=len(job_arguments),
                                bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
+
+
+def run_cmd(cmd, comment="", check_status=True):
+    """
+    Function to run a command in bash, allows to check the status of the command and to log the command output
+    """
+    verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
+    try:
+        to_run = cmd
+        if check_status:
+            to_run = f"{cmd} && echo OK"
+        content = os.popen(to_run).read()
+        if content:
+            content = content.strip()
+            for i in content.strip().split("\n"):
+                verbose_msg("++", i)
+        if "Encountered error" in content:
+            warning_msg("Error encountered runtime error in", cmd)
+        if check_status:
+            if "OK" not in content and "root" not in cmd:
+                fatal_msg("Command", cmd, "does not have the OK tag", content)
+    except:
+        fatal_msg("Error while running", f"'{cmd}'")
