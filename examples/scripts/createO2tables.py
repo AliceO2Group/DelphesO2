@@ -18,8 +18,10 @@ def process_run(run_number):
     processing_time = time.time()
     verbose_msg("> starting run", run_number)
     run_cmd(f"bash runner{run_number}.sh")
-    if not os.path.isfile(f"AODRun5.{run_number}.root"):
-        msg(f"++ something went wrong for run {run_number}, no output table found. Please check: 'AODRun5.{run_number}.log'",
+    aod_name = f"AODRun5.{run_number}.root"
+    if not os.path.isfile(aod_name):
+        msg(f"++ something went wrong for run {run_number}, no output AOD file {aod_name} found.",
+            f"Please check: 'AODRun5.{run_number}.log'",
             color=bcolors.FAIL)
     verbose_msg("< complete run", run_number)
     processing_time = time.time() - processing_time
@@ -345,9 +347,9 @@ def main(configuration_file,
                             check_status=True)
             # Check that there were no O2 errors
             write_to_runner(
-                f"if grep -q \"\[ERROR\]\" {aod_log_file}; then echo \": got some errors in '{aod_log_file}'\" && exit 1; fi")
+                f"if grep -q \"\[ERROR\]\" {aod_log_file}; then echo \": got some errors in '{aod_log_file}'\" && echo \"Found some ERROR in this log\" >> {aod_log_file}; fi")
             write_to_runner(
-                f"if grep -q \"\[FATAL\]\" {aod_log_file}; then echo \": got some fatals in '{aod_log_file}'\" && exit 1; fi")
+                f"if grep -q \"\[FATAL\]\" {aod_log_file}; then echo \": got some fatals in '{aod_log_file}'\" && echo \"Found some FATAL in this log\" >> {aod_log_file} && exit 1; fi")
             # Rename the temporary AODs to standard AODs
             write_to_runner(f"mv tmp_{aod_file} {aod_file}", check_status=True)
             if not clean_delphes_files:

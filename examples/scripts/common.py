@@ -82,7 +82,7 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
                                bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
 
 
-def run_cmd(cmd, comment="", check_status=True):
+def run_cmd(cmd, comment="", check_status=True, log_file=None):
     """
     Function to run a command in bash, allows to check the status of the command and to log the command output
     """
@@ -96,6 +96,10 @@ def run_cmd(cmd, comment="", check_status=True):
             content = content.strip()
             for i in content.strip().split("\n"):
                 verbose_msg("++", i)
+            if log_file is not None:
+                with open(log_file) as f_log:
+                    for i in content.strip().split("\n"):
+                        f_log.write(i + "\n")
         if "Encountered error" in content:
             warning_msg("Error encountered runtime error in", cmd)
         if check_status:

@@ -75,7 +75,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   TDatabasePDG::Instance()->AddAntiParticle("anti-helium3", -1000020030);
 
   if (do_vertexing) {
-    o2::base::GeometryManager::loadGeometry();
+    o2::base::GeometryManager::loadGeometry("./", false);
     o2::base::Propagator::initFieldFromGRP("o2sim_grp.root");
   }
 
@@ -502,8 +502,8 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   Printf("Writing tables for %i events", eventextra.fStart[kEvents] + 1);
   TString out_dir = outputFile;
-  out_dir.ReplaceAll(".root", "");
-  out_dir.ReplaceAll("AODRun5.", "");
+  const TObjArray* out_tag = out_dir.Tokenize(".");
+  out_dir = out_tag->GetEntries() > 1 ? out_tag->At(1)->GetName() : "";
   if (!out_dir.IsDec()) {
     out_dir = "DF_0";
   } else {
