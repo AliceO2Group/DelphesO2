@@ -25,10 +25,11 @@ public:
   /** LUT methods **/
   bool loadTable(int pdg, const char *filename);
   void useEfficiency(bool val) { mUseEfficiency = val; };
+  lutHeader_t *getLUTHeader(int pdg) { return mLUTHeader[getIndexPDG(pdg)]; };
   lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
 
   bool smearTrack(O2Track &o2track, lutEntry_t *lutEntry);
-  bool smearTrack(O2Track &o2track, int pid);
+  bool smearTrack(O2Track &o2track, int pid, float nch);
   bool smearTrack(Track &track, bool atDCA = true);
 
   int getIndexPDG(int pdg) {
@@ -41,12 +42,15 @@ public:
     default: return 2;
     };
   };
+
+  void setdNdEta(float val) { mdNdEta = val; };
   
 protected:
 
   lutHeader_t *mLUTHeader[5] = {nullptr};
   lutEntry_t *****mLUTEntry[5] = {nullptr};
   bool mUseEfficiency = true;
+  float mdNdEta =  1600.;
   
 };
   

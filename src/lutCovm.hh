@@ -2,6 +2,7 @@
 /// @email: preghenella@bo.infn.it
 
 #pragma once
+#define LUTCOVM_VERSION 20210611
 
 struct map_t {
   int nbins = 1;
@@ -27,6 +28,7 @@ struct map_t {
 };
 
 struct lutHeader_t {
+  int   version = LUTCOVM_VERSION;
   int   pdg = 0;
   float mass = 0.;
   float field = 0.;
@@ -34,17 +36,22 @@ struct lutHeader_t {
   map_t radmap;
   map_t etamap;
   map_t ptmap;
+  bool check_version() {
+    return (version == LUTCOVM_VERSION);
+  };
   void print() {
-    printf("    pdg: %d \n", pdg);
-    printf("  field: %f \n", field);
-    printf(" nchmap: "); nchmap.print();
-    printf(" radmap: "); radmap.print();
-    printf(" etamap: "); etamap.print();
-    printf("  ptmap: "); ptmap.print();
+    printf(" version: %d \n", version);
+    printf("     pdg: %d \n", pdg);
+    printf("   field: %f \n", field);
+    printf("  nchmap: "); nchmap.print();
+    printf("  radmap: "); radmap.print();
+    printf("  etamap: "); etamap.print();
+    printf("   ptmap: "); ptmap.print();
   };
 };
 
 struct lutEntry_t {
+  float nch = 0.;
   float eta = 0.;
   float pt = 0.;
   bool valid = false;
