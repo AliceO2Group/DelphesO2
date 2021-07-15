@@ -1,38 +1,72 @@
 #! /usr/bin/env bash
 
-if [[ $* == *"-h"* ]]; then
-    echo "Script to generate LUTs from LUT writer, arguments:"
-    echo "1) tag of the LUT writer [default]"
-    echo "2) Magnetic field in T [0.5]"
-    echo "3) Minimum radius of the track in cm [100]"
-    echo "4) Path where the LUT writers are located [\$DELPHESO2_ROOT/lut/]"
-    echo "5) Output path where to write the LUTs [.]"
-    echo "6) Particles to consider [\"0 1 2 3 4\"]"
-    exit 0
-fi
-
 WHAT=default
 FIELD=0.5
 RMIN=100.
-OUT_PATH=.
 WRITER_PATH=$DELPHESO2_ROOT/lut/
+OUT_PATH=.
+OUT_TAG=
 PARTICLES="0 1 2 3 4"
 
-[ -z "$1" ] || WHAT=$1
-[ -z "$2" ] || FIELD=$2
-[ -z "$3" ] || RMIN=$3
-[ -z "$4" ] || WRITER_PATH=$4
-[ -z "$5" ] || OUT_PATH=$5
-[ -z "$6" ] || PARTICLES=$6
+# Get the options
+while getopts ":t:B:R:p:o:T:P:h" option; do
+    case $option in
+    h) # display Help
+        echo "Script to generate LUTs from LUT writer, arguments:"
+        echo "Syntax: ./create_luts.sh [-h|t|B|R|p|o|T|P]"
+        echo "options:"
+        echo "-t tag of the LUT writer [default]"
+        echo "-B Magnetic field in T [0.5]"
+        echo "-R Minimum radius of the track in cm [100]"
+        echo "-p Path where the LUT writers are located [\$DELPHESO2_ROOT/lut/]"
+        echo "-o Output path where to write the LUTs [.]"
+        echo "-T Tag to append to LUTs [\"\"]"
+        echo "-P Particles to consider [\"0 1 2 3 4\"]"
+        echo "-h Show this help"
+        exit
+        ;;
+    t)
+        WHAT=$OPTARG
+        echo " > Setting LUT writer to ${WHAT}"
+        ;;
+    B)
+        FIELD=$OPTARG
+        echo " > Setting B field to ${FIELD}"
+        ;;
+    R)
+        RMIN=$OPTARG
+        echo " > Setting minimum radius to ${RMIN}"
+        ;;
+    p)
+        WRITER_PATH=$OPTARG
+        echo " > Setting LUT writer path to ${WRITER_PATH}"
+        ;;
+    o)
+        OUT_PATH=$OPTARG
+        echo " > Setting LUT output path to ${OUT_PATH}"
+        ;;
+    T)
+        OUT_TAG=$OPTARG
+        echo " > Setting LUT output tag to ${OUT_TAG}"
+        ;;
+    P)
+        PARTICLES=$OPTARG
+        echo " > Setting LUT particles to ${PARTICLES}"
+        ;;
+    \?) # Invalid option
+        echo "Error: Invalid option, use [-h|t|B|R|p|o|T|P]"
+        exit
+        ;;
+    esac
+done
 
 cp    "${WRITER_PATH}/lutWrite.$WHAT.cc" . || { echo "cannot find lut writer: ${WRITER_PATH}/lutWrite.$WHAT.cc" ; exit 1; }
 cp    "${WRITER_PATH}/DetectorK/DetectorK.cxx" .
 cp    "${WRITER_PATH}/DetectorK/DetectorK.h" .
 cp -r "${WRITER_PATH}/fwdRes" .
 cp    "${WRITER_PATH}/lutWrite.cc" .
-cp    "${WRITER_PATH}/lutCovm.hh" .
 
-echo " --- creating LUTs: config = $WHAT, field = $FIELD T, min tracking radius = $RMIN cm"
+echo " --- creating LUTs: config = ${WHAT}, field = ${FIELD} T, min tracking radius = ${RMIN} cm"
 
 for i in $PARTICLES; do
     root -l -b <<EOF
@@ -50,7 +84,7 @@ for i in $PARTICLES; do
     const float field = ${FIELD}f;
     const float rmin = ${RMIN};
     const int i = ${i};
-    lutWrite_${WHAT}("${OUT_PATH}/lutCovm." + pn[i] + ".dat", pc[i], field, rmin);
+    lutWrite_${WHAT}("${OUT_PATH}/lutCovm." + pn[i] + "${OUT_TAG}.dat", pc[i], field, rmin);
 
 EOF
 done
@@ -67,7 +101,7 @@ for i in $PARTICLES; do
     fi
 done
 
-if [[ ! -z $NullSize ]]; then
+if [[ -n $NullSize ]]; then
     echo "Created null sized LUTs!!"
     exit 1
 fi
