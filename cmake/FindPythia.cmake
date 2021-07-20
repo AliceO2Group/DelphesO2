@@ -14,7 +14,7 @@ find_path(Pythia_INCLUDE_DIR
   PATHS $ENV{PYTHIA_ROOT}/include)
 
 set(Pythia_INCLUDE_DIR ${Pythia_INCLUDE_DIR}/..)
-	
+
 find_library(Pythia_LIBRARIES
   NAMES libpythia8.so libpythia8.dylib
   PATHS $ENV{PYTHIA_ROOT}/lib)
@@ -22,4 +22,3 @@ find_library(Pythia_LIBRARIES
 find_package_handle_standard_args(Pythia
   REQUIRED_VARS Pythia_INCLUDE_DIR Pythia_LIBRARIES
   FAIL_MESSAGE "Pythia could not be found")
-

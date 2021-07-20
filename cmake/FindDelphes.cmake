@@ -9,7 +9,7 @@ find_path(Delphes_INCLUDE_DIR
   PATH_SUFFIXES "include")
 
 find_library(Delphes_LIBRARY
-  NAMES libDelphes.so
+  NAMES libDelphes.so libDelphes.dylib
   HINTS ${DELPHES_ROOT}/lib
   ENV LD_LIBRARY_PATH)
 
@@ -31,6 +31,5 @@ if(${Delphes_FOUND})
       INTERFACE_LINK_LIBRARIES "${Delphes_LIBRARIES}"
       )
   endif()
-  
-endif()
 
+endif()

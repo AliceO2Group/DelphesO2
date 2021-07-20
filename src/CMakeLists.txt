@@ -46,6 +46,8 @@ root_generate_dictionary(G__DelphesO2 ${HEADERS} LINKDEF DelphesO2LinkDef.h)
 target_link_libraries(DelphesO2
   Delphes::Core
   ROOT::MathCore
+  ROOT::RIO
+  ROOT::EG
   AliceO2::DetectorsVertexing
   AliceO2::ReconstructionDataFormats
   AliceO2::GPUCommon

@@ -16,10 +16,9 @@ find_path(HepMC_INCLUDE_DIR
 set(HepMC_INCLUDE_DIR ${HepMC_INCLUDE_DIR}/..)
 
 find_library(HepMC_LIBRARIES
-  NAMES libHepMC.so libHepMCfio.
+  NAMES libHepMC.so libHepMCfio.so libHepMC.dylib libHepMCfio.dylib
   PATHS $ENV{HEPMC_ROOT}/lib)
 
 find_package_handle_standard_args(HepMC
   REQUIRED_VARS HepMC_INCLUDE_DIR HepMC_LIBRARIES
   FAIL_MESSAGE "HepMC could not be found")
-

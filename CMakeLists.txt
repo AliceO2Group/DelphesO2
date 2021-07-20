@@ -16,10 +16,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(FindPackageHandleStandardArgs)
 find_package(fmt REQUIRED)
 find_package(ROOT REQUIRED)
-find_package(Delphes REQUIRED)
 find_package(FairLogger REQUIRED)
 find_package(FairRoot REQUIRED)
 find_package(AliceO2 REQUIRED)
+find_package(Delphes REQUIRED)
 
 include("${ROOT_DIR}/RootMacros.cmake")
 
