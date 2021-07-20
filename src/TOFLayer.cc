@@ -27,12 +27,12 @@ TOFLayer::hasTOF(const Track &track)
 {
   auto x = track.XOuter * 0.1; // [cm]
   auto y = track.YOuter * 0.1; // [cm]
-  auto z = track.ZOuter * 0.1; // [cm]  
+  auto z = track.ZOuter * 0.1; // [cm]
   if (mType == kBarrel) {
     auto r = hypot(x, y);
     return (fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
   }
-  if (mType = kForward) {
+  if (mType == kForward) {
     auto r = hypot(x, y);
     return (r > mRadiusIn) && (r < mRadius) && (fabs(fabs(z) - mLength) < 0.001);
   }
@@ -56,7 +56,7 @@ void
 TOFLayer::makePID(const Track &track, std::array<float, 5> &deltat, std::array<float, 5> &nsigma)
 {
   double pmass[5] = {0.00051099891, 0.10565800, 0.13957000, 0.49367700, 0.93827200};
-  
+
   /** get info **/
   double tof = track.TOuter * 1.e9; // [ns]
   double etof = track.ErrorT * 1.e9; // [ns]
@@ -71,7 +71,7 @@ TOFLayer::makePID(const Track &track, std::array<float, 5> &deltat, std::array<f
   for (Int_t ipart = 0; ipart < 5; ++ipart) {
     double mass2 = pmass[ipart] * pmass[ipart];
     double texp = Lc / p * TMath::Sqrt(mass2 + p2);
-    double etexp = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;    
+    double etexp = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;
     double sigma = TMath::Sqrt(etexp * etexp + etof * etof);
     deltat[ipart] = tof - texp;
     nsigma[ipart] = deltat[ipart] / sigma;
@@ -92,7 +92,7 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
 
     int pid       = track->PID;
     double mass   = TDatabasePDG::Instance()->GetParticle(pid)->Mass();
-    double mass2  = mass * mass;   
+    double mass2  = mass * mass;
     double tof    = track->TOuter * 1.e9; // [ns]
     double etof   = track->ErrorT * 1.e9; // [ns]
     double L      = track->L * 0.1;       // [cm]
@@ -102,7 +102,7 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
     double c      = 29.9792458;           // [cm/ns]
     double Lc     = L / c;
     double texp   = Lc / p * TMath::Sqrt(mass2 + p2);
-    double etexp  = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;    
+    double etexp  = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;
     double sigma  = TMath::Sqrt(etexp * etexp + etof * etof);
     double deltat = tof - texp;
 
@@ -143,14 +143,14 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
 
     sum = 0.;
     sumw = 0.;
-    
+
     for (int jtrack = 0; jtrack < tracks.size(); ++jtrack) {
       if (itrack == jtrack) continue; // do not use self
-      
+
       auto &track   = tracks[jtrack];
       int pid       = track->PID;
       double mass   = TDatabasePDG::Instance()->GetParticle(pid)->Mass();
-      double mass2  = mass * mass;   
+      double mass2  = mass * mass;
       double tof    = track->TOuter * 1.e9; // [ns]
       double etof   = track->ErrorT * 1.e9; // [ns]
       double L      = track->L * 0.1;       // [cm]
@@ -160,7 +160,7 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
       double c      = 29.9792458;           // [cm/ns]
       double Lc     = L / c;
       double texp   = Lc / p * TMath::Sqrt(mass2 + p2);
-      double etexp  = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;    
+      double etexp  = Lc * mass2 / p2 / TMath::Sqrt(mass2 + p2) * ep;
       double sigma  = TMath::Sqrt(etexp * etexp + etof * etof);
       double deltat = tof - texp;
       double w = 1. / (sigma * sigma);
@@ -174,18 +174,18 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
     sigma0[itrack] = std::sqrt(1. / sumw);
 
   }
-  
+
   for (int itrack = 0; itrack < tracks.size(); ++itrack) {
     auto &track   = tracks[itrack];
     track->TOuter -= time0[itrack] * 1.e-9; // [s]
     track->ErrorT = std::hypot(track->ErrorT, sigma0[itrack] * 1.e-9);
   }
-  
+
   return true;
 }
 
 /*****************************************************************/
 
-  
+
 } /** namespace delphes **/
 } /** namespace o2 **/
