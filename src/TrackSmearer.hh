@@ -34,21 +34,23 @@ public:
 
   int getIndexPDG(int pdg) {
     switch(abs(pdg)) {
-    case 11: return 0;
-    case 13: return 1;
-    case 211: return 2;
-    case 321: return 3;
-    case 2212: return 4;
-    default: return 2;
+    case 11: return 0; // Electron
+    case 13: return 1; // Muon
+    case 211: return 2; // Pion
+    case 321: return 3; // Kaon
+    case 2212: return 4; // Proton
+    case 1000010020: return 5; // Deuteron
+    case 1000020030: return 6; // Helium3
+    default: return 2; // Default: pion
     };
   };
 
   void setdNdEta(float val) { mdNdEta = val; };
   
 protected:
-
-  lutHeader_t *mLUTHeader[5] = {nullptr};
-  lutEntry_t *****mLUTEntry[5] = {nullptr};
+  static constexpr unsigned int nLUTs = 7;
+  lutHeader_t *mLUTHeader[nLUTs] = {nullptr};
+  lutEntry_t *****mLUTEntry[nLUTs] = {nullptr};
   bool mUseEfficiency = true;
   float mdNdEta =  1600.;
   
