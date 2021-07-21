@@ -124,6 +124,7 @@ def main(mode,
          merge_output=False,
          merge_only=False,
          shm_mem_size=16000000000,
+         rate_lim=1000000000,
          readers=1,
          avoid_overwriting_merge=False,
          extra_arguments=""):
@@ -139,7 +140,7 @@ def main(mode,
     else:
         msg("Merging output of", f"'{mode}'",
             "analysis", color=bcolors.BOKBLUE)
-    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --readers {readers}"
+    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers}"
     o2_arguments += extra_arguments
     if mode not in analyses:
         raise ValueError("Did not find analyses matching mode",
