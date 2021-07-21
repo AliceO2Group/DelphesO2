@@ -9,7 +9,6 @@ void
 fatInit_werner(float field = 0.5, float rmin = 100.)
 {
   fat.SetBField(field);
-  fat.SetdNdEtaCent(1600.);
   // new ideal Pixel properties?
   Double_t x0IB     = 0.001;
   Double_t x0OB     = 0.01;

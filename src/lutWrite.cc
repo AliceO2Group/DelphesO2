@@ -68,9 +68,9 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   lutHeader.field = field;
   // nch
   lutHeader.nchmap.log   = true;
-  lutHeader.nchmap.nbins = 1;
-  lutHeader.nchmap.min   = 0.;
-  lutHeader.nchmap.max   = 4.;
+  lutHeader.nchmap.nbins = 20;
+  lutHeader.nchmap.min   = 0.5;
+  lutHeader.nchmap.max   = 3.5;
   // radius
   lutHeader.radmap.log   = false;
   lutHeader.radmap.nbins = 1;
@@ -78,9 +78,9 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   lutHeader.radmap.max   = 100.;
   // eta
   lutHeader.etamap.log   = false;
-  lutHeader.etamap.nbins = 80;
-  lutHeader.etamap.min   = -4.;
-  lutHeader.etamap.max   =  4.;
+  lutHeader.etamap.nbins = 40;
+  lutHeader.etamap.min   = -2.;
+  lutHeader.etamap.max   =  2.;
   // pt
   lutHeader.ptmap.log    = true;
   lutHeader.ptmap.nbins  = 200;
@@ -96,8 +96,12 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
   lutEntry_t lutEntry;
   
   // write entries
-  for (int inch = 0; inch < nnch; ++inch)
-    for (int irad = 0; irad < nrad; ++irad)
+  for (int inch = 0; inch < nnch; ++inch) {
+    auto nch = lutHeader.nchmap.eval(inch);
+    lutEntry.nch = nch;
+    fat.SetdNdEtaCent(nch);
+    std::cout << " --- setting FAT dN/deta: " << nch << std::endl;
+    for (int irad = 0; irad < nrad; ++irad) {
       for (int ieta = 0; ieta < neta; ++ieta) {
 	auto eta = lutHeader.etamap.eval(ieta);
 	lutEntry.eta = lutHeader.etamap.eval(ieta);
@@ -125,7 +129,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  }
 	  diagonalise(lutEntry);
 	  lutFile.write(reinterpret_cast<char *>(&lutEntry), sizeof(lutEntry_t));
-	}}
+	}}}}
   
 	  
   lutFile.close();

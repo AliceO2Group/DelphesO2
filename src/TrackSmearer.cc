@@ -30,6 +30,10 @@ TrackSmearer::loadTable(int pdg, const char *filename)
     std::cout << " --- troubles reading covariance matrix header for PDG " << pdg << ": " << filename << std::endl;
     return false;
   }
+  if (mLUTHeader[ipdg]->version != LUTCOVM_VERSION) {
+    std::cout << " --- LUT header version mismatch: expected/detected = " << LUTCOVM_VERSION << "/" << mLUTHeader[ipdg]->version << std::endl;
+    return false;
+  }
   const int nnch = mLUTHeader[ipdg]->nchmap.nbins;
   const int nrad = mLUTHeader[ipdg]->radmap.nbins;
   const int neta = mLUTHeader[ipdg]->etamap.nbins;
@@ -106,12 +110,12 @@ TrackSmearer::smearTrack(O2Track &o2track, lutEntry_t *lutEntry)
 /*****************************************************************/
 
 bool
-TrackSmearer::smearTrack(O2Track &o2track, int pid)
+TrackSmearer::smearTrack(O2Track &o2track, int pid, float nch)
 {
 
   auto pt = o2track.getPt();
   auto eta = o2track.getEta();
-  auto lutEntry = getLUTEntry(pid, 0., 0., eta, pt);
+  auto lutEntry = getLUTEntry(pid, nch, 0., eta, pt);
   if (!lutEntry || !lutEntry->valid) return false;
   return smearTrack(o2track, lutEntry);
 }
@@ -124,7 +128,9 @@ TrackSmearer::smearTrack(Track &track, bool atDCA)
 
   O2Track o2track;
   TrackUtils::convertTrackToO2Track(track, o2track, atDCA);
-  if (!smearTrack(o2track, track.PID)) return false;
+  int pdg = track.PID;
+  float nch = mdNdEta; // use locally stored dNch/deta for the time being
+  if (!smearTrack(o2track, pdg, nch)) return false;
   TrackUtils::convertO2TrackToTrack(o2track, track, atDCA);
   return true;
   
