@@ -60,11 +60,19 @@ while getopts ":t:B:R:p:o:T:P:h" option; do
     esac
 done
 
-cp    "${WRITER_PATH}/lutWrite.$WHAT.cc" . || { echo "cannot find lut writer: ${WRITER_PATH}/lutWrite.$WHAT.cc" ; exit 1; }
-cp    "${WRITER_PATH}/DetectorK/DetectorK.cxx" .
-cp    "${WRITER_PATH}/DetectorK/DetectorK.h" .
-cp -r "${WRITER_PATH}/fwdRes" .
-cp    "${WRITER_PATH}/lutWrite.cc" .
+function do_copy() {
+    cp "${1}" . || {
+        echo "Cannot find $2: ${1}"
+        exit 1
+    }
+}
+
+do_copy "${WRITER_PATH}/lutWrite.$WHAT.cc" "lut writer"
+do_copy "${WRITER_PATH}/DetectorK/DetectorK.cxx"
+do_copy "${WRITER_PATH}/DetectorK/DetectorK.h"
+do_copy "${WRITER_PATH}/lutWrite.cc"
+do_copy "${WRITER_PATH}/lutCovm.hh"
+cp -r   "${WRITER_PATH}/fwdRes" .
 
 echo " --- creating LUTs: config = ${WHAT}, field = ${FIELD} T, min tracking radius = ${RMIN} cm"
 
@@ -93,11 +101,12 @@ done
 NullSize=""
 P=(el mu pi ka pr de he3)
 for i in $PARTICLES; do
-    if [[ ! -s lutCovm.${P[$i]}.dat ]]; then
-        echo "${i} has zero size"
+    LUT_FILE=${OUT_PATH}/lutCovm.${P[$i]}${OUT_TAG}.dat
+    if [[ ! -s ${LUT_FILE} ]]; then
+        echo "LUT file ${LUT_FILE} for particle ${i} has zero size"
         NullSize="${NullSize} ${i}"
     else
-        echo "lutCovm.${P[$i]}.dat is ok"
+        echo "${LUT_FILE} is ok"
     fi
 done
 
