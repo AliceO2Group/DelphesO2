@@ -94,14 +94,21 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // smearer
   o2::delphes::TrackSmearer smearer;
-  smearer.loadTable(11, "lutCovm.el.dat");
-  smearer.loadTable(13, "lutCovm.mu.dat");
-  smearer.loadTable(211, "lutCovm.pi.dat");
-  smearer.loadTable(321, "lutCovm.ka.dat");
-  smearer.loadTable(2212, "lutCovm.pr.dat");
+  std::map<int, const char*> mapPdgLut;
+  mapPdgLut.insert(std::make_pair(11, "lutCovm.el.dat"));
+  mapPdgLut.insert(std::make_pair(13, "lutCovm.mu.dat"));
+  mapPdgLut.insert(std::make_pair(211, "lutCovm.pi.dat"));
+  mapPdgLut.insert(std::make_pair(321, "lutCovm.ka.dat"));
+  mapPdgLut.insert(std::make_pair(2212, "lutCovm.pr.dat"));
   if (enable_nuclei) {
-    smearer.loadTable(1000010020, "lutCovm.de.dat");
-    smearer.loadTable(1000020030, "lutCovm.he3.dat");
+    mapPdgLut.insert(std::make_pair(1000010020, "lutCovm.de.dat"));
+    mapPdgLut.insert(std::make_pair(1000020030, "lutCovm.he.dat"));
+  }
+  for (auto e : mapPdgLut) {
+    if (!smearer.loadTable(e.first, e.second)) {
+      Printf("Having issue with loading the LUT %i '%s'", e.first, e.second);
+      return 1;
+    }
   }
 
   // TOF layer
