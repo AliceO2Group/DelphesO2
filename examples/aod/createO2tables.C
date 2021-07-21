@@ -177,6 +177,8 @@ int createO2tables(const char* inputFile = "delphes.root",
 
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
+    const float multEtaRange = 2.f; // Range in eta to count the charged particles
+    float dNdEta = 0.f;             // Charged particle multiplicity to use in the efficiency evaluation
 
     for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) { // Loop over particles
       auto particle = (GenParticle*)particles->At(iparticle);
@@ -214,8 +216,12 @@ int createO2tables(const char* inputFile = "delphes.root",
       mcparticle.fVz = particle->Z * 0.1;
       mcparticle.fVt = particle->T;
 
+      if (TMath::Abs(particle->Eta) <= multEtaRange && particle->D1 < 0 && particle->D2 < 0 && particle->Charge != 0) {
+        dNdEta += 1.f;
+      }
       FillTree(kMcParticle);
     }
+    dNdEta = 0.5f * dNdEta / multEtaRange;
     fOffsetLabel += particles->GetEntries();
 
     // loop over tracks
@@ -253,7 +259,7 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
-      if (!smearer.smearTrack(o2track, track->PID)) { // Skipping inefficient/not correctly smeared tracks
+      if (!smearer.smearTrack(o2track, track->PID, dNdEta)) { // Skipping inefficient/not correctly smeared tracks
         continue;
       }
       o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
