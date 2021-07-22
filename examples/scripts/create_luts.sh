@@ -84,22 +84,32 @@ for i in $PARTICLES; do
     TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 3, "Nucleus", 1000010020);
     TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
 
+    TDatabasePDG::Instance()->AddParticle("triton", "triton", 2.8089218, kTRUE, 0.0, 3, "Nucleus", 1000010030);
+    TDatabasePDG::Instance()->AddAntiParticle("anti-triton", -1000010030);
+
     TDatabasePDG::Instance()->AddParticle("helium3", "helium3", 2.80839160743, kTRUE, 0.0, 6, "Nucleus", 1000020030);
     TDatabasePDG::Instance()->AddAntiParticle("anti-helium3", -1000020030);
 
-    const TString pn[7] = {"el", "mu", "pi", "ka", "pr", "de", "he3"};
-    const int pc[7] = {11, 13, 211, 321, 2212, 1000010020, 1000020030 };
+    const int N = 8;
+    const TString pn[N] = {"el", "mu", "pi", "ka", "pr", "de", "tr", "he3"};
+    const int pc[N] = {11, 13, 211, 321, 2212, 1000010020, 1000010030, 1000020030 };
     const float field = ${FIELD}f;
     const float rmin = ${RMIN};
     const int i = ${i};
-    lutWrite_${WHAT}("${OUT_PATH}/lutCovm." + pn[i] + "${OUT_TAG}.dat", pc[i], field, rmin);
+    const TString out_file = "${OUT_PATH}/lutCovm." + pn[i] + "${OUT_TAG}.dat";
+    Printf("Creating LUT for particle ID %i: %s with pdg code %i to %s", i, pn[i].Data(), pc[i], out_file.Data());
+    if(i >= 0 && i < N){
+        lutWrite_${WHAT}(out_file, pc[i], field, rmin);
+    } else{
+        Printf("Particle ID %i is too large or too small", i);
+    }
 
 EOF
 done
 
 # Checking that the output LUTs are OK
 NullSize=""
-P=(el mu pi ka pr de he3)
+P=(el mu pi ka pr de tr he3)
 for i in $PARTICLES; do
     LUT_FILE=${OUT_PATH}/lutCovm.${P[$i]}${OUT_TAG}.dat
     if [[ ! -s ${LUT_FILE} ]]; then

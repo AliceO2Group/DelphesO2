@@ -40,7 +40,8 @@ public:
     case 321: return 3; // Kaon
     case 2212: return 4; // Proton
     case 1000010020: return 5; // Deuteron
-    case 1000020030: return 6; // Helium3
+    case 1000010030: return 6; // Triton
+    case 1000020030: return 7; // Helium3
     default: return 2; // Default: pion
     };
   };
@@ -48,7 +49,7 @@ public:
   void setdNdEta(float val) { mdNdEta = val; };
   
 protected:
-  static constexpr unsigned int nLUTs = 7;
+  static constexpr unsigned int nLUTs = 8; // Number of LUT available
   lutHeader_t *mLUTHeader[nLUTs] = {nullptr};
   lutEntry_t *****mLUTEntry[nLUTs] = {nullptr};
   bool mUseEfficiency = true;
