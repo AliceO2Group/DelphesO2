@@ -23,7 +23,7 @@ public:
   ~TrackSmearer() = default;
 
   /** LUT methods **/
-  bool loadTable(int pdg, const char *filename);
+  bool loadTable(int pdg, const char *filename, bool forceReload = false);
   void useEfficiency(bool val) { mUseEfficiency = val; };
   lutHeader_t *getLUTHeader(int pdg) { return mLUTHeader[getIndexPDG(pdg)]; };
   lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
