@@ -2,6 +2,8 @@
 /// @email: preghenella@bo.infn.it
 
 #include "TrackUtils.hh"
+#include "TParticle.h"
+#include "TParticlePDG.h"
 
 namespace o2
 {
@@ -135,6 +137,19 @@ TrackUtils::convertGenParticleToO2Track(const GenParticle& particle, O2Track& o2
 
   new (&o2track) O2Track(x, track.Phi, params, covm);
 #endif
+  
+}
+  
+/*****************************************************************/
+
+void
+TrackUtils::convertTParticleToO2Track(const TParticle& particle, O2Track& o2track)
+{
+
+  std::array<float, 3> xyz = {static_cast<float>(particle.Vx()), static_cast<float>(particle.Vy()), static_cast<float>(particle.Vz())};
+  std::array<float, 3> ptetaphi = {static_cast<float>(particle.Pt()), static_cast<float>(particle.Eta()), static_cast<float>(particle.Phi())};
+  int charge = particle.GetPDG() ? particle.GetPDG()->Charge() / 3. : 0;
+  makeO2Track(o2track, xyz, ptetaphi, charge);
   
 }
   
