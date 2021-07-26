@@ -241,7 +241,7 @@ def main(mode,
                             "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again")
                 continue
             merged_files.append(merged_file)
-            run_cmd(f"hadd -f {merged_file} " +
+            run_cmd(f"hadd -j {njobs} -f {merged_file} " +
                     " ".join(files_per_type[i]))
         if len(merged_files) == 0:
             warning_msg("Merged no files")

@@ -19,7 +19,7 @@ TrackSmearer::loadTable(int pdg, const char *filename, bool forceReload)
 {
   auto ipdg = getIndexPDG(pdg);
   if (mLUTHeader[ipdg] && !forceReload) {
-    std::cout << " --- LUT table for PDG " << pdg << " has been already loaded " << std::endl;
+    std::cout << " --- LUT table for PDG " << pdg << " has been already loaded with index " << ipdg << std::endl;
     return false;
   }
   mLUTHeader[ipdg] = new lutHeader_t;

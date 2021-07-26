@@ -207,10 +207,11 @@ def main(reader_name,
             if tag_name is not None:
                 drawn.append(latex.DrawLatexNDC(0.5, 0.80, tag_name[0]))
             drawn.append(latex.DrawLatexNDC(0.5, 0.75, f"#eta = {int(eta)}" +
-                                            "   R_{min} = " + rmin))
+                                            ("   R_{min} = " + rmin if rmin is not None else "") ))
 
         adjust_pad()
         canvas_all_species.Update()
+        canvas_all_species.SaveAs(f"/tmp/{canvas_all_species.GetName()}.png")
     if not background:
         input("Done, press enter to continue")
 

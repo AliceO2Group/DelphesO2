@@ -10,6 +10,9 @@ void diagonalise(lutEntry_t &lutEntry);
 bool
 fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int layer = 0, int what = 0, int efftype = 0, int q = 1)
 {
+  if (q > 1) {
+    mass = -mass;
+  }
   TrackSol tr(1, pt, eta, q, mass);
   bool retval = fat.SolveTrack(tr);
   if (!retval) return false;
@@ -54,6 +57,10 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 
   // output file
   ofstream lutFile(filename, std::ofstream::binary);
+  if (!lutFile.is_open()) {
+    Printf("Did not manage to open output file!!");
+    return;
+  }
 
   // write header
   lutHeader_t lutHeader;
