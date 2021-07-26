@@ -71,6 +71,9 @@ int createO2tables(const char* inputFile = "delphes.root",
   TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 3, "Nucleus", 1000010020);
   TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
 
+  TDatabasePDG::Instance()->AddParticle("triton", "triton", 2.8089218, kTRUE, 0.0, 3, "Nucleus", 1000010030);
+  TDatabasePDG::Instance()->AddAntiParticle("anti-triton", -1000010030);
+
   TDatabasePDG::Instance()->AddParticle("helium3", "helium3", 2.80839160743, kTRUE, 0.0, 6, "Nucleus", 1000020030);
   TDatabasePDG::Instance()->AddAntiParticle("anti-helium3", -1000020030);
 
@@ -102,7 +105,8 @@ int createO2tables(const char* inputFile = "delphes.root",
   mapPdgLut.insert(std::make_pair(2212, "lutCovm.pr.dat"));
   if (enable_nuclei) {
     mapPdgLut.insert(std::make_pair(1000010020, "lutCovm.de.dat"));
-    mapPdgLut.insert(std::make_pair(1000020030, "lutCovm.he.dat"));
+    mapPdgLut.insert(std::make_pair(1000010030, "lutCovm.tr.dat"));
+    mapPdgLut.insert(std::make_pair(1000020030, "lutCovm.he3.dat"));
   }
   for (auto e : mapPdgLut) {
     if (!smearer.loadTable(e.first, e.second)) {
