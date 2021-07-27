@@ -461,11 +461,11 @@ void DetectorK::PrintLayout(Bool_t full) {
     if (tmp->phiRes==RIDICULOUS) 
       printf("  -  ");
     else
-      printf("%3.0f   ",tmp->phiRes*10000);
+      printf("%3.2f   ",tmp->phiRes*10000);
     if (tmp->zRes==RIDICULOUS) 
       printf("  -");
     else
-      printf("%3.0f",tmp->zRes*10000);
+      printf("%3.2f",tmp->zRes*10000);
 
     if (tmp->zRes==RIDICULOUS) 
       printf("\t  -\n");
