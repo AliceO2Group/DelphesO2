@@ -17,3 +17,4 @@ rm tmpscript*.sh
 rm lutWrite*.cc
 rm DetectorK.*
 rm -r fwdRes
+rm -r __pycache__

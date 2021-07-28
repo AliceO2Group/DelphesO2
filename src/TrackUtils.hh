@@ -8,7 +8,9 @@
 #include "classes/DelphesClasses.h"
 
 using O2Track = o2::track::TrackParCov;
-  
+
+class TParticle;
+
 namespace o2
 {
 namespace delphes
@@ -23,6 +25,7 @@ public:
 
   static void convertTrackToO2Track(const Track &track, O2Track &o2track, bool atDCA);
   static void convertGenParticleToO2Track(const GenParticle &particle, O2Track &o2track);
+  static void convertTParticleToO2Track(const TParticle &particle, O2Track &o2track);
 
   static bool propagateToDCA(O2Track &o2track, std::array<float, 3> xyz, float Bz);
   

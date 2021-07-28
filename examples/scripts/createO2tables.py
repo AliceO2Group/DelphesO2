@@ -107,7 +107,7 @@ def main(configuration_file,
     lut_tag = opt("lut_tag")
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     if use_nuclei:
-        lut_particles += ["de", "he3"]
+        lut_particles += ["de", "tr", "he3"]
     if create_luts:
         # Creating LUTs
         minimum_track_radius = opt("minimum_track_radius")

@@ -15,23 +15,39 @@ namespace delphes
 /*****************************************************************/
 
 bool
-TrackSmearer::loadTable(int pdg, const char *filename)
+TrackSmearer::loadTable(int pdg, const char *filename, bool forceReload)
 {
   auto ipdg = getIndexPDG(pdg);
+  if (mLUTHeader[ipdg] && !forceReload) {
+    std::cout << " --- LUT table for PDG " << pdg << " has been already loaded " << std::endl;
+    return false;
+  }
   mLUTHeader[ipdg] = new lutHeader_t;
   
   std::ifstream lutFile(filename, std::ifstream::binary);
   if (!lutFile.is_open()) {
     std::cout << " --- cannot open covariance matrix file for PDG " << pdg << ": " << filename << std::endl;
+    delete mLUTHeader[ipdg];
+    mLUTHeader[ipdg] = nullptr;
     return false;
   }
   lutFile.read(reinterpret_cast<char *>(mLUTHeader[ipdg]), sizeof(lutHeader_t));
   if (lutFile.gcount() != sizeof(lutHeader_t)) {
     std::cout << " --- troubles reading covariance matrix header for PDG " << pdg << ": " << filename << std::endl;
+    delete mLUTHeader[ipdg];
+    mLUTHeader[ipdg] = nullptr;
     return false;
   }
   if (mLUTHeader[ipdg]->version != LUTCOVM_VERSION) {
     std::cout << " --- LUT header version mismatch: expected/detected = " << LUTCOVM_VERSION << "/" << mLUTHeader[ipdg]->version << std::endl;
+    delete mLUTHeader[ipdg];
+    mLUTHeader[ipdg] = nullptr;
+    return false;
+  }
+  if (mLUTHeader[ipdg]->pdg != pdg) {
+    std::cout << " --- LUT header PDG mismatch: expected/detected = " << pdg << "/" << mLUTHeader[ipdg]->pdg << std::endl;
+    delete mLUTHeader[ipdg];
+    mLUTHeader[ipdg] = nullptr;
     return false;
   }
   const int nnch = mLUTHeader[ipdg]->nchmap.nbins;

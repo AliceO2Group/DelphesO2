@@ -6,7 +6,7 @@
 
 using namespace Pythia8;
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
   int nevents, pdg, seed;
@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   double px, py, pz;
   double xProd, yProd, zProd;
   bool verbose, decay;
-  
+
   /** process arguments **/
   namespace po = boost::program_options;
   po::options_description desc("Options");
@@ -36,29 +36,40 @@ int main(int argc, char **argv)
       ("verbose,V", po::bool_switch(&verbose)->default_value(false), "Verbose event listing")
       ("seed", po::value<int>(&seed)->default_value(1), "initial seed")
       ;
-    
+
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
-    
+
     if (vm.count("help")) {
       std::cout << desc << std::endl;
       return 1;
     }
-  }
-  catch(std::exception& e) {
+  } catch (std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     std::cout << desc << std::endl;
     return 1;
   }
-  
+
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(output, std::ios::out);
-  
+
   // pythia
   Pythia pythia;
 
+  // configure pythia
+  pythia.readString("ProcessLevel:all = off");
+  //  pythia.readString("SoftQCD:elastic on");
+  if (!config.empty() && !pythia.readFile(config)) {
+    std::cout << "Error: could not read config file \"" << config << "\"" << std::endl;
+    return 1;
+  }
+
   // check valid pdg code
+  if (!pythia.particleData.isParticle(pdg)) {
+    std::cout << "Error: invalid PDG code \"" << pdg << "\" is not in the particle list" << std::endl;
+    return 1;
+  }
   if (!pythia.particleData.isLepton(pdg) &&
       !pythia.particleData.isHadron(pdg) &&
       !pythia.particleData.isResonance(pdg)) {
@@ -70,15 +81,7 @@ int main(int argc, char **argv)
     }
   }
 
-  // config
-  pythia.readString("ProcessLevel:all = off");
-  //  pythia.readString("SoftQCD:elastic on");
-  if (!config.empty() && !pythia.readFile(config)) {
-    std::cout << "Error: could not read config file \"" << config << "\"" << std::endl;
-    return 1;
-  }
-
-  std::cout<<"Random:seed =" + std::to_string(seed)<<std::endl;
+  std::cout << "Random:seed =" + std::to_string(seed) << std::endl;
   pythia.readString("Random:setSeed = on");
   pythia.readString("Random:seed =" + std::to_string(seed));
   // init
@@ -100,7 +103,7 @@ int main(int argc, char **argv)
   particle.zProd(zProd);
 
   // background interface
-  Pythia8::Pythia *pythia_bkg = nullptr;
+  Pythia8::Pythia* pythia_bkg = nullptr;
   if (!background_config.empty()) {
     std::cout << "Background: configure from " << background_config << std::endl;
     pythia_bkg = new Pythia8::Pythia;
@@ -110,29 +113,29 @@ int main(int argc, char **argv)
     }
     pythia_bkg->init();
   }
-  
 
-  
   // event loop
   for (int iev = 0; iev < nevents; ++iev) {
 
     // reset, add particle and decay
     pythia.event.reset();
     pythia.event.append(particle);
-    if (decay) pythia.moreDecays();
+    if (decay)
+      pythia.moreDecays();
     pythia.next();
-    
+
     // print verbose
-    if (verbose) pythia.event.list(1);
+    if (verbose)
+      pythia.event.list(1);
 
     // background
     if (pythia_bkg) {
       pythia_bkg->next();
       pythia.event += pythia_bkg->event;
-    }          
-    
+    }
+
     // write HepMC
-    HepMC::GenEvent *hepmcevt = new HepMC::GenEvent();
+    HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     ToHepMC.fill_next_event(pythia, hepmcevt);
     ascii_io << hepmcevt;
     delete hepmcevt;
@@ -144,7 +147,6 @@ int main(int argc, char **argv)
     pythia_bkg->stat();
     delete pythia_bkg;
   }
-  
+
   return 0;
-  
 }
