@@ -187,10 +187,8 @@ def main(mode,
         return run_list
 
     if type(input_file) is list:
-        if batch_size == 1:
-            input_file_list = os.path.join(os.getcwd(), input_file)
-        else:
-            input_file_list = build_list_of_files(input_file)
+        input_file = [os.path.join(os.getcwd(), i) for i in input_file]
+        input_file_list = build_list_of_files(input_file)
     elif not input_file.endswith(".root"):
         with open(input_file, "r") as f:
             lines = f.readlines()
