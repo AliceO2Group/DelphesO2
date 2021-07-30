@@ -83,7 +83,8 @@ fwdPara(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, f
   float relmomres_MS_barrel = sqrt(relmomres_barrel*relmomres_barrel-relmomres_pos_barrel*relmomres_pos_barrel);
 
   // interpolate MS contrib (rel resolution 0.4 at eta = 4)
-  float relmomres_MS = 1./beta*0.4*pow(0.4/(beta*relmomres_MS_barrel),(fabs(eta)-4.)/(4.-etaMaxBarrel));
+  float relmomres_MS_eta4 = 0.4/beta*0.5/Bfield;
+  float relmomres_MS = relmomres_MS_eta4*pow(relmomres_MS_eta4/relmomres_MS_barrel,(fabs(eta)-4.)/(4.-etaMaxBarrel));
   float momres_tot = pt*sqrt(relmomres_pos*relmomres_pos + relmomres_MS*relmomres_MS); // total absolute mom reso
 
   // Fill cov matrix diag
