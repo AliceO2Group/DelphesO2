@@ -8,6 +8,8 @@ DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
 static float etaMaxBarrel = 1.75;
 
+bool usePara = true; // use fwd parameterisation
+
 bool
 fatSolve(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int itof = 0, int otof = 0, int q = 1)
 {
@@ -37,15 +39,19 @@ fwdSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
 }
 
 bool
-fwdPara(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, float Bfield = 0.5, int layer = 0, int what = 0)
+fwdPara(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, float Bfield = 0.5)
 {
+  lutEntry.valid = false;
+
   // parametrised forward response; interpolates between FAT at eta = 1.75 and a fixed parametrisation at eta = 4; only diagonal elements
-  float eff = 0;
-  float covmbarrel[15] = {0};
   if (fabs(eta) < etaMaxBarrel || fabs(eta) > 4)
     return false;
 
-  if (!fatSolve(&eff, covmbarrel, pt, etaMaxBarrel, mass, layer, what)) return false;
+  if (!fatSolve(lutEntry, pt, etaMaxBarrel, mass)) return false;
+  float covmbarrel[15] = {0};
+  for (int i = 0; i < 15; ++i) {
+    covmbarrel[i] = lutEntry.covm[i];
+  }
 
   // parametrisation at eta = 4
   double beta = 1./sqrt(1+mass*mass/pt/pt/cosh(eta)/cosh(eta)); 
@@ -76,15 +82,15 @@ fwdPara(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, f
 
   // Fill cov matrix diag
   for (int i = 0; i < 15; ++i)
-    covm[i] = 0;
+    lutEntry.covm[i] = 0;
 
-  covm[0] = covmbarrel[0];
-  if (dcaxy2 > covm[0]) covm[0] = dcaxy2;
-  covm[2] = covmbarrel[2];
-  if (dcaz2 > covm[2]) covm[2] = dcaz2;
-  covm[5] = covmbarrel[5]; // sigma^2 sin(phi)
-  covm[9] = covmbarrel[9]; // sigma^2 tanl
-  covm[14] = momres_tot*momres_tot/pt/pt/pt/pt;  // sigma^2 1/pt
+  lutEntry.covm[0] = covmbarrel[0];
+  if (dcaxy2 > lutEntry.covm[0]) lutEntry.covm[0] = dcaxy2;
+  lutEntry.covm[2] = covmbarrel[2];
+  if (dcaz2 > lutEntry.covm[2]) lutEntry.covm[2] = dcaz2;
+  lutEntry.covm[5] = covmbarrel[5]; // sigma^2 sin(phi)
+  lutEntry.covm[9] = covmbarrel[9]; // sigma^2 tanl
+  lutEntry.covm[14] = momres_tot*momres_tot/pt/pt/pt/pt;  // sigma^2 1/pt
   return true;
 }
 
@@ -167,7 +173,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	    lutEntry.eff = 1.;
             bool retval = true;
             if (usePara) {
-	      retval = fwdPara(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, field, layer, what);
+	      retval = fwdPara(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, field);
             }
             else {
 	      retval = fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass);
