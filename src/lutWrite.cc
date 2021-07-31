@@ -8,39 +8,23 @@ DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
 
 bool
-fatSolve(float *eff, float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int layer = 0, int what = 0, int efftype = 0, int q = 1)
+fatSolve(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int itof = 0, int otof = 0, int q = 1)
 {
-  if (q > 1) {
-    mass = -mass;
-  }
+  lutEntry.valid = false;
+
+  // solve track
+  if (q > 1) mass = -mass;
   TrackSol tr(1, pt, eta, q, mass);
-  bool retval = fat.SolveTrack(tr);
-  if (!retval) return false;
+  if (!fat.SolveTrack(tr)) return false;
+  AliExternalTrackParam *trPtr = (AliExternalTrackParam*)tr.fTrackCmb.At(0);
+  if (!trPtr) return false;
 
-  switch (efftype) {
-  case 0:
-    *eff = fat.GetEfficiency();
-    break;
-  case 1:
-    *eff = fat.GetLayerEfficiency(layer);
-    break;
-  }
-
-  AliExternalTrackParam *trPtr = nullptr;
-  switch (what) {
-  case 0:
-    trPtr = (AliExternalTrackParam*)tr.fTrackCmb[layer];
-    break;
-  case 1:
-    trPtr = (AliExternalTrackParam*)tr.fTrackOutB[layer];
-    break;
-  case 2:
-    trPtr = (AliExternalTrackParam*)tr.fTrackOutA[layer];
-    break;
-  }
+  lutEntry.valid = true;
+  lutEntry.eff = fat.GetGoodHitProb(0);
+  lutEntry.itof = fat.GetGoodHitProb(itof);
+  lutEntry.otof = fat.GetGoodHitProb(otof);
+  for (int i = 0; i < 15; ++i) lutEntry.covm[i] = trPtr->GetCovariance()[i];
   
-  for (int i = 0; i < 15; ++i)
-    covm[i] = trPtr->GetCovariance()[i];
   return true;
 }
 
@@ -52,7 +36,7 @@ fwdSolve(float *covm, float pt = 0.1, float eta = 0.0, float mass = 0.13957000)
 }
 
 void
-lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, int layer = 0, int what = 0, int efftype = 0)
+lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, int itof = 0, int otof = 0)
 {
 
   // output file
@@ -116,10 +100,11 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  lutEntry.pt = lutHeader.ptmap.eval(ipt);
 	  lutEntry.valid = true;
 	  if (fabs(eta) < 2.) {
-	    //	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    if (!fatSolve(&lutEntry.eff, lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass, layer, what, efftype, q)) {
-	      //	      printf(" --- fatSolve: error \n");
-	      lutEntry.valid = false;
+            //            printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+	    if (!fatSolve(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, itof, otof, q)) {
+              //              printf(" --- [ERROR] fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+ 	      lutEntry.valid = false;
+              lutEntry.eff = 0.;
 	      for (int i = 0; i < 15; ++i)
 		lutEntry.covm[i] = 0.;
 	    }
@@ -130,6 +115,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	    if (!fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass)) {
 	      //	      printf(" --- fwdSolve: error \n");
 	      lutEntry.valid = false;
+              lutEntry.eff = 0.;
 	      for (int i = 0; i < 15; ++i)
 		lutEntry.covm[i] = 0.;
 	    }
