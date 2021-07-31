@@ -6,6 +6,7 @@
 #include <TList.h>
 #include <TGraph.h>
 #include <Riostream.h>
+#include "HistoManager.h"
 
 /***********************************************************
 
@@ -113,7 +114,7 @@ class DetectorK : public TNamed {
  public:
   
   DetectorK();
-  DetectorK(const char *name, const char *title);
+  DetectorK(char *name,char *title);
   virtual ~DetectorK();
 
   enum {kNptBins = 50}; // less then 400 !!
@@ -133,9 +134,7 @@ class DetectorK : public TNamed {
   Float_t GetRadiationLength(char *name);
   Float_t GetResolution(char *name, Int_t axis=0);
   Float_t GetLayerEfficiency(char *name);
-  Float_t GetEfficiency() { return fEfficiency[0]; };
-  Float_t GetLayerEfficiency(int i) { return fLayerEfficiency[i]; };
-  
+
   void PrintLayout(Bool_t full = kFALSE); 
   void PlotLayout(Int_t plotDead = kTRUE);
   
@@ -231,6 +230,8 @@ class DetectorK : public TNamed {
 
   Bool_t IsITSLayer(const TString& lname);
 
+  Double_t GetGoodHitProb(Int_t i) { return fGoodHitProb[i]; };
+  
   static Bool_t verboseR;
  protected:
  
@@ -266,9 +267,9 @@ class DetectorK : public TNamed {
   Double_t fDetPointRes[kMaxNumberOfDetectors][kNptBins];    // array of rphi resolution per layer
   Double_t fDetPointZRes[kMaxNumberOfDetectors][kNptBins];   // array of z resolution per layer
   Double_t fEfficiency[kNptBins];                            // efficiency 
-  Double_t fLayerEfficiency[kMaxNumberOfDetectors];          // layer efficiency
   Double_t fFake[kNptBins];                                  // fake prob
-
+  Double_t fGoodHitProb[kMaxNumberOfDetectors];              // array of good hit probability per layer
+  
   Int_t kDetLayer;                              // layer for which a few more details are extracted
   Double_t fResolutionRPhiLay[kNptBins];                        // array of rphi resolution
   Double_t fResolutionZLay[kNptBins];                           // array of z resolution
