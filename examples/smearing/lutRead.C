@@ -1,5 +1,6 @@
 enum EWhat {
   kEfficiency,
+  kEfficiency2,
   kEfficiencyInnerTOF,
   kEfficiencyOuterTOF,
   kPtResolution,
@@ -44,6 +45,7 @@ lutRead(int pdg, const char *filename, int what, int vs, float nch = 0., float r
     if (vs == kPt)  cen = lutEntry->pt;
     double val = 0.;
     if (what == kEfficiency)         val = lutEntry->eff * 100.; // efficiency (%)
+    if (what == kEfficiency2)        val = lutEntry->eff2 * 100.; // efficiency (%)
     if (what == kEfficiencyInnerTOF) val = lutEntry->itof * 100.; // efficiency (%)
     if (what == kEfficiencyOuterTOF) val = lutEntry->otof * 100.; // efficiency (%)
     if (what == kPtResolution)   val = sqrt(lutEntry->covm[14]) * lutEntry->pt * 100.; // pt resolution (%)

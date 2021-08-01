@@ -23,11 +23,28 @@ fatSolve(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.1
   if (!trPtr) return false;
 
   lutEntry.valid = true;
-  lutEntry.eff = fat.GetGoodHitProb(0);
   lutEntry.itof = fat.GetGoodHitProb(itof);
   lutEntry.otof = fat.GetGoodHitProb(otof);
   for (int i = 0; i < 15; ++i) lutEntry.covm[i] = trPtr->GetCovariance()[i];
-  
+
+  // define the efficiency
+  auto totfake = 0.;
+  lutEntry.eff = 1.;
+  for (int i = 1; i < 20; ++i) {
+    auto igoodhit = fat.GetGoodHitProb(i);
+    if (igoodhit <= 0. || i == itof || i == otof) continue;
+    lutEntry.eff *= igoodhit;
+    auto pairfake = 0.;
+    for (int j = i + 1; j < 20; ++j) {
+      auto jgoodhit = fat.GetGoodHitProb(j);
+      if (jgoodhit <= 0. || j == itof || j == otof) continue;
+      pairfake = (1. - igoodhit) * (1. - jgoodhit);
+      break;
+    }
+    totfake += pairfake;
+  }
+  lutEntry.eff2 = (1. - totfake);
+
   return true;
 }
 
@@ -164,6 +181,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	      //	      printf(" --- fatSolve: error \n");
 	      lutEntry.valid = false;
               lutEntry.eff = 0.;
+              lutEntry.eff2 = 0.;
 	      for (int i = 0; i < 15; ++i)
 		lutEntry.covm[i] = 0.;
 	    }
@@ -171,6 +189,7 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
 	  else {
 	    //	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
 	    lutEntry.eff = 1.;
+	    lutEntry.eff2 = 1.;
             bool retval = true;
             if (usePara) {
 	      retval = fwdPara(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, field);

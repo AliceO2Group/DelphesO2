@@ -2,7 +2,7 @@
 /// @email: preghenella@bo.infn.it
 
 #pragma once
-#define LUTCOVM_VERSION 20210731
+#define LUTCOVM_VERSION 20210801
 
 struct map_t {
   int nbins = 1;
@@ -56,6 +56,7 @@ struct lutEntry_t {
   float pt = 0.;
   bool valid = false;
   float eff = 0.; 
+  float eff2 = 0.; 
   float itof = 0.;
   float otof = 0.;
   float covm[15] = {0.};

@@ -25,6 +25,7 @@ public:
   /** LUT methods **/
   bool loadTable(int pdg, const char *filename, bool forceReload = false);
   void useEfficiency(bool val) { mUseEfficiency = val; };
+  void setWhatEfficiency(int val) { mWhatEfficiency = val; };
   lutHeader_t *getLUTHeader(int pdg) { return mLUTHeader[getIndexPDG(pdg)]; };
   lutEntry_t *getLUTEntry(int pdg, float nch, float radius, float eta, float pt);
 
@@ -53,6 +54,7 @@ protected:
   lutHeader_t *mLUTHeader[nLUTs] = {nullptr};
   lutEntry_t *****mLUTEntry[nLUTs] = {nullptr};
   bool mUseEfficiency = true;
+  int mWhatEfficiency = 1;
   float mdNdEta =  1600.;
   
 };
