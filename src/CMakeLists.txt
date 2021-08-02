@@ -7,6 +7,7 @@ set(SOURCES
   TOFLayer.cc
   RICHdetector.cc
   MIDdetector.cc
+  PreShower.cc
   )
 
 set(HEADERS
@@ -16,6 +17,7 @@ set(HEADERS
   TOFLayer.hh
   RICHdetector.hh
   MIDdetector.hh 
+  PreShower.hh 
   )
 
 get_target_property(DELPHES_INCLUDE_DIRECTORIES

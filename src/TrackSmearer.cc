@@ -96,8 +96,13 @@ bool
 TrackSmearer::smearTrack(O2Track &o2track, lutEntry_t *lutEntry)
 {
   // generate efficiency
-  if (mUseEfficiency && (gRandom->Uniform() > lutEntry->eff))
-    return false;
+  if (mUseEfficiency) {
+    auto eff = 0.;
+    if (mWhatEfficiency == 1) eff = lutEntry->eff;
+    if (mWhatEfficiency == 2) eff = lutEntry->eff2;
+    if (gRandom->Uniform() > eff)
+      return false;
+  }
   // transform params vector and smear
   double params_[5];
   for (int i = 0; i < 5; ++i) {
