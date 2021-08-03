@@ -6,6 +6,7 @@ RMIN=100.
 WRITER_PATH=$DELPHESO2_ROOT/lut/
 OUT_PATH=.
 OUT_TAG=
+PARALLEL_JOBS=1
 PARTICLES="0 1 2 3 4"
 
 # Get the options
@@ -13,7 +14,7 @@ while getopts ":t:B:R:p:o:T:P:h" option; do
     case $option in
     h) # display Help
         echo "Script to generate LUTs from LUT writer, arguments:"
-        echo "Syntax: ./create_luts.sh [-h|t|B|R|p|o|T|P]"
+        echo "Syntax: ./create_luts.sh [-h|t|B|R|p|o|T|P|j]"
         echo "options:"
         echo "-t tag of the LUT writer [default]"
         echo "-B Magnetic field in T [0.5]"
@@ -22,6 +23,7 @@ while getopts ":t:B:R:p:o:T:P:h" option; do
         echo "-o Output path where to write the LUTs [.]"
         echo "-T Tag to append to LUTs [\"\"]"
         echo "-P Particles to consider [\"0 1 2 3 4\"]"
+        echo "-j Number of parallel processes to use [1]"
         echo "-h Show this help"
         exit
         ;;
@@ -68,15 +70,19 @@ function do_copy() {
 }
 
 do_copy "${WRITER_PATH}/lutWrite.$WHAT.cc" "lut writer"
+do_copy "${WRITER_PATH}/DetectorK/HistoManager.h"
 do_copy "${WRITER_PATH}/DetectorK/DetectorK.cxx"
 do_copy "${WRITER_PATH}/DetectorK/DetectorK.h"
 do_copy "${WRITER_PATH}/lutWrite.cc"
-do_copy "${WRITER_PATH}/lutCovm.hh"
-cp -r   "${WRITER_PATH}/fwdRes" .
+if [[ -z ${DELPHESO2_ROOT} ]]; then
+    do_copy "${WRITER_PATH}/lutCovm.hh"
+fi
+cp -r "${WRITER_PATH}/fwdRes" .
 
 echo " --- creating LUTs: config = ${WHAT}, field = ${FIELD} T, min tracking radius = ${RMIN} cm"
 
-for i in $PARTICLES; do
+function do_lut_for_particle() {
+    i=${1}
     root -l -b <<EOF
     .L DetectorK.cxx+
     .L lutWrite.${WHAT}.cc
@@ -105,7 +111,19 @@ for i in $PARTICLES; do
     }
 
 EOF
+
+}
+
+root -l -b <<EOF
+    .L DetectorK.cxx+
+EOF
+
+for i in ${PARTICLES}; do
+   ((i=i%PARALLEL_JOBS)); ((i++==0)) && wait
+    do_lut_for_particle "${i}" &
 done
+
+wait
 
 # Checking that the output LUTs are OK
 NullSize=""

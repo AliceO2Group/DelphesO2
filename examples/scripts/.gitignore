@@ -20,3 +20,4 @@ create_luts.C
 fwdRes/fwdRes.C
 lutWrite*.cc
 *.hepmc
+HistoManager.h
