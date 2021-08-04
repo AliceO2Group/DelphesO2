@@ -437,6 +437,7 @@ def main(configuration_file,
             run_cmd(f"cat {summaryfile} >> {s}")
         else:
             run_cmd(f"mv {summaryfile} {output_path}")
+            run_cmd(f"ln -s {output_path}/{summaryfile} ./")
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)

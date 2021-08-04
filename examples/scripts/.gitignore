@@ -21,3 +21,4 @@ fwdRes/fwdRes.C
 lutWrite*.cc
 *.hepmc
 HistoManager.h
+lutCovm.hh
