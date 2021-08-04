@@ -1,7 +1,8 @@
 #! /usr/bin/env python3
 
 """
-Handler to run the DelphesO2 framework and to create O2 analysis tables
+Handler to run the DelphesO2 framework and to create O2 analysis tables.
+Author: Nicolo' Jacazio, nicolo.jacazio@cern.ch
 """
 
 import configparser

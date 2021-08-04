@@ -135,6 +135,9 @@ TrackSmearer::smearTrack(O2Track &o2track, int pid, float nch)
 {
 
   auto pt = o2track.getPt();
+  if (abs(pid) == 1000020030) {
+    pt *= 2.f;
+  }
   auto eta = o2track.getEta();
   auto lutEntry = getLUTEntry(pid, nch, 0., eta, pt);
   if (!lutEntry || !lutEntry->valid) return false;

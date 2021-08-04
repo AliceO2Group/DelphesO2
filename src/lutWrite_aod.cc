@@ -4,6 +4,8 @@
 /// @author: Nicolo' Jacazio
 /// @email: nicolo.jacazio@cern.ch
 
+/// \brief LUT writer with the AnalysisResults from AODs as input
+
 #include "TCanvas.h"
 #include "TDatabasePDG.h"
 #include "TFile.h"
@@ -12,32 +14,23 @@
 #include "TProfile2D.h"
 #include "TProfile3D.h"
 #include "TVectorD.h"
-#include "fwdRes/fwdRes.C"
+#include "DetectorK/DetectorK.h"
 #include "lutCovm.hh"
 #include <Riostream.h>
-
-void diagonalise(lutEntry_t& lutEntry);
-
-bool fwdSolve(float* covm, float pt = 0.1, float eta = 0.0,
-    float mass = 0.13957000)
-{
-  if (fwdRes(covm, pt, eta, mass) < 0)
-    return false;
-  return true;
-}
+#include "lutWrite.cc"
 
 void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
-    int pdg = 211,
-    float field = 0.2, int layer = 0, int what = 0,
-    int efftype = 0,
-    const char* infilename = "/tmp/AnalysisResults_LUT.root",
-    float minPt = 0.f,
-    float maxPt = 80.f,
-    float minEta = -4.f,
-    float maxEta = 4.f)
+                  int pdg = 211,
+                  float field = 0.2, int layer = 0, int what = 0,
+                  int efftype = 0,
+                  const char* infilename = "/tmp/AnalysisResults_LUT.root",
+                  float minPt = 0.f,
+                  float maxPt = 80.f,
+                  float minEta = -4.f,
+                  float maxEta = 4.f)
 {
 
-  std::map<int, std::string> partname{ { 11, "electron" }, { 13, "muon" }, { 211, "pion" }, { 321, "kaon" }, { 2212, "proton" } };
+  std::map<int, std::string> partname{{11, "electron"}, {13, "muon"}, {211, "pion"}, {321, "kaon"}, {2212, "proton"}};
   const std::string dn = "alice3-lutmaker-" + partname[pdg];
 
   // Get the input from the analysis results
@@ -55,23 +48,23 @@ void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
     return;
   }
   // d->ls();
-  std::map<std::string, TH1F*> h{ { "eta", nullptr }, { "pt", nullptr } };
-  std::map<std::string, TProfile2D*> m{ { "CovMat_cYY", nullptr },
-    { "CovMat_cZY", nullptr },
-    { "CovMat_cZZ", nullptr },
-    { "CovMat_cSnpY", nullptr },
-    { "CovMat_cSnpZ", nullptr },
-    { "CovMat_cSnpSnp", nullptr },
-    { "CovMat_cTglY", nullptr },
-    { "CovMat_cTglZ", nullptr },
-    { "CovMat_cTglSnp", nullptr },
-    { "CovMat_cTglTgl", nullptr },
-    { "CovMat_c1PtY", nullptr },
-    { "CovMat_c1PtZ", nullptr },
-    { "CovMat_c1PtSnp", nullptr },
-    { "CovMat_c1PtTgl", nullptr },
-    { "CovMat_c1Pt21Pt2", nullptr },
-    { "Efficiency", nullptr } };
+  std::map<std::string, TH1F*> h{{"eta", nullptr}, {"pt", nullptr}};
+  std::map<std::string, TProfile2D*> m{{"CovMat_cYY", nullptr},
+                                       {"CovMat_cZY", nullptr},
+                                       {"CovMat_cZZ", nullptr},
+                                       {"CovMat_cSnpY", nullptr},
+                                       {"CovMat_cSnpZ", nullptr},
+                                       {"CovMat_cSnpSnp", nullptr},
+                                       {"CovMat_cTglY", nullptr},
+                                       {"CovMat_cTglZ", nullptr},
+                                       {"CovMat_cTglSnp", nullptr},
+                                       {"CovMat_cTglTgl", nullptr},
+                                       {"CovMat_c1PtY", nullptr},
+                                       {"CovMat_c1PtZ", nullptr},
+                                       {"CovMat_c1PtSnp", nullptr},
+                                       {"CovMat_c1PtTgl", nullptr},
+                                       {"CovMat_c1Pt21Pt2", nullptr},
+                                       {"Efficiency", nullptr}};
 
   struct binning {
     int n = 0;
@@ -287,32 +280,4 @@ void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
   hptcalls->Draw("HIST");
   can->cd(2);
   hetacalls->Draw("HIST");
-}
-
-void diagonalise(lutEntry_t& lutEntry)
-{
-  // Printf(" --- diagonalise: pt = %f, eta = %f", lutEntry.pt, lutEntry.eta);
-  TMatrixDSym m(5);
-  double fcovm[5][5];
-  for (int i = 0, k = 0; i < 5; ++i)
-    for (int j = 0; j < i + 1; ++j, ++k) {
-      fcovm[i][j] = lutEntry.covm[k];
-      fcovm[j][i] = lutEntry.covm[k];
-    }
-  m.SetMatrixArray((double*)fcovm);
-  TMatrixDSymEigen eigen(m);
-  // eigenvalues vector
-  TVectorD eigenVal = eigen.GetEigenValues();
-  for (int i = 0; i < 5; ++i)
-    lutEntry.eigval[i] = eigenVal[i];
-  // eigenvectors matrix
-  TMatrixD eigenVec = eigen.GetEigenVectors();
-  for (int i = 0; i < 5; ++i)
-    for (int j = 0; j < 5; ++j)
-      lutEntry.eigvec[i][j] = eigenVec[i][j];
-  // inverse eigenvectors matrix
-  eigenVec.Invert();
-  for (int i = 0; i < 5; ++i)
-    for (int j = 0; j < 5; ++j)
-      lutEntry.eiginv[i][j] = eigenVec[i][j];
 }
