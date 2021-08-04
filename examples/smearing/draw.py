@@ -23,12 +23,15 @@ def main(reader_name,
          leg_pos=[0.74, 0.2, 0.90, 0.4],
          particles=None,
          eta=0,
+         dnch_deta=100,
          rmin=None,
          add_eta_label=True,
          add_alice3_label=True,
          save=None,
          background=False,
-         aod=None):
+         use_p_over_z=True,
+         aod=None,
+         study_label="ALICE 3 study"):
     gROOT.LoadMacro(reader_name)
     gROOT.LoadMacro("style.C")
     reader_name = reader_name.split(".")[-2]
@@ -39,10 +42,15 @@ def main(reader_name,
 
     style()
 
-    p = {"el": "e", "pi": "#pi", "ka": "K", "pr": "p", "de": "d", "he3": "^{3}He"}
+    p = {"el": "e", "pi": "#pi", "ka": "K", "pr": "p",
+         "de": "d", "tr": "t", "he3": "^{3}He"}
+    charge = {"el": 1, "pi": 1, "ka": 1, "pr": 1,
+              "de": 1, "tr": 1, "he3": 2}
     p_colors = {"el": "#e41a1c", "pi": "#377eb8",
                 "ka": "#4daf4a", "pr": "#984ea3",
-                "de": "#ff7f00", "he3": "#a65628"}
+                "de": "#ff7f00", "tr": "#999999",
+                "he3": "#a65628"}
+
     if particles is not None:
         to_remove = []
         for i in p:
@@ -87,6 +95,8 @@ def main(reader_name,
         leg = TLegend(*leg_pos)
         if add_eta_label:
             label = f"#eta = {int(eta)}"
+            label += " dN_{Ch}/d#eta ="
+            label += f" {int(dnch_deta)}"
             if rmin is not None:
                 label += "   R_{min} = " + rmin
             else:
@@ -95,10 +105,10 @@ def main(reader_name,
         leg.SetLineColor(0)
         drawn.append(leg)
 
-    def draw_alice3_label(x=0.5, y=0.9):
+    def draw_study_label(x=0.5, y=0.9):
         latex = TLatex()
         latex.SetTextAlign(13)
-        drawn.append(latex.DrawLatexNDC(x, y, "ALICE 3 study"))
+        drawn.append(latex.DrawLatexNDC(x, y, " ".join(study_label)))
     for i in p:
         c = f"{canvas.GetName()}_{i}"
         c = TCanvas(c, c, 800, 800)
@@ -115,24 +125,36 @@ def main(reader_name,
                 '#984ea3', '#ff7f00', '#ffff33']
         for k, j in enumerate(tags):
             lut = f"{lut_path}/lutCovm.{i}.{j}.dat"
+            if j == "":
+                lut = f"{lut_path}/lutCovm.{i}.dat"
             if not path.isfile(lut):
                 print("LUT file", lut, "does not exist")
                 return
-            g = reader(lut, eta)
+            g = reader(lut, eta, dnch_deta)
             if g.GetN() <= 0:
                 print("Skipping", g.GetName(), "because empty graph")
                 continue
             if len(g_list) == 0:
                 frame.GetXaxis().SetTitle(g.GetXaxis().GetTitle())
                 frame.GetYaxis().SetTitle(g.GetYaxis().GetTitle())
+            if use_p_over_z:
+                for j in range(g.GetN()):
+                    if "_pt" in reader_name:
+                        g.SetPoint(j,
+                                   g.GetPointX(j)/charge[i],
+                                   g.GetPointY(j)/charge[i])
+                    else:
+                        g.SetPoint(j,
+                                   g.GetPointX(j)/charge[i], g.GetPointY(j))
+                frame.GetXaxis().SetTitle("#it{p}_{T}/z (GeV/#it{c})")
             col = TColor.GetColor(cols[len(g_list)])
             g.SetLineColor(col)
             g.SetLineStyle(1)
             g.SetLineWidth(3)
             g.Draw("samel")
             if aod is not None:
+                f_aod = TFile(aod, "READ")
                 if "_eff" in reader_name:
-                    f_aod = TFile(aod, "READ")
                     extra[g.GetName()] = f_aod.Get(
                         "qa-tracking-efficiency-kaon/pt/num")
                     extra[g.GetName()].Divide(f_aod.Get("qa-tracking-efficiency-kaon/pt/num"),
@@ -140,7 +162,16 @@ def main(reader_name,
                     extra[g.GetName()].Scale(100)
                     extra[g.GetName()].Draw("SAME")
                     extra[g.GetName()].SetDirectory(0)
-                    f_aod.Close()
+                elif "_pt" in reader_name:
+                    extra[g.GetName()] = f_aod.Get(
+                        "qa-tracking-efficiency-kaon/pt/num")
+                    extra[g.GetName()].Divide(f_aod.Get("qa-tracking-efficiency-kaon/pt/num"),
+                                              f_aod.Get("qa-tracking-efficiency-kaon/pt/den"), 1, 1, "B")
+                    extra[g.GetName()].Scale(100)
+                    extra[g.GetName()].Draw("SAME")
+                    extra[g.GetName()].SetDirectory(0)
+                f_aod.Close()
+
             print("Drawing", g.GetName())
             if tag_name is not None and counter == 1:
                 leg.AddEntry(g, tag_name[k], "l")
@@ -152,7 +183,7 @@ def main(reader_name,
         drawn.append(latex.DrawLatexNDC(0.9, 0.9, p[i]))
         if leg is not None:
             leg.Draw()
-        draw_alice3_label(.4, .91)
+        draw_study_label(.4, .91)
         gPad.Update()
         canvas.cd(counter)
         clone = c.DrawClonePad()
@@ -169,15 +200,7 @@ def main(reader_name,
         c.SaveAs(f"/tmp/{c.GetName()}.png")
         gPad.Update()
         counter += 1
-    if save is None:
-        canvas.SaveAs(f"/tmp/lut_{canvas.GetName()}.root")
-    else:
-        fo = TFile(save, "RECREATE")
-        fo.cd()
-        canvas.Write()
-        for i in drawn_graphs:
-            for j in drawn_graphs[i]:
-                j.Write()
+    canvas_all_species = None
     if len(tags) == 1:
         canvas_all_species = TCanvas("all_spec_"+canvas.GetName(),
                                      "all_spec_"+canvas.GetName(), 800, 800)
@@ -194,24 +217,40 @@ def main(reader_name,
             g_list = []
             for j in drawn_graphs[i]:
                 g_list.append(j.Clone())
+                g_list[-1].SetName(g_list[-1].GetName()+"_color")
                 g_list[-1].SetLineColor(TColor.GetColor(p_colors[i]))
                 g_list[-1].Draw("same")
                 leg_all_spec.AddEntry(g_list[-1], p[i], "L")
             drawn_graphs_all_spec[i] = g_list
+        for i in drawn_graphs_all_spec:
+            drawn_graphs[i+"_allspec"] = drawn_graphs_all_spec[i]
         leg_all_spec.Draw()
         if add_alice3_label:
-            draw_alice3_label()
+            draw_study_label()
             latex = TLatex()
             latex.SetTextAlign(13)
             latex.SetTextSize(0.04)
             if tag_name is not None:
                 drawn.append(latex.DrawLatexNDC(0.5, 0.80, tag_name[0]))
-            drawn.append(latex.DrawLatexNDC(0.5, 0.75, f"#eta = {int(eta)}" +
-                                            ("   R_{min} = " + rmin if rmin is not None else "") ))
+            drawn.append(latex.DrawLatexNDC(0.4, 0.82, f"#eta = {int(eta)}"
+                                            + "\n dN_{Ch}/d#eta ="
+                                            + f" {int(dnch_deta)}"
+                                            + ("\n R_{min} = " + rmin if rmin is not None else "")))
 
         adjust_pad()
         canvas_all_species.Update()
         canvas_all_species.SaveAs(f"/tmp/{canvas_all_species.GetName()}.png")
+    if save is None:
+        canvas.SaveAs(f"/tmp/lut_{canvas.GetName()}.root")
+    else:
+        fo = TFile(save, "RECREATE")
+        fo.cd()
+        canvas.Write()
+        if canvas_all_species is not None:
+            canvas_all_species.Write()
+        for i in drawn_graphs:
+            for j in drawn_graphs[i]:
+                j.Write()
     if not background:
         input("Done, press enter to continue")
 
@@ -249,6 +288,10 @@ if __name__ == "__main__":
                         type=float,
                         default=0,
                         help="Eta position")
+    parser.add_argument("--nch", "--dndeta",
+                        type=float,
+                        default=100,
+                        help="Value of the charged particle multiplicity")
     parser.add_argument("--ymin",
                         type=float,
                         default=None,
@@ -273,10 +316,16 @@ if __name__ == "__main__":
                         type=float, nargs="+",
                         default=[0.74, 0.2, 0.90, 0.4],
                         help="Position of the legend in NDC coordinates")
+    parser.add_argument("--label", "-L",
+                        type=str, nargs="+",
+                        default=["ALICE 3 study"],
+                        help="Label to write into the label box")
     parser.add_argument("--logx", action="store_true",
                         help="Log x")
     parser.add_argument("--logy", action="store_true",
                         help="Log y")
+    parser.add_argument("--pt_over_z", action="store_true",
+                        help="Plot pt over z")
     parser.add_argument("-b", action="store_true",
                         help="Background mode")
     args = parser.parse_args()
@@ -296,4 +345,7 @@ if __name__ == "__main__":
          eta=args.eta,
          save=args.save,
          background=args.b,
-         aod=args.aod)
+         aod=args.aod,
+         dnch_deta=args.nch,
+         use_p_over_z=args.pt_over_z,
+         study_label=args.label)

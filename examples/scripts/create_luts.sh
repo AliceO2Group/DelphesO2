@@ -10,7 +10,7 @@ PARALLEL_JOBS=1
 PARTICLES="0 1 2 3 4"
 
 # Get the options
-while getopts ":t:B:R:p:o:T:P:h" option; do
+while getopts ":t:B:R:p:o:T:P:h:j:" option; do
     case $option in
     h) # display Help
         echo "Script to generate LUTs from LUT writer, arguments:"
@@ -55,8 +55,12 @@ while getopts ":t:B:R:p:o:T:P:h" option; do
         PARTICLES=$OPTARG
         echo " > Setting LUT particles to ${PARTICLES}"
         ;;
+    j)
+        PARALLEL_JOBS=$OPTARG
+        echo " > Setting parallel jobs to ${PARALLEL_JOBS}"
+        ;;
     \?) # Invalid option
-        echo "Error: Invalid option, use [-h|t|B|R|p|o|T|P]"
+        echo "Error: Invalid option, use [-h|t|B|R|p|o|T|P|j]"
         exit
         ;;
     esac
@@ -118,9 +122,11 @@ root -l -b <<EOF
     .L DetectorK.cxx+
 EOF
 
+N_RAN=0
 for i in ${PARTICLES}; do
-   ((i=i%PARALLEL_JOBS)); ((i++==0)) && wait
+   ((N_RAN=N_RAN%PARALLEL_JOBS)); ((N_RAN++==0)) && wait
     do_lut_for_particle "${i}" &
+    ((N_RAN+1))
 done
 
 wait
