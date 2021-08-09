@@ -111,6 +111,8 @@ int main(int argc, char** argv)
       std::cout << "Error: could not read config file \"" << background_config << "\"" << std::endl;
       return 1;
     }
+    pythia_bkg->readString("Random:setSeed = on");
+    pythia_bkg->readString("Random:seed =" + std::to_string(seed));
     pythia_bkg->init();
   }
 
@@ -131,6 +133,8 @@ int main(int argc, char** argv)
     // background
     if (pythia_bkg) {
       pythia_bkg->next();
+      if (decay)
+        pythia_bkg->moreDecays();
       pythia.event += pythia_bkg->event;
     }
 
