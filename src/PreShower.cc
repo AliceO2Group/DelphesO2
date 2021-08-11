@@ -53,7 +53,7 @@ namespace o2 {
       auto part = pidmap[pdg];
       if (part == kElectron) {
 			// Parametrisation of preshower detector studies without charge sharing
-         float eff = 0.8*(1.-exp(1.6*(track.P-0.05)));
+         float eff = 0.8*(1.-exp(-1.6*(track.P-0.05)));
          return (gRandom->Uniform() < eff);
       }
       else {
