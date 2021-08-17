@@ -1,20 +1,25 @@
 #! /usr/bin/env bash
 
+# Configuration variables
 WHAT=default
 FIELD=0.5
 RMIN=100.
-WRITER_PATH=$DELPHESO2_ROOT/lut/
+WRITER_PATH=${DELPHESO2_ROOT}/lut/
 OUT_PATH=.
 OUT_TAG=
 PARALLEL_JOBS=1
 PARTICLES="0 1 2 3 4"
+AUTOTAG="Yes"
+VERBOSE=
 
+# List of arguments expected in the input
+optstring=":ht:B:R:p:o:T:P:j:vF"
 # Get the options
-while getopts ":t:B:R:p:o:T:P:h:j:" option; do
-    case $option in
+while getopts ${optstring} option; do
+    case ${option} in
     h) # display Help
         echo "Script to generate LUTs from LUT writer, arguments:"
-        echo "Syntax: ./create_luts.sh [-h|t|B|R|p|o|T|P|j]"
+        echo "Syntax: ./create_luts.sh [${optstring}]"
         echo "options:"
         echo "-t tag of the LUT writer [default]"
         echo "-B Magnetic field in T [0.5]"
@@ -24,8 +29,10 @@ while getopts ":t:B:R:p:o:T:P:h:j:" option; do
         echo "-T Tag to append to LUTs [\"\"]"
         echo "-P Particles to consider [\"0 1 2 3 4\"]"
         echo "-j Number of parallel processes to use [1]"
+        echo "-F Don't use the automatic tagging and use only the one provided instead for the naming of the output files"
+        echo "-v Verbose mode"
         echo "-h Show this help"
-        exit
+        exit 0
         ;;
     t)
         WHAT=$OPTARG
@@ -33,11 +40,11 @@ while getopts ":t:B:R:p:o:T:P:h:j:" option; do
         ;;
     B)
         FIELD=$OPTARG
-        echo " > Setting B field to ${FIELD}"
+        echo " > Setting B field to ${FIELD} T"
         ;;
     R)
         RMIN=$OPTARG
-        echo " > Setting minimum radius to ${RMIN}"
+        echo " > Setting minimum radius to ${RMIN} cm"
         ;;
     p)
         WRITER_PATH=$OPTARG
@@ -59,12 +66,48 @@ while getopts ":t:B:R:p:o:T:P:h:j:" option; do
         PARALLEL_JOBS=$OPTARG
         echo " > Setting parallel jobs to ${PARALLEL_JOBS}"
         ;;
+    T)
+        AUTOTAG=
+        echo " > Disabling autotagging mode"
+        ;;
+    v)
+        VERBOSE="Yes"
+        echo " > Enabling verbose mode"
+        ;;
     \?) # Invalid option
-        echo "Error: Invalid option, use [-h|t|B|R|p|o|T|P|j]"
+        echo "$0: Error: Invalid option, use [${optstring}]"
         exit
+        ;;
+    :) # Empty argument
+        echo "$0: Error: ust supply an argument to -$OPTARG." >&2
+        exit 1
         ;;
     esac
 done
+
+if [[ -n ${AUTOTAG} ]]; then
+    # Defining the output tag based on the input
+    FIELDT=$(echo "${FIELD}*10" | bc)
+    FIELDT=${FIELDT%.0}
+    OUT_TAG=".${FIELDT}kG.rmin${RMIN}.${WHAT}${OUT_TAG}"
+fi
+
+if [[ -n ${VERBOSE} ]]; then
+    echo "WHAT='${WHAT}'"
+    echo "FIELD='${FIELD}'"
+    echo "RMIN='${RMIN}'"
+    echo "WRITER_PATH='${WRITER_PATH}'"
+    echo "OUT_PATH='${OUT_PATH}'"
+    echo "OUT_TAG='${OUT_TAG}'"
+    echo "PARALLEL_JOBS='${PARALLEL_JOBS}'"
+    echo "PARTICLES='${PARTICLES}'"
+    echo "AUTOTAG='${AUTOTAG}'"
+fi
+
+if [[ -z ${WRITER_PATH} ]]; then
+    echo "Path of the LUT writers not defined, cannot continue"
+    exit 1
+fi
 
 function do_copy() {
     cp "${1}" . || {
@@ -103,7 +146,7 @@ function do_lut_for_particle() {
     const int N = 8;
     const TString pn[N] = {"el", "mu", "pi", "ka", "pr", "de", "tr", "he3"};
     const int pc[N] = {11, 13, 211, 321, 2212, 1000010020, 1000010030, 1000020030 };
-    const float field = ${FIELD}f;
+    const float field = ${FIELD};
     const float rmin = ${RMIN};
     const int i = ${i};
     const TString out_file = "${OUT_PATH}/lutCovm." + pn[i] + "${OUT_TAG}.dat";
@@ -124,9 +167,10 @@ EOF
 
 N_RAN=0
 for i in ${PARTICLES}; do
-   ((N_RAN=N_RAN%PARALLEL_JOBS)); ((N_RAN++==0)) && wait
+    ((N_RAN = N_RAN % PARALLEL_JOBS))
+    ((N_RAN++ == 0)) && wait
     do_lut_for_particle "${i}" &
-    ((N_RAN+1))
+    ((N_RAN + 1))
 done
 
 wait

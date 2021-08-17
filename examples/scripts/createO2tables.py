@@ -114,7 +114,7 @@ def main(configuration_file,
         minimum_track_radius = opt("minimum_track_radius")
         verbose_msg("Creating LUTs")
         lut_path = os.path.join(lut_path, "create_luts.sh")
-        run_cmd(f"{lut_path} {lut_tag} {float(bField)*0.1} {minimum_track_radius} 2>&1",
+        run_cmd(f"{lut_path} -p {lut_path} -t {lut_tag} -B {float(bField)*0.1} -R {minimum_track_radius} -P \"0 1 2 3 4 5 6\" -j 1 -F 2>&1",
                 f"Creating the lookup tables with tag {lut_tag} from {lut_path} script")
     else:
         # Fetching LUTs
