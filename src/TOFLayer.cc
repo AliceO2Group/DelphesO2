@@ -97,6 +97,7 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
     double etof   = track->ErrorT * 1.e9; // [ns]
     double L      = track->L * 0.1;       // [cm]
     double p      = track->P;             // [GeV/c]
+    p *= abs(TDatabasePDG::Instance()->GetParticle(pid)->Charge()) / 3.; // [GeV/c]
     double ep     = track->ErrorP;
     double p2     = p * p;
     double c      = 29.9792458;           // [cm/ns]
@@ -155,6 +156,7 @@ TOFLayer::eventTime(std::vector<Track *> &tracks, std::array<float, 2> &tzero)
       double etof   = track->ErrorT * 1.e9; // [ns]
       double L      = track->L * 0.1;       // [cm]
       double p      = track->P;             // [GeV/c]
+      p *= abs(TDatabasePDG::Instance()->GetParticle(pid)->Charge()) / 3.; // [GeV/c]
       double ep     = track->ErrorP;
       double p2     = p * p;
       double c      = 29.9792458;           // [cm/ns]
