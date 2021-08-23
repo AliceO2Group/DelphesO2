@@ -9,6 +9,7 @@ import argparse
 import multiprocessing
 import sys
 import os
+import datetime
 try:
     import tqdm
 except ImportError as e:
@@ -98,7 +99,9 @@ def run_cmd(cmd, comment="", check_status=True, log_file=None):
             for i in content.strip().split("\n"):
                 verbose_msg("++", i)
             if log_file is not None:
-                with open(log_file) as f_log:
+                with open(log_file, "a") as f_log:
+                    f_log.write(f" -- {datetime.datetime.now()}\n")
+                    f_log.write(f"    '{cmd}'\n")
                     for i in content.strip().split("\n"):
                         f_log.write(i + "\n")
         if "Encountered error" in content:
