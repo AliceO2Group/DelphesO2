@@ -46,12 +46,20 @@ const double forward_tof_length = 200.;   // [cm] Length of the Forward TOF dete
 const double forward_tof_sigmat = 0.02;   // [ns] Resolution of the Forward TOF detector
 const double forward_tof_sigmat0 = 0.2;   // [ns] Time spread of the vertex
 // RICH
-const double rich_radius = 100.; // [cm] Radius of the RICH detector (used to compute acceptance)
-const double rich_length = 200.; // [cm] Length of the RICH detector (used to compute acceptance)
-const double rich_index = 1.03;
-const double rich_radiator_length = 2.;
-const double rich_efficiency = 0.4;
-const double rich_sigma = 7.e-3;
+const double rich_radius = 100.;        // [cm] Radius of the RICH detector (used to compute acceptance)
+const double rich_length = 200.;        // [cm] Length of the RICH detector (used to compute acceptance)
+const double rich_index = 1.03;         // Refraction index of the RICH detector
+const double rich_radiator_length = 2.; // Radiator length of the RICH detector
+const double rich_efficiency = 0.4;     // Efficiency of the RICH detector
+const double rich_sigma = 7.e-3;        // Resolution of the RICH detector
+// Forward RICH
+const double forward_rich_radius = 100.;        // [cm] Radius of the Forward RICH detector (used to compute acceptance)
+const double forward_rich_radius_in = 10.;      // [cm] Inner radius of the Forward RICH detector (used to compute acceptance)
+const double forward_rich_length = 200.;        // [cm] Length of the Forward RICH detector (used to compute acceptance)
+const double forward_rich_index = 1.03;         // Refraction index of the Forward RICH detector
+const double forward_rich_radiator_length = 2.; // Radiator length of the Forward RICH detector
+const double forward_rich_efficiency = 0.4;     // Efficiency of the Forward RICH detector
+const double forward_rich_sigma = 7.e-3;        // Resolution of the Forward RICH detector
 // MID
 const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
@@ -68,6 +76,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     return 0;
   }
 
+  // Defining particles to transport
   TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 3, "Nucleus", 1000010020);
   TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
 
@@ -133,6 +142,16 @@ int createO2tables(const char* inputFile = "delphes.root",
   rich_detector.setEfficiency(rich_efficiency);
   rich_detector.setSigma(rich_sigma);
 
+  // Forward RICH layer
+  o2::delphes::RICHdetector forward_rich_detector;
+  forward_rich_detector.setup(rich_radius, rich_length);
+  forward_rich_detector.setIndex(rich_index);
+  forward_rich_detector.setRadiatorLength(rich_radiator_length);
+  forward_rich_detector.setEfficiency(rich_efficiency);
+  forward_rich_detector.setSigma(rich_sigma);
+  forward_rich_detector.setType(o2::delphes::RICHdetector::kForward);
+  forward_rich_detector.setRadiusIn(forward_rich_radius_in);
+
   // MID detector
   o2::delphes::MIDdetector mid_detector;
   const bool isMID = mid_detector.setup(inputFileAccMuonPID);
@@ -149,6 +168,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2trackExtra();
   MakeTreeO2ftof();
   MakeTreeO2rich();
+  MakeTreeO2frich();
   MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
@@ -345,6 +365,28 @@ int createO2tables(const char* inputFile = "delphes.root",
         rich.fRICHNsigmaKa = nsigma[3];
         rich.fRICHNsigmaPr = nsigma[4];
         FillTree(kRICH);
+      }
+
+      // check if has hit on the forward RICH
+      if (forward_rich_detector.hasRICH(*track)) {
+        const auto measurement = forward_rich_detector.getMeasuredAngle(*track);
+        frich.fIndexCollisions = ientry + eventOffset;
+        frich.fIndexTracks = fTrackCounter; // Index in the Track table
+        frich.fRICHSignal = measurement.first;
+        frich.fRICHSignalError = measurement.second;
+        std::array<float, 5> deltaangle, nsigma;
+        forward_rich_detector.makePID(*track, deltaangle, nsigma);
+        frich.fRICHDeltaEl = deltaangle[0];
+        frich.fRICHDeltaMu = deltaangle[1];
+        frich.fRICHDeltaPi = deltaangle[2];
+        frich.fRICHDeltaKa = deltaangle[3];
+        frich.fRICHDeltaPr = deltaangle[4];
+        frich.fRICHNsigmaEl = nsigma[0];
+        frich.fRICHNsigmaMu = nsigma[1];
+        frich.fRICHNsigmaPi = nsigma[2];
+        frich.fRICHNsigmaKa = nsigma[3];
+        frich.fRICHNsigmaPr = nsigma[4];
+        FillTree(kFRICH);
       }
 
       // check if has Forward TOF
