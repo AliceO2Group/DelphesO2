@@ -41,7 +41,8 @@ def main(configuration_file,
          create_luts,
          turn_off_vertexing,
          append_production,
-         use_nuclei):
+         use_nuclei,
+         avoid_file_copy):
     arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
@@ -93,11 +94,25 @@ def main(configuration_file,
     barrel_half_length = opt("barrel_half_length")
 
     # copy relevant files in the working directory
-    def do_copy(in_file, out_file=".", in_path=None):
+    def do_copy(in_file, out_file=None, in_path=None):
         """Function to copy files"""
+        in_file = os.path.normpath(in_file)  # Normalize path
+        if out_file is None:
+            # If left unconfigured use the same name but put in the current path
+            out_file = os.path.basename(in_file)
+        out_file = os.path.normpath(out_file)  # Normalize path
         if in_path is not None:
             in_file = os.path.join(in_path, in_file)
         in_file = os.path.expanduser(os.path.expandvars(in_file))
+        if avoid_file_copy:
+            if os.path.isfile(out_file) or (in_file == out_file):
+                verbose_msg("Skipping copy of", in_file, "to",
+                            out_file, "because of --avoid-config-copy")
+            else:
+                verbose_msg("Linking ", in_file, "to",
+                            out_file, "because of --avoid-config-copy")
+                os.symlink(in_file, out_file)
+            return
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
 
@@ -207,8 +222,8 @@ def main(configuration_file,
             config_string = config_string.replace("\\", "").strip("/")
             for lineno, line in enumerate(f):
                 if line.strip() == config_string:
-                    verbose_msg("Found config string", config_string,
-                                "in line", lineno, line.strip())
+                    verbose_msg(f"Found config string '{config_string}'",
+                                f"at line #{lineno} '{line.strip()}'")
                     has_it = True
                     break
             if not has_it:
@@ -476,6 +491,9 @@ if __name__ == "__main__":
     parser.add_argument("--nuclei",
                         action="store_true",
                         help="Option use nuclei LUTs")
+    parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
+                        action="store_true",
+                        help="Option to avoid copying the configuration files and to use the ones directly in the current path e.g. for grid use")
     parser.add_argument("--use-preexisting-luts", "-l",
                         action="store_true",
                         help="Option to use preexisting LUTs instead of creating new ones, in this case LUTs with the requested tag are fetched from the LUT path. By default new LUTs are created at each run.")
@@ -497,4 +515,5 @@ if __name__ == "__main__":
          create_luts=not args.use_preexisting_luts,
          turn_off_vertexing=args.no_vertexing,
          append_production=args.append,
-         use_nuclei=args.nuclei)
+         use_nuclei=args.nuclei,
+         avoid_file_copy=args.avoid_config_copy)
