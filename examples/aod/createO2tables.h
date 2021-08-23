@@ -29,6 +29,7 @@ enum TreeIndex { // Index of the output trees
   kOrigin,
   kHMPID,
   kRICH,
+  kFRICH,
   kMID,
   kFTOF,
   kTrees
@@ -65,6 +66,7 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2origin",
                                   "O2hmpid",
                                   "O2rich",
+                                  "O2frich",
                                   "O2mid",
                                   "O2ftof"};
 
@@ -96,6 +98,7 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "DF ids",
                                    "HMPID info",
                                    "RICH info",
+                                   "Forward RICH info",
                                    "MID info",
                                    "Forward TOF info"};
 
@@ -370,7 +373,7 @@ struct {
   Float_t fRICHNsigmaPi = -999.f;    /// Nsigma for Pi
   Float_t fRICHNsigmaKa = -999.f;    /// Nsigma for Ka
   Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
-} rich;                              //! structure to keep RICH info
+} rich, frich;                              //! structure to keep RICH info
 
 void MakeTreeO2rich()
 {
@@ -389,6 +392,26 @@ void MakeTreeO2rich()
   tRICH->Branch("fRICHNsigmaPi", &rich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
   tRICH->Branch("fRICHNsigmaKa", &rich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
   tRICH->Branch("fRICHNsigmaPr", &rich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  tRICH->SetBasketSize("*", fBasketSizeTracks);
+}
+
+void MakeTreeO2frich()
+{
+  TTree* tRICH = CreateTree(kFRICH);
+  tRICH->Branch("fIndexCollisions", &frich.fIndexCollisions, "fIndexCollisions/I");
+  tRICH->Branch("fIndexTracks", &frich.fIndexTracks, "fIndexTracks/I");
+  tRICH->Branch("fRICHSignal", &frich.fRICHSignal, "fRICHSignal/F");
+  tRICH->Branch("fRICHSignalError", &frich.fRICHSignalError, "fRICHSignalError/F");
+  tRICH->Branch("fRICHDeltaEl", &frich.fRICHDeltaEl, "fRICHDeltaEl/F");
+  tRICH->Branch("fRICHDeltaMu", &frich.fRICHDeltaMu, "fRICHDeltaMu/F");
+  tRICH->Branch("fRICHDeltaPi", &frich.fRICHDeltaPi, "fRICHDeltaPi/F");
+  tRICH->Branch("fRICHDeltaKa", &frich.fRICHDeltaKa, "fRICHDeltaKa/F");
+  tRICH->Branch("fRICHDeltaPr", &frich.fRICHDeltaPr, "fRICHDeltaPr/F");
+  tRICH->Branch("fRICHNsigmaEl", &frich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
+  tRICH->Branch("fRICHNsigmaMu", &frich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
+  tRICH->Branch("fRICHNsigmaPi", &frich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
+  tRICH->Branch("fRICHNsigmaKa", &frich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
+  tRICH->Branch("fRICHNsigmaPr", &frich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
   tRICH->SetBasketSize("*", fBasketSizeTracks);
 }
 
