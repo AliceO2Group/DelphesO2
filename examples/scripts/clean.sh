@@ -16,6 +16,7 @@ rm runner*.sh
 rm tmpscript*.sh
 rm lutWrite*.cc
 rm DetectorK.*
+rm HistoManager.*
 rm -r fwdRes
 rm -r __pycache__
 rm lutCovm.hh
