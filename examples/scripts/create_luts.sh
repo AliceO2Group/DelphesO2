@@ -117,6 +117,7 @@ function do_copy() {
 }
 
 do_copy "${WRITER_PATH}/lutWrite.$WHAT.cc" "lut writer"
+do_copy "${WRITER_PATH}/DetectorK/HistoManager.cxx"
 do_copy "${WRITER_PATH}/DetectorK/HistoManager.h"
 do_copy "${WRITER_PATH}/DetectorK/DetectorK.cxx"
 do_copy "${WRITER_PATH}/DetectorK/DetectorK.h"
@@ -131,6 +132,7 @@ echo " --- creating LUTs: config = ${WHAT}, field = ${FIELD} T, min tracking rad
 function do_lut_for_particle() {
     i=${1}
     root -l -b <<EOF
+    .L HistoManager.cxx+
     .L DetectorK.cxx+
     .L lutWrite.${WHAT}.cc
 
@@ -162,6 +164,7 @@ EOF
 }
 
 root -l -b <<EOF
+    .L HistoManager.cxx+
     .L DetectorK.cxx+
 EOF
 
