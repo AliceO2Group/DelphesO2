@@ -4,7 +4,7 @@
 Script to plot the content of the LUT in terms of pointing resolution, efficiency, momentum resolution
 """
 
-from ROOT import gROOT, TLatex, TCanvas, TLegend, TColor, gPad
+from ROOT import gROOT, TLatex, TCanvas, TLegend, TColor, gPad, TGraph
 from ROOT import TFile
 from os import path
 import argparse
@@ -13,16 +13,16 @@ import argparse
 def main(reader_name,
          tags,
          lut_path,
-         ptmin,
-         ptmax,
+         xmin,
+         xmax,
          ymin=None,
          ymax=None,
-         tag_name=None,
+         tags_name=None,
          logx=False,
          logy=False,
          leg_pos=[0.74, 0.2, 0.90, 0.4],
          particles=None,
-         eta=0,
+         ind_var=0,
          dnch_deta=100,
          rmin=None,
          add_eta_label=True,
@@ -31,17 +31,15 @@ def main(reader_name,
          background=False,
          use_p_over_z=True,
          aod=None,
+         styles=None,
          study_label="ALICE 3 study"):
     gROOT.LoadMacro(reader_name)
     gROOT.LoadMacro("style.C")
     reader_name = reader_name.split(".")[-2]
     reader = getattr(__import__('ROOT', fromlist=[reader_name]),
                      reader_name)
-    style = getattr(__import__('ROOT', fromlist=["style"]),
-                    "style")
-
-    style()
-
+    getattr(__import__('ROOT', fromlist=["style"]),
+            "style")()
     p = {"el": "e", "pi": "#pi", "ka": "K", "pr": "p",
          "de": "d", "tr": "t", "he3": "^{3}He"}
     charge = {"el": 1, "pi": 1, "ka": 1, "pr": 1,
@@ -68,20 +66,20 @@ def main(reader_name,
     drawn = [canvas]
     drawn_graphs = {}
     drawn_frames = {}
-    if ymin is None:
-        if "_dca" in reader_name:
-            ymin = 0.1
-        elif "_pt" in reader_name:
-            ymin = 1.
-        elif "_eff" in reader_name:
-            ymin = 0.
-    if ymax is None:
-        if "_dca" in reader_name:
-            ymax = 1e4
-        elif "_pt" in reader_name:
-            ymax = 100.
-        elif "_eff" in reader_name:
-            ymax = 115.
+
+    def set_limit(l, v=0):
+        if l is None:
+            return v
+        return l
+    if "_dca" in reader_name:
+        ymin = set_limit(ymin, 0.1)
+        ymax = set_limit(ymax, 1e4)
+    elif "_pt" in reader_name:
+        ymin = set_limit(ymin, 1)
+        ymax = set_limit(ymax, 100)
+    elif "_eff" in reader_name:
+        ymin = set_limit(ymin, 0)
+        ymax = set_limit(ymax, 115)
 
     def adjust_pad():
         if logx:
@@ -91,10 +89,12 @@ def main(reader_name,
 
     counter = 1
     leg = None
-    if tag_name is not None:
+    if tags_name is not None:
         leg = TLegend(*leg_pos)
         if add_eta_label:
-            label = f"#eta = {int(eta)}"
+            label = f"#eta = {int(ind_var)}"
+            if "vs_eta" in reader_name:
+                label = "#it{p}_{T} "f"= {int(ind_var)} ""GeV/#it{c}"
             label += " dN_{Ch}/d#eta ="
             label += f" {int(dnch_deta)}"
             if rmin is not None:
@@ -109,15 +109,17 @@ def main(reader_name,
         latex = TLatex()
         latex.SetTextAlign(13)
         drawn.append(latex.DrawLatexNDC(x, y, " ".join(study_label)))
-    for i in p:
+    for i in p:  # Drawing one canvas per particle species
         c = f"{canvas.GetName()}_{i}"
         c = TCanvas(c, c, 800, 800)
         drawn.append(c)
         adjust_pad()
 
-        frame = c.DrawFrame(ptmin, ymin,
-                            ptmax, ymax, "")
+        frame = c.DrawFrame(xmin, ymin,
+                            xmax, ymax, "")
         frame.SetDirectory(0)
+        if leg is not None:
+            leg.Draw()
         drawn_frames[i] = frame
         g_list = []
         extra = {}
@@ -130,7 +132,7 @@ def main(reader_name,
             if not path.isfile(lut):
                 print("LUT file", lut, "does not exist")
                 return
-            g = reader(lut, eta, dnch_deta)
+            g = reader(lut, ind_var, dnch_deta)
             if g.GetN() <= 0:
                 print("Skipping", g.GetName(), "because empty graph")
                 continue
@@ -173,16 +175,14 @@ def main(reader_name,
                 f_aod.Close()
 
             print("Drawing", g.GetName())
-            if tag_name is not None and counter == 1:
-                leg.AddEntry(g, tag_name[k], "l")
+            if tags_name is not None and counter == 1:
+                leg.AddEntry(g, tags_name[k], "l")
             g_list.append(g)
         drawn_graphs[i] = g_list
         if len(g_list) <= 0:
             print("Nothing drawn!")
             continue
         drawn.append(latex.DrawLatexNDC(0.9, 0.9, p[i]))
-        if leg is not None:
-            leg.Draw()
         draw_study_label(.4, .91)
         gPad.Update()
         canvas.cd(counter)
@@ -201,9 +201,11 @@ def main(reader_name,
         gPad.Update()
         counter += 1
     canvas_all_species = None
-    if len(tags) == 1:
-        canvas_all_species = TCanvas("all_spec_"+canvas.GetName(),
-                                     "all_spec_"+canvas.GetName(), 800, 800)
+    if len(tags) == 1 or styles is not None:
+        canvas_all_species = "all_spec_"+canvas.GetName()
+        canvas_all_species = TCanvas(canvas_all_species,
+                                     canvas_all_species,
+                                     800, 800)
         drawn.append(canvas_all_species)
         canvas_all_species.cd()
         drawn_graphs_all_spec = {}
@@ -214,43 +216,62 @@ def main(reader_name,
         for i in drawn_graphs:
             if canvas_all_species.GetListOfPrimitives().GetEntries() == 0:
                 drawn_frames[i].Draw()
-            g_list = []
-            for j in drawn_graphs[i]:
-                g_list.append(j.Clone())
-                g_list[-1].SetName(g_list[-1].GetName()+"_color")
-                g_list[-1].SetLineColor(TColor.GetColor(p_colors[i]))
-                g_list[-1].Draw("same")
-                leg_all_spec.AddEntry(g_list[-1], p[i], "L")
-            drawn_graphs_all_spec[i] = g_list
+                leg_all_spec.Draw()
+            drawn_graphs_all_spec[i] = []
+            for k, g in enumerate(drawn_graphs[i]):
+                g = g.Clone()
+                drawn_graphs_all_spec[i].append(g)
+                g.SetName(g.GetName()+"_color")
+                g.SetLineColor(TColor.GetColor(p_colors[i]))
+                if styles is not None:
+                    g.SetLineStyle(styles[k])
+                g.Draw("same")
+                if k == 0:
+                    leg_all_spec.AddEntry(g, p[i], "L")
+        if styles is not None:
+            for j, k in enumerate(tags_name):
+                g = TGraph()
+                g.SetLineWidth(3)
+                g.SetLineColor(1)
+                g.SetLineStyle(styles[j])
+                leg_all_spec.AddEntry(g, k, "L")
+                drawn_graphs_all_spec[i].append(g)
         for i in drawn_graphs_all_spec:
             drawn_graphs[i+"_allspec"] = drawn_graphs_all_spec[i]
-        leg_all_spec.Draw()
         if add_alice3_label:
-            draw_study_label()
+            draw_study_label(.2, .91)
             latex = TLatex()
             latex.SetTextAlign(13)
             latex.SetTextSize(0.04)
-            if tag_name is not None:
-                drawn.append(latex.DrawLatexNDC(0.5, 0.80, tag_name[0]))
-            drawn.append(latex.DrawLatexNDC(0.4, 0.82, f"#eta = {int(eta)}"
-                                            + "\n dN_{Ch}/d#eta ="
-                                            + f" {int(dnch_deta)}"
-                                            + ("\n R_{min} = " + rmin if rmin is not None else "")))
+            if tags_name is not None and styles is None:
+                drawn.append(latex.DrawLatexNDC(0.5, 0.80, tags_name[0]))
+            if "vs_eta" in reader_name:
+                drawn.append(latex.DrawLatexNDC(0.42, 0.82, "#splitline{" +
+                                                "#it{p}_{T}"
+                                                + " = {:.1f} GeV/c".format(ind_var)
+                                                + " dN_{Ch}/d#eta ="
+                                                + f" {int(dnch_deta)}" + "}"
+                                                + ("{R_{min} = " + rmin + "}" if rmin is not None else "")))
+            else:
+                # drawn.append(latex.DrawLatexNDC(0.55, 0.82, "#splitline{" +
+                drawn.append(latex.DrawLatexNDC(0.55, 0.45, "#splitline{" +
+                                                f"#eta = {int(ind_var)}"
+                                                + " dN_{Ch}/d#eta ="
+                                                + f" {int(dnch_deta)}" + "}"
+                                                + ("{R_{min} = " + rmin + "}" if rmin is not None else "")))
 
         adjust_pad()
         canvas_all_species.Update()
         canvas_all_species.SaveAs(f"/tmp/{canvas_all_species.GetName()}.png")
-    if save is None:
+        canvas_all_species.SaveAs(f"/tmp/{canvas_all_species.GetName()}.pdf")
         canvas.SaveAs(f"/tmp/lut_{canvas.GetName()}.root")
-    else:
+    if save is not None:
+        print("Saving to", save)
         fo = TFile(save, "RECREATE")
         fo.cd()
-        canvas.Write()
-        if canvas_all_species is not None:
-            canvas_all_species.Write()
         for i in drawn_graphs:
             for j in drawn_graphs[i]:
-                j.Write()
+                j.Write(j.GetName().split("/")[-1])
     if not background:
         input("Done, press enter to continue")
 
@@ -268,11 +289,11 @@ if __name__ == "__main__":
                         nargs="+",
                         default=None,
                         help="Particles to show e.g. el pi ka mu pr")
-    parser.add_argument("--ptmin",
+    parser.add_argument("--xmin",
                         type=float,
                         default=1e-2,
                         help="Minimum pT of the plot")
-    parser.add_argument("--ptmax",
+    parser.add_argument("--xmax",
                         type=float,
                         default=100.,
                         help="Maximum pT of the plot")
@@ -284,10 +305,15 @@ if __name__ == "__main__":
                         type=str, nargs="+",
                         default=None,
                         help="Title of the tags that can be used in legend making")
-    parser.add_argument("--eta",
+    parser.add_argument("--ind_var", "--ind", "-i",
                         type=float,
                         default=0,
-                        help="Eta position")
+                        help="Value of the indepentend variable, i.e. eta if plotting vs pT or pT if plotting against eta")
+    parser.add_argument("--styles",
+                        type=int,
+                        default=None,
+                        nargs="+",
+                        help="Plotting style of different analyses")
     parser.add_argument("--nch", "--dndeta",
                         type=float,
                         default=100,
@@ -312,11 +338,11 @@ if __name__ == "__main__":
                         type=str,
                         default=None,
                         help="Name to save the figure to")
-    parser.add_argument("--leg_pos", "-l",
+    parser.add_argument("--leg-pos", "-l",
                         type=float, nargs="+",
                         default=[0.74, 0.2, 0.90, 0.4],
                         help="Position of the legend in NDC coordinates")
-    parser.add_argument("--label", "-L",
+    parser.add_argument("--study_label", "--label", "-L",
                         type=str, nargs="+",
                         default=["ALICE 3 study"],
                         help="Label to write into the label box")
@@ -332,20 +358,21 @@ if __name__ == "__main__":
     main(args.reader,
          args.tags,
          lut_path=args.path,
-         ptmin=args.ptmin,
-         ptmax=args.ptmax,
+         xmin=args.xmin,
+         xmax=args.xmax,
          logx=args.logx,
          logy=args.logy,
-         tag_name=args.tags_name,
+         tags_name=args.tags_name,
          particles=args.particles,
          leg_pos=args.leg_pos,
          ymin=args.ymin,
          ymax=args.ymax,
          rmin=args.rmin,
-         eta=args.eta,
+         ind_var=args.ind_var,
          save=args.save,
          background=args.b,
          aod=args.aod,
          dnch_deta=args.nch,
          use_p_over_z=args.pt_over_z,
-         study_label=args.label)
+         study_label=args.study_label,
+         styles=args.styles)

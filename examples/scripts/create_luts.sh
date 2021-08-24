@@ -13,10 +13,12 @@ OUT_TAG=
 PARALLEL_JOBS=1
 PARTICLES="0 1 2 3 4"
 AUTOTAG="Yes"
-VERBOSE=
+DIPOLE="No"
+FLATDIPOLE="No"
+VERBOSE="No"
 
 # List of arguments expected in the input
-optstring=":ht:B:R:p:o:T:P:j:vF"
+optstring=":ht:B:R:p:o:T:P:j:vFDd"
 # Get the options
 while getopts ${optstring} option; do
     case ${option} in
@@ -33,6 +35,8 @@ while getopts ${optstring} option; do
         echo "-P Particles to consider [\"0 1 2 3 4\"]"
         echo "-j Number of parallel processes to use [1]"
         echo "-F Don't use the automatic tagging and use only the one provided instead for the naming of the output files"
+        echo "-D Use dipole"
+        echo "-d Use dipole flat dipole parametrization"
         echo "-v Verbose mode"
         echo "-h Show this help"
         exit 0
@@ -70,8 +74,16 @@ while getopts ${optstring} option; do
         echo " > Setting parallel jobs to ${PARALLEL_JOBS}"
         ;;
     F)
-        AUTOTAG=
+        AUTOTAG="No"
         echo " > Disabling autotagging mode"
+        ;;
+    D)
+        DIPOLE="Yes"
+        echo " > Enabling dipole"
+        ;;
+    d)
+        FLATDIPOLE="Yes"
+        echo " > Enabling flat dipole"
         ;;
     v)
         VERBOSE="Yes"
@@ -88,14 +100,32 @@ while getopts ${optstring} option; do
     esac
 done
 
-if [[ -n ${AUTOTAG} ]]; then
+if [[ ${AUTOTAG} == "Yes" ]]; then
     # Defining the output tag based on the input
     FIELDT=$(echo "${FIELD}*10" | bc)
     FIELDT=${FIELDT%.0}
+    if [[ ${DIPOLE} == "Yes" ]]; then
+        OUT_TAG="${OUT_TAG}_Dipole"
+    fi
+    if [[ ${FLATDIPOLE} == "Yes" ]]; then
+        OUT_TAG="${OUT_TAG}_FlatDipole"
+    fi
     OUT_TAG=".${FIELDT}kG.rmin${RMIN}.${WHAT}${OUT_TAG}"
 fi
 
-if [[ -n ${VERBOSE} ]]; then
+if [[ ${DIPOLE} == "Yes" ]]; then
+    DIPOLE="useDipole = 1;"
+else
+    DIPOLE=""
+fi
+
+if [[ ${FLATDIPOLE} == "Yes" ]]; then
+    FLATDIPOLE="useFlatDipole = 1;"
+else
+    FLATDIPOLE=""
+fi
+
+if [[ ${VERBOSE} == "Yes" ]]; then
     echo "WHAT='${WHAT}'"
     echo "FIELD='${FIELD}'"
     echo "RMIN='${RMIN}'"
@@ -133,11 +163,14 @@ cp -r "${WRITER_PATH}/fwdRes" .
 echo " --- creating LUTs: config = ${WHAT}, field = ${FIELD} T, min tracking radius = ${RMIN} cm"
 
 function do_lut_for_particle() {
-    i=${1}
     root -l -b <<EOF
     .L HistoManager.cxx+
     .L DetectorK.cxx+
+    .L lutWrite.cc
+    $DIPOLE
+    $FLATDIPOLE
     .L lutWrite.${WHAT}.cc
+    printLutWriterConfiguration();
 
     TDatabasePDG::Instance()->AddParticle("deuteron", "deuteron", 1.8756134, kTRUE, 0.0, 3, "Nucleus", 1000010020);
     TDatabasePDG::Instance()->AddAntiParticle("anti-deuteron", -1000010020);
@@ -153,7 +186,7 @@ function do_lut_for_particle() {
     const int pc[N] = {11, 13, 211, 321, 2212, 1000010020, 1000010030, 1000020030 };
     const float field = ${FIELD};
     const float rmin = ${RMIN};
-    const int i = ${i};
+    const int i = ${1};
     const TString out_file = "${OUT_PATH}/lutCovm." + pn[i] + "${OUT_TAG}.dat";
     Printf("Creating LUT for particle ID %i: %s with pdg code %i to %s", i, pn[i].Data(), pc[i], out_file.Data());
     if(i >= 0 && i < N){
