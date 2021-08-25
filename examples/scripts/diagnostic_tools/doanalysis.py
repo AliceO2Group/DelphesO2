@@ -225,8 +225,10 @@ def main(mode,
         if len(files_to_merge) == 0:
             warning_msg("Did not find any file to merge for tag", tag)
             return
+        if len(files_to_merge) > len(run_list):
+            fatal_msg("Trying to merge too many files!", tag)
         msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
-        files_per_type = {}
+        files_per_type = {} # List of files to be merged
         for i in files_to_merge:
             fn = os.path.basename(i)
             files_per_type.setdefault(fn, [])
@@ -239,8 +241,14 @@ def main(mode,
                             "is already found, remove it before merging, you can use the --mergeonly flag to avoid running the analysis again")
                 continue
             merged_files.append(merged_file)
-            run_cmd(f"hadd -j {njobs} -f {merged_file} " +
-                    " ".join(files_per_type[i]))
+            merge_file_list = os.path.join(os.path.dirname(os.path.abspath(merged_file)),
+                                           "tomerge_" + "".join(i.split(".")[:-1])+".txt")
+            verbose_msg("List of files to be merged:", merge_file_list)
+            with open(merge_file_list, "w") as fmerge:
+                for j in files_per_type[i]:
+                    fmerge.write(j+"\n")
+            run_cmd(f"hadd -j {njobs} -f {merged_file} `cat {merge_file_list}`",
+                    log_file=merge_file_list.replace(".txt", ".log"))
         if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:

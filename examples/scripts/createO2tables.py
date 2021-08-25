@@ -313,7 +313,8 @@ def main(configuration_file,
                 """
                 if os.path.normpath(output_path) != os.getcwd():
                     write_to_runner(f"mv {file_name} {output_path} \n")
-                    write_to_runner(f"ln -s {output_path}/{file_name} . \n")
+                    write_to_runner(
+                        f"ln -s {os.path.join(output_path, file_name)} . \n")
 
             write_to_runner("#! /usr/bin/env bash\n")
             delphes_file = f"delphes.{run_number}.root"
@@ -453,7 +454,7 @@ def main(configuration_file,
             run_cmd(f"cat {summaryfile} >> {s}")
         else:
             run_cmd(f"mv {summaryfile} {output_path}")
-            run_cmd(f"ln -s {output_path}/{summaryfile} ./")
+            run_cmd(f"ln -s {os.path.join(output_path, summaryfile)} ./")
 
     if qa:
         msg(" --- running test analysis", color=bcolors.HEADER)
