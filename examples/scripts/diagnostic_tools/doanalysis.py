@@ -127,6 +127,7 @@ def main(mode,
          rate_lim=1000000000,
          readers=1,
          avoid_overwriting_merge=False,
+         clean_localhost_after_running=True,
          extra_arguments=""):
     if len(input_file) == 1:
         input_file = input_file[0]
@@ -214,6 +215,8 @@ def main(mode,
     if not merge_only:
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message="Running analysis")
+        if clean_localhost_after_running:
+            run_cmd("find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v")
 
     if merge_output or merge_only:
         files_to_merge = []
