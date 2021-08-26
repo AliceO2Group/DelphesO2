@@ -148,10 +148,11 @@ def main(configuration_file,
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
         # Checking that the generators are defined
-        if opt("generators", require=False) is None:
+        generators = opt("generators", require=False)
+        if generators is None:
             fatal_msg("Did not find any generator configuration corresponding to the entry",
                       config_entry, "in your configuration file", configuration_file)
-        generators = opt("generators").split(" ")
+        generators = generators.split(" ")
         for i in generators:
             do_copy(i)
         msg("Using pythia with configuration", generators)
