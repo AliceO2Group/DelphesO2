@@ -397,22 +397,22 @@ void MakeTreeO2rich()
 
 void MakeTreeO2frich()
 {
-  TTree* tRICH = CreateTree(kFRICH);
-  tRICH->Branch("fIndexCollisions", &frich.fIndexCollisions, "fIndexCollisions/I");
-  tRICH->Branch("fIndexTracks", &frich.fIndexTracks, "fIndexTracks/I");
-  tRICH->Branch("fRICHSignal", &frich.fRICHSignal, "fRICHSignal/F");
-  tRICH->Branch("fRICHSignalError", &frich.fRICHSignalError, "fRICHSignalError/F");
-  tRICH->Branch("fRICHDeltaEl", &frich.fRICHDeltaEl, "fRICHDeltaEl/F");
-  tRICH->Branch("fRICHDeltaMu", &frich.fRICHDeltaMu, "fRICHDeltaMu/F");
-  tRICH->Branch("fRICHDeltaPi", &frich.fRICHDeltaPi, "fRICHDeltaPi/F");
-  tRICH->Branch("fRICHDeltaKa", &frich.fRICHDeltaKa, "fRICHDeltaKa/F");
-  tRICH->Branch("fRICHDeltaPr", &frich.fRICHDeltaPr, "fRICHDeltaPr/F");
-  tRICH->Branch("fRICHNsigmaEl", &frich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
-  tRICH->Branch("fRICHNsigmaMu", &frich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
-  tRICH->Branch("fRICHNsigmaPi", &frich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
-  tRICH->Branch("fRICHNsigmaKa", &frich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
-  tRICH->Branch("fRICHNsigmaPr", &frich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
-  tRICH->SetBasketSize("*", fBasketSizeTracks);
+  TTree* tFRICH = CreateTree(kFRICH);
+  tFRICH->Branch("fIndexCollisions", &frich.fIndexCollisions, "fIndexCollisions/I");
+  tFRICH->Branch("fIndexTracks", &frich.fIndexTracks, "fIndexTracks/I");
+  tFRICH->Branch("fRICHSignal", &frich.fRICHSignal, "fRICHSignal/F");
+  tFRICH->Branch("fRICHSignalError", &frich.fRICHSignalError, "fRICHSignalError/F");
+  tFRICH->Branch("fRICHDeltaEl", &frich.fRICHDeltaEl, "fRICHDeltaEl/F");
+  tFRICH->Branch("fRICHDeltaMu", &frich.fRICHDeltaMu, "fRICHDeltaMu/F");
+  tFRICH->Branch("fRICHDeltaPi", &frich.fRICHDeltaPi, "fRICHDeltaPi/F");
+  tFRICH->Branch("fRICHDeltaKa", &frich.fRICHDeltaKa, "fRICHDeltaKa/F");
+  tFRICH->Branch("fRICHDeltaPr", &frich.fRICHDeltaPr, "fRICHDeltaPr/F");
+  tFRICH->Branch("fRICHNsigmaEl", &frich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
+  tFRICH->Branch("fRICHNsigmaMu", &frich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
+  tFRICH->Branch("fRICHNsigmaPi", &frich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
+  tFRICH->Branch("fRICHNsigmaKa", &frich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
+  tFRICH->Branch("fRICHNsigmaPr", &frich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  tFRICH->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
