@@ -109,9 +109,9 @@ def main(configuration_file,
                 verbose_msg("Skipping copy of", in_file, "to",
                             out_file, "because of --avoid-config-copy")
             else:
-                verbose_msg("Linking ", in_file, "to",
+                verbose_msg("Copying", in_file, "to",
                             out_file, "because of --avoid-config-copy")
-                os.symlink(in_file, out_file)
+                run_cmd(f"cp {in_file} {out_file}")
             return
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
@@ -148,10 +148,11 @@ def main(configuration_file,
     custom_gen = opt("custom_gen", require=False)
     if custom_gen is None:
         # Checking that the generators are defined
-        if opt("generators", require=False) is None:
+        generators = opt("generators", require=False)
+        if generators is None:
             fatal_msg("Did not find any generator configuration corresponding to the entry",
                       config_entry, "in your configuration file", configuration_file)
-        generators = opt("generators").split(" ")
+        generators = generators.split(" ")
         for i in generators:
             do_copy(i)
         msg("Using pythia with configuration", generators)

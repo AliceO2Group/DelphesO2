@@ -21,6 +21,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 // O2 includes
 #include "DetectorsVertexing/PVertexer.h"
 #include "DetectorsVertexing/PVertexerHelpers.h"
+#include "Steer/InteractionSampler.h"
 #include "CommonDataFormat/BunchFilling.h"
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
@@ -100,12 +101,12 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Create object of class ExRootTreeReader
   auto treeReader = new ExRootTreeReader(&chain);
-  auto numberOfEntries = treeReader->GetEntries();
+  const auto numberOfEntries = treeReader->GetEntries();
 
   // Get pointers to branches used in this analysis
-  auto events = treeReader->UseBranch("Event");
-  auto tracks = treeReader->UseBranch("Track");
-  auto particles = treeReader->UseBranch("Particle");
+  const auto events = treeReader->UseBranch("Event");
+  const auto tracks = treeReader->UseBranch("Track");
+  const auto particles = treeReader->UseBranch("Particle");
 
   // smearer
   o2::delphes::TrackSmearer smearer;
@@ -195,7 +196,18 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Random generator for reshuffling tracks when reading them
   std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
-  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {                               // Loop over events
+
+  // Define the PVertexer and its utilities
+  o2::steer::InteractionSampler irSampler;
+  irSampler.setInteractionRate(10000);
+  irSampler.init();
+
+  o2::vertexing::PVertexer vertexer;
+  vertexer.setValidateWithIR(kFALSE);
+  vertexer.setBunchFilling(irSampler.getBunchFilling());
+  vertexer.init();
+
+  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
       eventextra.fStart[i] += eventextra.fNentries[i];
@@ -251,9 +263,11 @@ int createO2tables(const char* inputFile = "delphes.root",
     dNdEta = 0.5f * dNdEta / multEtaRange;
     fOffsetLabel += particles->GetEntries();
 
-    // loop over tracks
+    // For vertexing
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
+    o2::InteractionRecord ir = irSampler.generateCollisionTime(); // Generate IR
+
     // Tracks used for the T0 evaluation
     std::vector<Track*> tof_tracks;
     std::vector<Track*> ftof_tracks;
@@ -408,7 +422,6 @@ int createO2tables(const char* inputFile = "delphes.root",
         }
       }
       if (do_vertexing) {
-        o2::InteractionRecord ir(ientry + eventOffset, 0);
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
         tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
@@ -470,13 +483,6 @@ int createO2tables(const char* inputFile = "delphes.root",
     collision.fIndexBCs = ientry + eventOffset;
     bc.fGlobalBC = ientry + eventOffset;
     if (do_vertexing) { // Performing vertexing
-      o2::BunchFilling bcfill;
-      bcfill.setDefault();
-      o2::vertexing::PVertexer vertexer;
-      vertexer.setValidateWithIR(kFALSE);
-      vertexer.setBunchFilling(bcfill);
-      vertexer.init();
-
       std::vector<o2::MCCompLabel> lblTracks;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
@@ -489,7 +495,6 @@ int createO2tables(const char* inputFile = "delphes.root",
         lblTracks.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
         idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
       }
-      vertexer.setStartIR({0, 0});
       const int n_vertices = vertexer.process(tracks_for_vertexing,
                                               idxVec,
                                               gsl::span<o2::InteractionRecord>{bcData},
