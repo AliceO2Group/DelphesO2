@@ -109,9 +109,9 @@ def main(configuration_file,
                 verbose_msg("Skipping copy of", in_file, "to",
                             out_file, "because of --avoid-config-copy")
             else:
-                verbose_msg("Linking ", in_file, "to",
+                verbose_msg("Copying", in_file, "to",
                             out_file, "because of --avoid-config-copy")
-                os.symlink(in_file, out_file)
+                run_cmd(f"cp {in_file} {out_file}")
             return
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
