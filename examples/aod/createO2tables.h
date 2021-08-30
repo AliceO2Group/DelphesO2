@@ -569,8 +569,8 @@ class TrackAlice3 : public o2::track::TrackParCov
   TrackAlice3(const TrackAlice3& src) = default;
   TrackAlice3(const o2::track::TrackParCov& src, const float t = 0, const float te = 1, const int label = 0) : o2::track::TrackParCov(src), timeEst{t, te}, mLabel{label} {}
   const TimeEst& getTimeMUS() const { return timeEst; }
-  const int mLabel;
-  TimeEst timeEst; ///< time estimate in ns
+  const int mLabel = 0;
+  const TimeEst timeEst = {}; ///< time estimate in ns
 };
 
 // Function to check if a particle is a secondary based on its history
