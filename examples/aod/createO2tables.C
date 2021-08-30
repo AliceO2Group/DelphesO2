@@ -101,12 +101,12 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Create object of class ExRootTreeReader
   auto treeReader = new ExRootTreeReader(&chain);
-  auto numberOfEntries = treeReader->GetEntries();
+  const auto numberOfEntries = treeReader->GetEntries();
 
   // Get pointers to branches used in this analysis
-  auto events = treeReader->UseBranch("Event");
-  auto tracks = treeReader->UseBranch("Track");
-  auto particles = treeReader->UseBranch("Particle");
+  const auto events = treeReader->UseBranch("Event");
+  const auto tracks = treeReader->UseBranch("Track");
+  const auto particles = treeReader->UseBranch("Particle");
 
   // smearer
   o2::delphes::TrackSmearer smearer;
@@ -263,9 +263,11 @@ int createO2tables(const char* inputFile = "delphes.root",
     dNdEta = 0.5f * dNdEta / multEtaRange;
     fOffsetLabel += particles->GetEntries();
 
-    // loop over tracks
+    // For vertexing
     std::vector<TrackAlice3> tracks_for_vertexing;
     std::vector<o2::InteractionRecord> bcData;
+    o2::InteractionRecord ir = irSampler.generateCollisionTime(); // Generate IR
+
     // Tracks used for the T0 evaluation
     std::vector<Track*> tof_tracks;
     std::vector<Track*> ftof_tracks;
@@ -420,7 +422,6 @@ int createO2tables(const char* inputFile = "delphes.root",
         }
       }
       if (do_vertexing) {
-        o2::InteractionRecord ir(ientry + eventOffset, 0);
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
         tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
@@ -494,7 +495,6 @@ int createO2tables(const char* inputFile = "delphes.root",
         lblTracks.emplace_back(tracks_for_vertexing[i].mLabel, ientry + eventOffset, 1, false);
         idxVec.emplace_back(i, o2::dataformats::GlobalTrackID::ITS);
       }
-      vertexer.setStartIR({0, 0});
       const int n_vertices = vertexer.process(tracks_for_vertexing,
                                               idxVec,
                                               gsl::span<o2::InteractionRecord>{bcData},
