@@ -21,6 +21,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 // O2 includes
 #include "DetectorsVertexing/PVertexer.h"
 #include "DetectorsVertexing/PVertexerHelpers.h"
+#include "Steer/InteractionSampler.h"
 #include "CommonDataFormat/BunchFilling.h"
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
@@ -195,7 +196,18 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Random generator for reshuffling tracks when reading them
   std::default_random_engine e(std::chrono::system_clock::now().time_since_epoch().count()); // time-based seed:
-  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) {                               // Loop over events
+
+  // Define the PVertexer and its utilities
+  o2::steer::InteractionSampler irSampler;
+  irSampler.setInteractionRate(10000);
+  irSampler.init();
+
+  o2::vertexing::PVertexer vertexer;
+  vertexer.setValidateWithIR(kFALSE);
+  vertexer.setBunchFilling(irSampler.getBunchFilling());
+  vertexer.init();
+
+  for (Int_t ientry = 0; ientry < numberOfEntries; ++ientry) { // Loop over events
     // Adjust start indices for this event in all trees by adding the number of entries of the previous event
     for (auto i = 0; i < kTrees; ++i) {
       eventextra.fStart[i] += eventextra.fNentries[i];
@@ -470,13 +482,6 @@ int createO2tables(const char* inputFile = "delphes.root",
     collision.fIndexBCs = ientry + eventOffset;
     bc.fGlobalBC = ientry + eventOffset;
     if (do_vertexing) { // Performing vertexing
-      o2::BunchFilling bcfill;
-      bcfill.setDefault();
-      o2::vertexing::PVertexer vertexer;
-      vertexer.setValidateWithIR(kFALSE);
-      vertexer.setBunchFilling(bcfill);
-      vertexer.init();
-
       std::vector<o2::MCCompLabel> lblTracks;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
