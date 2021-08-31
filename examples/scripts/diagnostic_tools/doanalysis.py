@@ -108,6 +108,7 @@ def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
     if remove_tmp_script:
         os.remove(tmp_script_name)
     verbose_msg("< end run with", tmp_script_name)
+    return tmp_script_name
 
 
 analyses = {}  # List of all known analyses, taken from configuration file
@@ -121,7 +122,7 @@ def main(mode,
          n_max_files=100,
          dpl_configuration_file=None,
          njobs=1,
-         merge_output=False,
+         merge_output=True,
          merge_only=False,
          shm_mem_size=16000000000,
          rate_lim=1000000000,
@@ -216,9 +217,10 @@ def main(mode,
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message="Running analysis")
         if clean_localhost_after_running:
-            run_cmd("find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v")
+            run_cmd(
+                "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v")
 
-    if merge_output or merge_only:
+    if (merge_output or merge_only) and len(run_list) > 1:
         files_to_merge = []
         for i in input_file_list:
             p = os.path.dirname(os.path.abspath(i))
@@ -231,7 +233,7 @@ def main(mode,
         if len(files_to_merge) > len(run_list):
             fatal_msg("Trying to merge too many files!", tag)
         msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
-        files_per_type = {} # List of files to be merged
+        files_per_type = {}  # List of files to be merged per type
         for i in files_to_merge:
             fn = os.path.basename(i)
             files_per_type.setdefault(fn, [])
@@ -305,7 +307,7 @@ if __name__ == "__main__":
     parser.add_argument("--extra_arguments", "-e",
                         default="", type=str,
                         help="Extra arguments to feed to the workflow")
-    parser.add_argument("--merge_output", "--merge-output", "--merge",
+    parser.add_argument("--no_merge", "--no_merge_output", "--no_merge-output", "--nomerge",
                         action="store_true", help="Flag to merge the output files into one")
     parser.add_argument("--avoid_overwriting_merge", "--no_overwrite", "-a",
                         action="store_true", help="Flag to check that the old merged files are not overwritten")
@@ -313,6 +315,8 @@ if __name__ == "__main__":
                         action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
     parser.add_argument("--show", "-s",
                         action="store_true", help="Flag to show the workflow of the current tag")
+    parser.add_argument("--no_clean", "-nc",
+                        action="store_true", help="Flag to avoid cleaning the localhost files after running")
     args = parser.parse_args()
     set_verbose_mode(args)
 
@@ -341,10 +345,11 @@ if __name__ == "__main__":
              n_max_files=args.max_files,
              njobs=args.njobs,
              out_tag=args.tag,
-             merge_output=args.merge_output,
+             merge_output=not args.no_merge,
              out_path=args.out_path,
              merge_only=args.merge_only,
              readers=args.readers,
              extra_arguments=args.extra_arguments,
              avoid_overwriting_merge=args.avoid_overwriting_merge,
-             shm_mem_size=args.mem)
+             shm_mem_size=args.mem,
+             clean_localhost_after_running=not args.no_clean)

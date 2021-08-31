@@ -147,18 +147,27 @@ void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
 
   // output file
   ofstream lutFile(filename, std::ofstream::binary);
+  if (!lutFile.is_open()) {
+    Printf("Did not manage to open output file!!");
+    return;
+  }
 
   // write header
   lutHeader_t lutHeader;
   // pid
   lutHeader.pdg = pdg;
   lutHeader.mass = TDatabasePDG::Instance()->GetParticle(pdg)->Mass();
+  const int q = std::abs(TDatabasePDG::Instance()->GetParticle(pdg)->Charge()) / 3;
+  if (q <= 0) {
+    Printf("Negative or null charge (%f) for pdg code %i. Fix the charge!", TDatabasePDG::Instance()->GetParticle(pdg)->Charge(), pdg);
+    return;
+  }
   lutHeader.field = field;
   // nch
   lutHeader.nchmap.log = true;
-  lutHeader.nchmap.nbins = 1;
-  lutHeader.nchmap.min = 0.;
-  lutHeader.nchmap.max = 4.;
+  lutHeader.nchmap.nbins = 20;
+  lutHeader.nchmap.min = 0.5;
+  lutHeader.nchmap.max = 3.5;
   // radius
   lutHeader.radmap.log = false;
   lutHeader.radmap.nbins = 1;
@@ -193,9 +202,11 @@ void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
 
   TH1F* hptcalls = (TH1F*)h["pt"]->Clone("hptcalls");
   hptcalls->Reset();
+  hptcalls->GetYaxis()->SetTitle("pT calls");
 
   TH1F* hetacalls = (TH1F*)h["eta"]->Clone("hetacalls");
   hetacalls->Reset();
+  hetacalls->GetYaxis()->SetTitle("eta calls");
 
   // write entries
   for (int inch = 0; inch < nnch; ++inch) {
@@ -273,7 +284,7 @@ void lutWrite_aod(const char* filename = "/tmp/lutCovm.pi.aod.dat",
   }
 
   lutFile.close();
-  TCanvas* can = new TCanvas();
+  TCanvas* can = new TCanvas("ptetacalls", "ptetacalls");
   can->Divide(2);
   can->cd(1);
   hptcalls->Scale(1. / hetacalls->GetNbinsX());

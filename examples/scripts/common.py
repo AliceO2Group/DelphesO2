@@ -75,13 +75,16 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
     """
     with multiprocessing.Pool(processes=processes) as pool:
         msg(job_message)
+        result = []
         if "tqdm" not in sys.modules:
             for i in enumerate(pool.imap(job_runner, job_arguments)):
                 msg(f"Done: {i[0]+1},", len(job_arguments)-i[0]-1, "to go")
+                result.append(i)
         else:
-            r = list(tqdm.tqdm(pool.imap(job_runner, job_arguments),
-                               total=len(job_arguments),
-                               bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
+            result = list(tqdm.tqdm(pool.imap(job_runner, job_arguments),
+                                    total=len(job_arguments),
+                                    bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'))
+        return result
 
 
 def run_cmd(cmd, comment="", check_status=True, log_file=None):
