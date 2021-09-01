@@ -1,6 +1,8 @@
 /// @author: Roberto Preghenella
 /// @email: preghenella@bo.infn.it
 
+#ifndef lutWrite_CC
+#define lutWrite_CC
 #include "lutCovm.hh"
 #include "fwdRes/fwdRes.C"
 
@@ -8,7 +10,18 @@ DetectorK fat;
 void diagonalise(lutEntry_t &lutEntry);
 static float etaMaxBarrel = 1.75;
 
-bool usePara = true; // use fwd parameterisation
+bool usePara = true;        // use fwd parameterisation
+bool useDipole = false;     // use dipole i.e. flat parametrization for efficiency and momentum resolution
+bool useFlatDipole = false; // use dipole i.e. flat parametrization outside of the barrel
+
+void printLutWriterConfiguration()
+{
+  std::cout << " --- Printing configuration of LUT writer --- " << std::endl;
+  std::cout << "    -> etaMaxBarrel  = " << etaMaxBarrel << std::endl;
+  std::cout << "    -> usePara       = " << usePara << std::endl;
+  std::cout << "    -> useDipole     = " << useDipole << std::endl;
+  std::cout << "    -> useFlatDipole = " << useFlatDipole << std::endl;
+}
 
 bool
 fatSolve(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.13957000, int itof = 0, int otof = 0, int q = 1)
@@ -112,8 +125,13 @@ fwdPara(lutEntry_t &lutEntry, float pt = 0.1, float eta = 0.0, float mass = 0.13
 }
 
 void
-lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2, int itof = 0, int otof = 0)
+lutWrite(const char* filename = "lutCovm.dat", int pdg = 211, float field = 0.2, int itof = 0, int otof = 0)
 {
+
+  if (useFlatDipole && useDipole) {
+    Printf("Both dipole and dipole flat flags are on, please use only one of them");
+    return;
+  }
 
   // output file
   ofstream lutFile(filename, std::ofstream::binary);
@@ -170,49 +188,59 @@ lutWrite(const char *filename = "lutCovm.dat", int pdg = 211, float field = 0.2,
     std::cout << " --- setting FAT dN/deta: " << nch << std::endl;
     for (int irad = 0; irad < nrad; ++irad) {
       for (int ieta = 0; ieta < neta; ++ieta) {
-	auto eta = lutHeader.etamap.eval(ieta);
-	lutEntry.eta = lutHeader.etamap.eval(ieta);
-	for (int ipt = 0; ipt < npt; ++ipt) {
-	  lutEntry.pt = lutHeader.ptmap.eval(ipt);
-	  lutEntry.valid = true;
-	  if (fabs(eta) <= etaMaxBarrel) { // full lever arm ends at etaMaxBarrel
-	    //	    printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    if (!fatSolve(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, itof, otof, q)) {
-	      //	      printf(" --- fatSolve: error \n");
-	      lutEntry.valid = false;
+        auto eta = lutHeader.etamap.eval(ieta);
+        lutEntry.eta = lutHeader.etamap.eval(ieta);
+        for (int ipt = 0; ipt < npt; ++ipt) {
+          lutEntry.pt = lutHeader.ptmap.eval(ipt);
+          lutEntry.valid = true;
+          if (fabs(eta) <= etaMaxBarrel) { // full lever arm ends at etaMaxBarrel
+            // printf(" --- fatSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+            if (!fatSolve(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, itof, otof, q)) {
+              // printf(" --- fatSolve: error \n");
+              lutEntry.valid = false;
               lutEntry.eff = 0.;
               lutEntry.eff2 = 0.;
-	      for (int i = 0; i < 15; ++i)
-		lutEntry.covm[i] = 0.;
-	    }
-	  }
-	  else {
-	    //	    printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
-	    lutEntry.eff = 1.;
-	    lutEntry.eff2 = 1.;
+              for (int i = 0; i < 15; ++i)
+                lutEntry.covm[i] = 0.;
+            }
+          } else {
+            // printf(" --- fwdSolve: pt = %f, eta = %f, mass = %f, field=%f \n", lutEntry.pt, lutEntry.eta, lutHeader.mass, lutHeader.field);
+            lutEntry.eff = 1.;
+            lutEntry.eff2 = 1.;
             bool retval = true;
-            if (usePara) {
-	      retval = fwdPara(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, field);
+            if (useFlatDipole) { // Using the parametrization at the border of the barrel
+              retval = fatSolve(lutEntry, lutEntry.pt, etaMaxBarrel, lutHeader.mass, itof, otof, q);
+            } else if (usePara) {
+              retval = fwdPara(lutEntry, lutEntry.pt, lutEntry.eta, lutHeader.mass, field);
+            } else {
+              retval = fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass);
             }
-            else {
-	      retval = fwdSolve(lutEntry.covm, lutEntry.pt, lutEntry.eta, lutHeader.mass);
+            if (useDipole) { // Using the parametrization at the border of the barrel only for efficiency and momentum resolution
+              lutEntry_t lutEntryBarrel;
+              retval = fatSolve(lutEntryBarrel, lutEntry.pt, etaMaxBarrel, lutHeader.mass, itof, otof, q);
+              lutEntry.valid = lutEntryBarrel.valid;
+              lutEntry.covm[14] = lutEntryBarrel.covm[14];
+              lutEntry.eff = lutEntryBarrel.eff;
+              lutEntry.eff2 = lutEntryBarrel.eff2;
             }
-	    if ( !retval) {
-	        //	      printf(" --- fwdSolve: error \n");
-	        lutEntry.valid = false;
-	        for (int i = 0; i < 15; ++i)
-			lutEntry.covm[i] = 0.;
-	    }
-	  }
-	  diagonalise(lutEntry);
-	  lutFile.write(reinterpret_cast<char *>(&lutEntry), sizeof(lutEntry_t));
-	}}}}
-  
-	  
+            if (!retval) {
+              // printf(" --- fwdSolve: error \n");
+              lutEntry.valid = false;
+              for (int i = 0; i < 15; ++i)
+                lutEntry.covm[i] = 0.;
+            }
+          }
+          diagonalise(lutEntry);
+          lutFile.write(reinterpret_cast<char*>(&lutEntry), sizeof(lutEntry_t));
+        }
+      }
+    }
+  }
+
   lutFile.close();
 }
 
-void diagonalise(lutEntry_t &lutEntry)
+void diagonalise(lutEntry_t& lutEntry)
 {
   TMatrixDSym m(5);
   double fcovm[5][5];
@@ -220,8 +248,8 @@ void diagonalise(lutEntry_t &lutEntry)
     for (int j = 0; j < i + 1; ++j, ++k) {
       fcovm[i][j] = lutEntry.covm[k];
       fcovm[j][i] = lutEntry.covm[k];
-    }  
-  m.SetMatrixArray((double *)fcovm);
+    }
+  m.SetMatrixArray((double*)fcovm);
   TMatrixDSymEigen eigen(m);
   // eigenvalues vector
   TVectorD eigenVal = eigen.GetEigenValues();
@@ -237,5 +265,6 @@ void diagonalise(lutEntry_t &lutEntry)
   for (int i = 0; i < 5; ++i)
     for (int j = 0; j < 5; ++j)
       lutEntry.eiginv[i][j] = eigenVec[i][j];
-
 }
+
+#endif
