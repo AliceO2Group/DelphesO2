@@ -32,6 +32,7 @@ enum TreeIndex { // Index of the output trees
   kFRICH,
   kMID,
   kFTOF,
+  kA3ECAL,
   kTrees
 };
 
@@ -68,7 +69,8 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2rich",
                                   "O2frich",
                                   "O2mid",
-                                  "O2ftof"};
+                                  "O2ftof",
+                                  "O2a3ecal"};
 
 const TString TreeTitle[kTrees] = {"Collision tree",
                                    "Collision extra",
@@ -100,7 +102,8 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "RICH info",
                                    "Forward RICH info",
                                    "MID info",
-                                   "Forward TOF info"};
+                                   "Forward TOF info",
+                                   "ALICE3 ECAL"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -373,7 +376,7 @@ struct {
   Float_t fRICHNsigmaPi = -999.f;    /// Nsigma for Pi
   Float_t fRICHNsigmaKa = -999.f;    /// Nsigma for Ka
   Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
-} rich, frich;                              //! structure to keep RICH info
+} rich, frich;                       //! structure to keep RICH info
 
 void MakeTreeO2rich()
 {
@@ -468,6 +471,31 @@ void MakeTreeO2ftof()
   tFTOF->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
   tFTOF->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
   tFTOF->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
+  // ALICE3 ECAL data
+  Int_t fIndexCollisions = -1;  /// Collision ID
+  Int_t fIndexMcParticles = -1; /// Particle ID
+  Int_t fIndexTracks = -1;      /// Track ID
+
+  Float_t fEnergy = -999.f; /// Energy
+  Float_t fPosX = -999.f;   /// Position in X
+  Float_t fPosY = -999.f;   /// Position in Y
+  Float_t fPosZ = -999.f;   /// Position in Z
+} ecal;                     //! structure to keep ECAL info
+
+void MakeTreeO2ecal()
+{
+  TTree* tECAL = CreateTree(kA3ECAL);
+  tECAL->Branch("fIndexCollisions", &ecal.fIndexCollisions, "fIndexCollisions/I");
+  tECAL->Branch("fIndexMcParticles", &ecal.fIndexMcParticles, "fIndexMcParticles/I");
+  tECAL->Branch("fIndexTracks", &ecal.fIndexTracks, "fIndexTracks/I");
+  tECAL->Branch("fEnergy", &ecal.fEnergy, "fEnergy/F");
+  tECAL->Branch("fPosX", &ecal.fPosX, "fPosX/F");
+  tECAL->Branch("fPosY", &ecal.fPosY, "fPosY/F");
+  tECAL->Branch("fPosZ", &ecal.fPosZ, "fPosZ/F");
+  tECAL->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
