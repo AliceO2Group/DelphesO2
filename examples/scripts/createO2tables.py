@@ -490,7 +490,7 @@ if __name__ == "__main__":
     parser.add_argument("--append", "-a",
                         action="store_true",
                         help="Option to append the results instead of starting over by shifting the AOD indexing. N.B. the user is responsible of the compatibility between appended AODs. Only works in conjuction by specifying an output path (option '-o')")
-    parser.add_argument("--nuclei",
+    parser.add_argument("--no_nuclei", "--no-nuclei",
                         action="store_true",
                         help="Option use nuclei LUTs")
     parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
@@ -517,5 +517,5 @@ if __name__ == "__main__":
          create_luts=not args.use_preexisting_luts,
          turn_off_vertexing=args.no_vertexing,
          append_production=args.append,
-         use_nuclei=args.nuclei,
+         use_nuclei=not args.no_nuclei,
          avoid_file_copy=args.avoid_config_copy)
