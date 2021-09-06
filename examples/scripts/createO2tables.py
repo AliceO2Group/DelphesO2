@@ -42,7 +42,8 @@ def main(configuration_file,
          turn_off_vertexing,
          append_production,
          use_nuclei,
-         avoid_file_copy):
+         avoid_file_copy,
+         debug_aod):
     arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
@@ -121,6 +122,7 @@ def main(configuration_file,
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
+    lut_tag = f"rmin{int(float(barrel_radius))}.{lut_tag}"
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     if use_nuclei:
         lut_particles += ["de", "tr", "he3"]
@@ -236,10 +238,13 @@ def main(configuration_file,
     set_config("createO2tables.C", "const double Bz = ", f"{bField}""e\-1\;/")
     if turn_off_vertexing:
         set_config("createO2tables.C",
-                   "const bool do_vertexing = ", "false\;/")
+                   "constexpr bool do_vertexing = ", "false\;/")
     if use_nuclei:
         set_config("createO2tables.C",
-                   "const bool enable_nuclei = ", "true\;/")
+                   "constexpr bool enable_nuclei = ", "true\;/")
+    if debug_aod:
+        set_config("createO2tables.C",
+                   "constexpr bool debug_qa = ", "true\;/")
     else:  # Check that the geometry file for the vertexing is there
         if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
             run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
@@ -493,6 +498,9 @@ if __name__ == "__main__":
     parser.add_argument("--no_nuclei", "--no-nuclei",
                         action="store_true",
                         help="Option use nuclei LUTs")
+    parser.add_argument("--debug", "-d",
+                        action="store_true",
+                        help="Option to use the debug flag for the AOD making")
     parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
                         action="store_true",
                         help="Option to avoid copying the configuration files and to use the ones directly in the current path e.g. for grid use")
@@ -518,4 +526,5 @@ if __name__ == "__main__":
          turn_off_vertexing=args.no_vertexing,
          append_production=args.append,
          use_nuclei=not args.no_nuclei,
-         avoid_file_copy=args.avoid_config_copy)
+         avoid_file_copy=args.avoid_config_copy,
+         debug_aod=args.debug)
