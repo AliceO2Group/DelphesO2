@@ -14,6 +14,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TClonesArray.h"
 #include "TRandom3.h"
 #include "TDatabasePDG.h"
+#include "TH1F.h"
 
 // Delphes includes
 #include "ExRootAnalysis/ExRootTreeReader.h"
@@ -68,8 +69,9 @@ const double forward_rich_sigma = 7.e-3;        // Resolution of the Forward RIC
 const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
-const bool do_vertexing = true;
-const bool enable_nuclei = false;
+constexpr bool do_vertexing = true;  // Vertexing with the O2
+constexpr bool enable_nuclei = true; // Nuclei LUTs
+constexpr bool debug_qa = false;     // Debug QA histograms
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -90,9 +92,18 @@ int createO2tables(const char* inputFile = "delphes.root",
   TDatabasePDG::Instance()->AddParticle("helium3", "helium3", 2.80839160743, kTRUE, 0.0, 6, "Nucleus", 1000020030);
   TDatabasePDG::Instance()->AddAntiParticle("anti-helium3", -1000020030);
 
-  if (do_vertexing) {
+  if constexpr (do_vertexing) { // Load files for the vertexing
     o2::base::GeometryManager::loadGeometry("./", false);
     o2::base::Propagator::initFieldFromGRP("o2sim_grp.root");
+  }
+
+  // Debug histograms
+  std::map<const char*, TH1F*> debugHisto;
+  std::map<int, TH1F*> debugEffNum;
+  std::map<int, TH1F*> debugEffDen;
+  std::map<int, TH1F*> debugEffDenPart;
+  if constexpr (debug_qa) { // Create histograms for debug QA
+    debugHisto["Multiplicity"] = new TH1F("Multiplicity", "Multiplicity", 1000, 0, 5000);
   }
 
   // Create chain of root trees
@@ -116,7 +127,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   mapPdgLut.insert(std::make_pair(211, "lutCovm.pi.dat"));
   mapPdgLut.insert(std::make_pair(321, "lutCovm.ka.dat"));
   mapPdgLut.insert(std::make_pair(2212, "lutCovm.pr.dat"));
-  if (enable_nuclei) {
+  if constexpr (enable_nuclei) {
     mapPdgLut.insert(std::make_pair(1000010020, "lutCovm.de.dat"));
     mapPdgLut.insert(std::make_pair(1000010030, "lutCovm.tr.dat"));
     mapPdgLut.insert(std::make_pair(1000020030, "lutCovm.he3.dat"));
@@ -216,8 +227,8 @@ int createO2tables(const char* inputFile = "delphes.root",
 
     // Load selected branches with data from specified event
     treeReader->ReadEntry(ientry);
-    const float multEtaRange = 2.f; // Range in eta to count the charged particles
-    float dNdEta = 0.f;             // Charged particle multiplicity to use in the efficiency evaluation
+    constexpr float multEtaRange = 2.f; // Range in eta to count the charged particles
+    float dNdEta = 0.f;                 // Charged particle multiplicity to use in the efficiency evaluation
 
     for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) { // Loop over particles
       auto particle = (GenParticle*)particles->At(iparticle);
@@ -259,8 +270,17 @@ int createO2tables(const char* inputFile = "delphes.root",
         dNdEta += 1.f;
       }
       FillTree(kMcParticle);
+      if constexpr (debug_qa) {
+        if (!debugEffDenPart[particle->PID]) {
+          debugEffDenPart[particle->PID] = new TH1F(Form("denPart%i", particle->PID), Form("denPart%i;#it{p}_{T} (GeV/#it{c})", particle->PID), 1000, 0, 10);
+        }
+        debugEffDenPart[particle->PID]->Fill(particle->PT);
+      }
     }
     dNdEta = 0.5f * dNdEta / multEtaRange;
+    if constexpr (debug_qa) {
+      debugHisto["Multiplicity"]->Fill(dNdEta);
+    }
     fOffsetLabel += particles->GetEntries();
 
     // For vertexing
@@ -300,8 +320,20 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       O2Track o2track; // tracks in internal O2 format
       o2::delphes::TrackUtils::convertTrackToO2Track(*track, o2track, true);
+      if constexpr (debug_qa) {
+        if (!debugEffDen[track->PID]) {
+          debugEffDen[track->PID] = new TH1F(Form("den%i", track->PID), Form("den%i;#it{p}_{T} (GeV/#it{c})", track->PID), 1000, 0, 10);
+        }
+        debugEffDen[track->PID]->Fill(track->PT);
+      }
       if (!smearer.smearTrack(o2track, track->PID, dNdEta)) { // Skipping inefficient/not correctly smeared tracks
         continue;
+      }
+      if constexpr (debug_qa) {
+        if (!debugEffNum[track->PID]) {
+          debugEffNum[track->PID] = new TH1F(Form("num%i", track->PID), Form("num%i;#it{p}_{T} (GeV/#it{c})", track->PID), 1000, 0, 10);
+        }
+        debugEffNum[track->PID]->Fill(track->PT);
       }
       o2::delphes::TrackUtils::convertO2TrackToTrack(o2track, *track, true);
 
@@ -421,7 +453,7 @@ int createO2tables(const char* inputFile = "delphes.root",
           FillTree(kMID);
         }
       }
-      if (do_vertexing) {
+      if constexpr (do_vertexing) {
         const float t = (ir.bc2ns() + gRandom->Gaus(0., 100.)) * 1e-3;
         tracks_for_vertexing.push_back(TrackAlice3{o2track, t, 100.f * 1e-3, TMath::Abs(alabel)});
       }
@@ -482,7 +514,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     // fill collision information
     collision.fIndexBCs = ientry + eventOffset;
     bc.fGlobalBC = ientry + eventOffset;
-    if (do_vertexing) { // Performing vertexing
+    if constexpr (do_vertexing) { // Performing vertexing
       std::vector<o2::MCCompLabel> lblTracks;
       std::vector<o2::vertexing::PVertex> vertices;
       std::vector<o2::vertexing::GIndex> vertexTrackIDs;
@@ -581,6 +613,19 @@ int createO2tables(const char* inputFile = "delphes.root",
   for (int i = 0; i < kTrees; i++) {
     if (Trees[i])
       Trees[i]->Write();
+  }
+  fout->cd();
+  for (auto e : debugHisto) {
+    e.second->Write();
+  }
+  for (auto e : debugEffNum) {
+    e.second->Write();
+  }
+  for (auto e : debugEffDen) {
+    e.second->Write();
+  }
+  for (auto e : debugEffDenPart) {
+    e.second->Write();
   }
   fout->ls();
   fout->Close();
