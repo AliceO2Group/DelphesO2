@@ -43,7 +43,8 @@ def main(configuration_file,
          append_production,
          use_nuclei,
          avoid_file_copy,
-         debug_aod):
+         debug_aod,
+         tof_mismatch):
     arguments = locals()  # List of arguments to put into the log
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
@@ -92,7 +93,9 @@ def main(configuration_file,
     bField = opt("bField")
     sigmaT = opt("sigmaT")
     sigmaT0 = opt("sigmaT0")
-    barrel_radius = opt("barrel_radius")
+    tof_radius = opt("tof_radius")
+    rich_radius = opt("rich_radius")
+    minimum_track_radius = opt("minimum_track_radius")
     etaMax = opt("etamax")
     barrel_half_length = opt("barrel_half_length")
 
@@ -124,13 +127,12 @@ def main(configuration_file,
 
     lut_path = opt("lut_path")
     lut_tag = opt("lut_tag")
-    lut_tag = f"rmin{int(float(barrel_radius))}.{lut_tag}"
+    lut_tag = f"rmin{int(float(minimum_track_radius))}.{lut_tag}"
     lut_particles = ["el", "mu", "pi", "ka", "pr"]
     if use_nuclei:
         lut_particles += ["de", "tr", "he3"]
     if create_luts:
         # Creating LUTs
-        minimum_track_radius = opt("minimum_track_radius")
         verbose_msg("Creating LUTs")
         lut_path = os.path.join(lut_path, "create_luts.sh")
         run_cmd(f"{lut_path} -p {lut_path} -t {lut_tag} -B {float(bField)*0.1} -R {minimum_track_radius} -P \"0 1 2 3 4 5 6\" -j 1 -F 2>&1",
@@ -199,14 +201,18 @@ def main(configuration_file,
     msg("  LUT path       =", f"'{lut_path}'")
     msg(" --- with detector configuration", color=bcolors.HEADER)
     msg("  B field              =", bField, "[kG]")
-    msg("  sigmaT               =", sigmaT, "[ns]")
-    msg("  sigmaT0              =", sigmaT0, "[ns]")
-    msg("  Barrel radius        =", barrel_radius, "[cm]")
+    msg("  Barrel radius        =", minimum_track_radius, "[cm]")
     msg("  Barrel half length   =", barrel_half_length, "[cm]")
     if create_luts:
         msg("  Minimum track radius =", minimum_track_radius, "[cm]")
     msg("  LUT                  =", lut_tag)
     msg("  etaMax               =", etaMax)
+    msg(" --- with TOF configuration", color=bcolors.HEADER)
+    msg("  sigmaT               =", sigmaT, "[ns]")
+    msg("  sigmaT0              =", sigmaT0, "[ns]")
+    msg("  tof_radius           =", tof_radius, "[cm]")
+    msg(" --- with RICH configuration", color=bcolors.HEADER)
+    msg("  rich_radius          =", rich_radius, "[cm]")
 
     aod_path = opt("aod_path")
     do_copy("createO2tables.h", in_path=aod_path)
@@ -247,6 +253,11 @@ def main(configuration_file,
     if debug_aod:
         set_config("createO2tables.C",
                    "constexpr bool debug_qa = ", "true\;/")
+    if tof_mismatch:
+        if not tof_mismatch in [1, 2]:
+            fatal_msg("tof_mismatch", tof_mismatch, "is not 1 or 2")
+        set_config("createO2tables.C",
+                   "constexpr int tof_mismatch = ", f"{tof_mismatch}\;/")
     else:  # Check that the geometry file for the vertexing is there
         if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
             run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
@@ -254,14 +265,20 @@ def main(configuration_file,
         set_config("dpl-config_std.json", "\\\"d_bz\\\":",
                    "\\\""f"{bField}""\\\"\,/")
     # set barrel_radius
-    set_config("propagate.tcl", "set barrel_Radius", f"{barrel_radius}""e\-2/")
-    set_config("createO2tables.C",
-               "const double tof_radius =", f"{barrel_radius}""\;/")
+    set_config("propagate.tcl", "set barrel_Radius",
+               f"{minimum_track_radius}""e\-2/")
     # set barrel_half_length
     set_config("propagate.tcl", "set barrel_HalfLength",
                f"{barrel_half_length}""e\-2/")
+    # set tof_radius
+    set_config("createO2tables.C",
+               "constexpr double tof_radius =", f"{tof_radius}""\;/")
+    # set tof_length
     set_config("createO2tables.C",
                "const double tof_length =", f"{barrel_half_length}""\;/")
+    # set rich_radius
+    set_config("createO2tables.C",
+               "constexpr double rich_radius =", f"{rich_radius}""\;/")
     # # set acceptance
     set_config("propagate.tcl", "set barrel_Acceptance",
                "\{ 0.0 + 1.0 * fabs(eta) < "f"{etaMax}"" \}/")
@@ -468,6 +485,9 @@ def main(configuration_file,
         msg(" --- running test analysis", color=bcolors.HEADER)
         run_cmd(
             f"./diagnostic_tools/doanalysis.py TrackQA RICH TOF -i {output_list_file} -M 25 -B 25")
+    if tof_mismatch == 1:  # TOF mismatch in create mode
+        run_cmd(
+            f"hadd -j {njobs} -f tofMM.root tof_mismatch_template_DF_*.root && rm tof_mismatch_template_DF_*.root")
 
 
 if __name__ == "__main__":
@@ -503,6 +523,10 @@ if __name__ == "__main__":
     parser.add_argument("--debug", "-d",
                         action="store_true",
                         help="Option to use the debug flag for the AOD making")
+    parser.add_argument("--tof-mismatch", "--tof_mismatch", "--use_tof_mismatch", "-t",
+                        type=int,
+                        default=0,
+                        help="Option to use the TOF mismatch in simulation, accepted values 0, 1, 2")
     parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
                         action="store_true",
                         help="Option to avoid copying the configuration files and to use the ones directly in the current path e.g. for grid use")
@@ -529,4 +553,5 @@ if __name__ == "__main__":
          append_production=args.append,
          use_nuclei=not args.no_nuclei,
          avoid_file_copy=args.avoid_config_copy,
-         debug_aod=args.debug)
+         debug_aod=args.debug,
+         tof_mismatch=args.tof_mismatch)
