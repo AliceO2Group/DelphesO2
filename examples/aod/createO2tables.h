@@ -32,6 +32,7 @@ enum TreeIndex { // Index of the output trees
   kFRICH,
   kMID,
   kFTOF,
+  kA3ECAL,
   kTrees
 };
 
@@ -68,7 +69,8 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2rich",
                                   "O2frich",
                                   "O2mid",
-                                  "O2ftof"};
+                                  "O2ftof",
+                                  "O2a3ecal"};
 
 const TString TreeTitle[kTrees] = {"Collision tree",
                                    "Collision extra",
@@ -100,7 +102,8 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "RICH info",
                                    "Forward RICH info",
                                    "MID info",
-                                   "Forward TOF info"};
+                                   "Forward TOF info",
+                                   "ALICE3 ECAL"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -472,6 +475,35 @@ void MakeTreeO2ftof()
   tFTOF->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
   tFTOF->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
   tFTOF->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
+  // ALICE3 ECAL data
+  Int_t fIndexCollisions = -1;  /// Collision ID
+  Int_t fIndexMcParticles = -1; /// Particle ID
+  Int_t fIndexTracks = -1;      /// Track ID
+
+  Double_t fPx = -1.e10;    /// px
+  Double_t fPy = -1.e10;    /// py
+  Double_t fPz = -1.e10;    /// pz
+  Double_t fE = -1.e10;     /// E
+  Float_t fPosZ = -999.f;   /// Position in Z
+  Float_t fPosPhi = -999.f; /// Position in phi
+} ecal;                     //! structure to keep ECAL info
+
+void MakeTreeO2ecal()
+{
+  TTree* tECAL = CreateTree(kA3ECAL);
+  tECAL->Branch("fIndexCollisions", &ecal.fIndexCollisions, "fIndexCollisions/I");
+  tECAL->Branch("fIndexMcParticles", &ecal.fIndexMcParticles, "fIndexMcParticles/I");
+  tECAL->Branch("fIndexTracks", &ecal.fIndexTracks, "fIndexTracks/I");
+  tECAL->Branch("fPx", &ecal.fPx, "fPx/D");
+  tECAL->Branch("fPy", &ecal.fPy, "fPy/D");
+  tECAL->Branch("fPz", &ecal.fPz, "fPz/D");
+  tECAL->Branch("fE", &ecal.fE, "fE/D");
+  tECAL->Branch("fPosZ", &ecal.fPosZ, "fPosZ/F");
+  tECAL->Branch("fPosPhi", &ecal.fPosPhi, "fPosPhi/F");
+  tECAL->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {
