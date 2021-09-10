@@ -32,6 +32,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TrackSmearer.hh"
 #include "TOFLayer.hh"
 #include "RICHdetector.hh"
+#include "ECALdetector.hh"
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
@@ -167,6 +168,9 @@ int createO2tables(const char* inputFile = "delphes.root",
   forward_rich_detector.setType(o2::delphes::RICHdetector::kForward);
   forward_rich_detector.setRadiusIn(forward_rich_radius_in);
 
+  // ECAL detector
+  o2::delphes::ECALdetector ecal_detector;
+
   // MID detector
   o2::delphes::MIDdetector mid_detector;
   const bool isMID = mid_detector.setup(inputFileAccMuonPID);
@@ -183,6 +187,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2trackExtra();
   MakeTreeO2ftof();
   MakeTreeO2rich();
+  MakeTreeO2ecal();
   MakeTreeO2frich();
   MakeTreeO2mid();
   MakeTreeO2collision();
@@ -270,6 +275,19 @@ int createO2tables(const char* inputFile = "delphes.root",
         dNdEta += 1.f;
       }
       FillTree(kMcParticle);
+
+      // info for the ECAL
+      std::array<float, 3> pos;
+      float energy = 0;
+      if (ecal_detector.makeSignal(*particle, pos, energy)) {
+        ecal.fIndexCollisions = ientry + eventOffset;
+        ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+        ecal.fEnergy = energy;
+        ecal.fPosX = pos[0];
+        ecal.fPosY = pos[1];
+        ecal.fPosZ = pos[2];
+        FillTree(kA3ECAL);
+      }
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
           debugEffDenPart[particle->PID] = new TH1F(Form("denPart%i", particle->PID), Form("denPart%i;#it{p}_{T} (GeV/#it{c})", particle->PID), 1000, 0, 10);
