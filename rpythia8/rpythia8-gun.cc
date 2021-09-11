@@ -34,8 +34,7 @@ int main(int argc, char** argv)
       ("output,o", po::value<std::string>(&output)->default_value("pythia-gun.hepmc"), "Output HepMC file")
       ("decay,D", po::bool_switch(&decay)->default_value(false), "Decay particle at production vertex")
       ("verbose,V", po::bool_switch(&verbose)->default_value(false), "Verbose event listing")
-      ("seed", po::value<int>(&seed)->default_value(1), "initial seed")
-      ;
+      ("seed", po::value<int>(&seed)->default_value(1), "initial seed");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);

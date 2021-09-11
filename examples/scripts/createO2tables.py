@@ -48,8 +48,10 @@ def main(configuration_file,
     parser = configparser.RawConfigParser()
     parser.read(configuration_file)
     if config_entry not in parser.keys():
+        k = list(parser.keys())
+        k.sort()
         fatal_msg(f"Did not find configuration entry '{config_entry}' in config file",
-                  configuration_file + "\n\t Available entries:\n\t\t" + "\n\t\t".join(list(parser.keys())))
+                  configuration_file + "\n\t Available entries:\n\t\t" + "\n\t\t".join(k))
 
     run_cmd("./clean.sh > /dev/null 2>&1", check_status=False)
     # Dictionary of fetched options
