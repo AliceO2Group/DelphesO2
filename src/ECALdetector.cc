@@ -9,48 +9,102 @@
 
 namespace o2
 {
-namespace delphes
-{
+  namespace delphes
+  {
 
-/*****************************************************************/
+    /*****************************************************************/
 
-void ECALdetector::setup(float resoEA, float resoEB, float resoEC, float resoPos)
-{
-}
+    void ECALdetector::setup(float resoEA, float resoEB, float resoEC, float resoXA, float resoXB)
+    {
+      mEnergyResolutionA = resoEA;
+      mEnergyResolutionB = resoEB;
+      mEnergyResolutionC = resoEC;
+      mPositionResolutionA = resoXA;
+      mPositionResolutionB = resoXB;
+    }
 
-/*****************************************************************/
+    /*****************************************************************/
 
-bool ECALdetector::hasECAL(const Track& track) const
-{
-  auto x = track.XOuter * 0.1; // [cm]
-  auto y = track.YOuter * 0.1; // [cm]
-  auto z = track.ZOuter * 0.1; // [cm]
-  /** check if hit **/
-  bool ishit = false;
-  auto r = hypot(x, y);
-  ishit = (fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
-  if (!ishit)
-    return false;
-  auto particle = (GenParticle*)track.Particle.GetObject();
-  return true;
-}
+    bool ECALdetector::hasECAL(const Track& track) const
+    {
+      auto x = track.XOuter * 0.1; // [cm]
+      auto y = track.YOuter * 0.1; // [cm]
+      auto z = track.ZOuter * 0.1; // [cm]
+      /** check if hit **/
+      bool ishit = false;
+      auto r = hypot(x, y);
+      ishit = (fabs(r - mRadius) < 0.001 && fabs(z) < mLength);
+      if (!ishit)
+	return false;
+      auto particle = (GenParticle*)track.Particle.GetObject();
+      return true;
+    }
 
-/*****************************************************************/
-bool ECALdetector::makeSignal(const GenParticle& particle, std::array<float, 3>& pos, float& energy) const
-{
-  TLorentzVector vec;
-  const int pid = particle.PID;
-  if (pid != 22) {
-    return false;
-  }
-  pos[0] = 0.f;
-  pos[1] = 0.f;
-  pos[2] = 0.f;
-  energy = 0.f;
-  return true;
-}
+    /*****************************************************************/
+    // bool ECALdetector::makeSignal(const GenParticle& particle, std::array<float, 3>& pos, float& energy) const
+    bool ECALdetector::makeSignal(const GenParticle& particle, TLorentzVector &pECAL, float & posZ, float & posPhi)
+    {
+      const int pid = particle.PID;
+      if (pid != 22) {
+	return false;
+      }
 
-/*****************************************************************/
+      TLorentzVector p4True = particle.P4(); // true 4-momentum
+      Float_t vtX = particle.X; // particle vertex X
+      Float_t vtY = particle.Y; // particle vertex Y
+      Float_t vtZ = particle.Z; // particle vertex Z
 
-} // namespace delphes
+      posPhi = particle.Phi;                // azimuth angle of a photon hit
+      posZ   = mRadius * particle.CtgTheta; // z-coodrinate  of a photon hit
+
+      Double_t eSmeared = smearPhotonE(particle.E); // smeared photon energy
+      TLorentzVector p4Smeared = smearPhotonP4(p4True);
+
+      return true;
+    }
+
+    /*****************************************************************/
+    TLorentzVector ECALdetector::smearPhotonP4(const TLorentzVector pTrue)
+    {
+      // This function smears the photon 4-momentum from the true one via applying
+      // parametrized energy and coordinate resolution
+      
+      // Get true energy from true 4-momentum and smear this energy
+      Double_t eTrue    = pTrue.E();
+      Double_t eSmeared = smearPhotonE(eTrue);
+      // Smear direction of 3-vector
+      Double_t phi   = pTrue.Phi()   + gRandom->Gaus(0.,sigmaX(eTrue)/mRadius);
+      Double_t theta = pTrue.Theta() + gRandom->Gaus(0.,sigmaX(eTrue)/mRadius);
+      // Calculate smeared components of 3-vector
+      Double_t pxSmeared = eSmeared*TMath::Cos(phi)*TMath::Sin(theta);
+      Double_t pySmeared = eSmeared*TMath::Sin(phi)*TMath::Sin(theta);
+      Double_t pzSmeared = eSmeared*TMath::Cos(theta);
+      // Construct new 4-momentum from smeared energy and 3-momentum
+      TLorentzVector pSmeared(pxSmeared,pySmeared,pzSmeared,eSmeared);
+      return pSmeared;
+    }
+    /*****************************************************************/
+    Double_t ECALdetector::sigmaX(const Double_t eTrue)
+    {
+      // Calculate sigma of photon coordinate smearing [cm]
+      // E is the photon energy
+      Double_t dX = sqrt(mPositionResolutionA*mPositionResolutionA + mPositionResolutionB*mPositionResolutionB/eTrue);
+      return dX;
+    }
+    /*****************************************************************/
+    Double_t ECALdetector::smearPhotonE(const Double_t eTrue)
+    {
+      // Smear a photon energy eTrue according to a Gaussian distribution with energy resolution parameters
+      // sigma of Gaussian smearing is calculated from parameters A,B,C and true energy
+
+      Double_t sigmaE = eTrue * sqrt(mEnergyResolutionA*mEnergyResolutionA/eTrue/eTrue +
+				     mEnergyResolutionB*mEnergyResolutionB/eTrue +
+				     mEnergyResolutionC*mEnergyResolutionC);
+      Double_t eSmeared = gRandom->Gaus(eTrue,sigmaE);
+      if (eSmeared < 0) eSmeared = 0;
+      return eSmeared;
+    }
+    /*****************************************************************/
+
+  } // namespace delphes
 } // namespace o2
