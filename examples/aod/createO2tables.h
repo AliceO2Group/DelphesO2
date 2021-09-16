@@ -400,18 +400,18 @@ void MakeTreeO2frich()
   TTree* tFRICH = CreateTree(kFRICH);
   tFRICH->Branch("fIndexCollisions", &frich.fIndexCollisions, "fIndexCollisions/I");
   tFRICH->Branch("fIndexTracks", &frich.fIndexTracks, "fIndexTracks/I");
-  tFRICH->Branch("fRICHSignal", &frich.fRICHSignal, "fRICHSignal/F");
-  tFRICH->Branch("fRICHSignalError", &frich.fRICHSignalError, "fRICHSignalError/F");
-  tFRICH->Branch("fRICHDeltaEl", &frich.fRICHDeltaEl, "fRICHDeltaEl/F");
-  tFRICH->Branch("fRICHDeltaMu", &frich.fRICHDeltaMu, "fRICHDeltaMu/F");
-  tFRICH->Branch("fRICHDeltaPi", &frich.fRICHDeltaPi, "fRICHDeltaPi/F");
-  tFRICH->Branch("fRICHDeltaKa", &frich.fRICHDeltaKa, "fRICHDeltaKa/F");
-  tFRICH->Branch("fRICHDeltaPr", &frich.fRICHDeltaPr, "fRICHDeltaPr/F");
-  tFRICH->Branch("fRICHNsigmaEl", &frich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
-  tFRICH->Branch("fRICHNsigmaMu", &frich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
-  tFRICH->Branch("fRICHNsigmaPi", &frich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
-  tFRICH->Branch("fRICHNsigmaKa", &frich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
-  tFRICH->Branch("fRICHNsigmaPr", &frich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  tFRICH->Branch("fFRICHSignal", &frich.fRICHSignal, "fFRICHSignal/F");
+  tFRICH->Branch("fFRICHSignalError", &frich.fRICHSignalError, "fFRICHSignalError/F");
+  tFRICH->Branch("fFRICHDeltaEl", &frich.fRICHDeltaEl, "fFRICHDeltaEl/F");
+  tFRICH->Branch("fFRICHDeltaMu", &frich.fRICHDeltaMu, "fFRICHDeltaMu/F");
+  tFRICH->Branch("fFRICHDeltaPi", &frich.fRICHDeltaPi, "fFRICHDeltaPi/F");
+  tFRICH->Branch("fFRICHDeltaKa", &frich.fRICHDeltaKa, "fFRICHDeltaKa/F");
+  tFRICH->Branch("fFRICHDeltaPr", &frich.fRICHDeltaPr, "fFRICHDeltaPr/F");
+  tFRICH->Branch("fFRICHNsigmaEl", &frich.fRICHNsigmaEl, "fFRICHNsigmaEl/F");
+  tFRICH->Branch("fFRICHNsigmaMu", &frich.fRICHNsigmaMu, "fFRICHNsigmaMu/F");
+  tFRICH->Branch("fFRICHNsigmaPi", &frich.fRICHNsigmaPi, "fFRICHNsigmaPi/F");
+  tFRICH->Branch("fFRICHNsigmaKa", &frich.fRICHNsigmaKa, "fFRICHNsigmaKa/F");
+  tFRICH->Branch("fFRICHNsigmaPr", &frich.fRICHNsigmaPr, "fFRICHNsigmaPr/F");
   tFRICH->SetBasketSize("*", fBasketSizeTracks);
 }
 
