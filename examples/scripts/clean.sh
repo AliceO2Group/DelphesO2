@@ -20,3 +20,4 @@ rm HistoManager.*
 rm -r fwdRes
 rm -r __pycache__
 rm lutCovm.hh
+rm tof_mismatch_template_DF*.root

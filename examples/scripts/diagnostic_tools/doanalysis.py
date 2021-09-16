@@ -55,17 +55,19 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                 tmp_script.write(instructions.replace("\"", "\\\"").strip())
                 tmp_script.write("'\"\n")
                 tmp_script.write("  exit $ReturnValue\n")
-                tmp_script.write("fi\n")
+                tmp_script.write("fi\n\n")
 
         write_instructions(f"#!/bin/bash", n=2)
-        write_instructions(f"cd {output_path}", n=2)  # Move to run dir
-        write_instructions(f"pwd", n=2)  # Move to run dir
+        # Move to run dir
+        write_instructions(f"cd {output_path} || exit 1", n=2)
+        # Print run dir
+        write_instructions(f"pwd", n=2)
 
         for i in output_files:  # Removing old output
-            write_instructions(f"rm -v {i} 2>&1")
+            write_instructions(f"[ -f {i} ] && rm -v {i} 2>&1")
             i = i.replace(".root", f"_{tag}")
-            write_instructions(f"rm -v {i}.root 2>&1")
-        write_instructions("\n")
+            write_instructions(f"[ -f {i} ] && rm -v {i}.root 2>&1")
+        write_instructions("")
 
         o2_workflow = ""
         for i in o2_analyses:
@@ -79,25 +81,26 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             else:
                 line = f"{line}"
             o2_workflow += line
-        log_line = "echo \"Running: \n \t"+o2_workflow.replace("\t", "")+"\""
-        log_line += f" > {log_file}"
-        write_instructions(log_line, n=2)
-        write_instructions(
-            o2_workflow + f" >> {log_file} \n \t", check_status=True)
-        write_instructions("\n")
 
-        write_instructions(
-            f"if grep -q \"\[ERROR\]\" {log_file}; then echo \": got some errors in '{log_file}'\" && exit 1; fi")
-        write_instructions(
-            f"if grep -q \"\[FATAL\]\" {log_file}; then echo \": got some fatals in '{log_file}'\" && exit 1; fi")
-        write_instructions("\n")
+        write_instructions(f"O2Workflow=\"{o2_workflow}\"", n=2)
+        write_instructions("if [[ -z \"${1}\" ]]; then", n=2)
+        write_instructions("  echo \"Running: \n \t ${O2Workflow}\""
+                           f" > {log_file}")
+        write_instructions("  eval \"${O2Workflow}\""
+                           f" >> {log_file}", check_status=True)
+        write_instructions("else")
+        write_instructions("  eval \"${O2Workflow}\"")
+
+        for i in ["ERROR", "FATAL"]:
+            write_instructions(
+                f"if grep -q \"\[{i}\]\" {log_file}; then echo \": got some {i}s in '{log_file}'\" && exit 1; fi")
+        write_instructions("")
 
         for i in output_files:  # renaming output with tag
             r = i.replace(".root", f"_{tag}.root")
-            write_instructions(f"mv {i} {r} 2>&1")
+            write_instructions(f"[ -f {i} ] && mv {i} {r} 2>&1")
 
-        write_instructions("\n")
-        write_instructions("exit 0")
+        write_instructions("\nexit 0")
     return tmp_script_name
 
 
