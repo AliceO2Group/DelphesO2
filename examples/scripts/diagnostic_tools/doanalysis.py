@@ -90,6 +90,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                            f" >> {log_file}", check_status=True)
         write_instructions("else")
         write_instructions("  eval \"${O2Workflow}\"")
+        write_instructions("fi")
 
         for i in ["ERROR", "FATAL"]:
             write_instructions(
