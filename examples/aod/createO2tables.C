@@ -20,7 +20,6 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "ExRootAnalysis/ExRootTreeReader.h"
 
 // O2 includes
-
 #include "DetectorsVertexing/PVertexer.h"
 #include "DetectorsVertexing/PVertexerHelpers.h"
 #include "Steer/InteractionSampler.h"
@@ -572,7 +571,6 @@ int createO2tables(const char* inputFile = "delphes.root",
                                               v2tRefs,
                                               gsl::span<const o2::MCCompLabel>{lblTracks},
                                               lblVtx);
-      //Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
         collision.fPosX = 0.f;
         collision.fPosY = 0.f;
