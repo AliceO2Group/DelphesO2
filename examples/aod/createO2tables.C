@@ -571,7 +571,6 @@ int createO2tables(const char* inputFile = "delphes.root",
                                               v2tRefs,
                                               gsl::span<const o2::MCCompLabel>{lblTracks},
                                               lblVtx);
-      // Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
         collision.fPosX = 0.f;
         collision.fPosY = 0.f;
@@ -586,18 +585,27 @@ int createO2tables(const char* inputFile = "delphes.root",
         collision.fChi2 = 0.01f;
         collision.fN = 0;
       } else {
-        collision.fPosX = vertices[0].getX();
-        collision.fPosY = vertices[0].getY();
-        collision.fPosZ = vertices[0].getZ();
-        collision.fCovXX = vertices[0].getSigmaX2();
-        collision.fCovXY = vertices[0].getSigmaXY();
-        collision.fCovXZ = vertices[0].getSigmaXZ();
-        collision.fCovYY = vertices[0].getSigmaY2();
-        collision.fCovYZ = vertices[0].getSigmaYZ();
-        collision.fCovZZ = vertices[0].getSigmaZ2();
+        int index = 0;
+        int hm = 0;
+        for (int i = 0; i < n_vertices; i++) {
+          //in case of multiple vertices select the vertex with the higher multiplicities
+          if (vertices[i].getNContributors() > hm) {
+            hm = vertices[i].getNContributors();
+            index = i;
+          }
+        }
+        collision.fPosX = vertices[index].getX();
+        collision.fPosY = vertices[index].getY();
+        collision.fPosZ = vertices[index].getZ();
+        collision.fCovXX = vertices[index].getSigmaX2();
+        collision.fCovXY = vertices[index].getSigmaXY();
+        collision.fCovXZ = vertices[index].getSigmaXZ();
+        collision.fCovYY = vertices[index].getSigmaY2();
+        collision.fCovYZ = vertices[index].getSigmaYZ();
+        collision.fCovZZ = vertices[index].getSigmaZ2();
         collision.fFlags = 0;
-        collision.fChi2 = vertices[0].getChi2();
-        collision.fN = vertices[0].getNContributors();
+        collision.fChi2 = vertices[index].getChi2();
+        collision.fN = vertices[index].getNContributors();
       }
     } else {
       collision.fPosX = 0.f;
