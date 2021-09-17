@@ -587,14 +587,15 @@ int createO2tables(const char* inputFile = "delphes.root",
         collision.fChi2 = 0.01f;
         collision.fN = 0;
       } else {
-        int index=0;
-	int hm=0;
-	for (int i=0; i<n_vertices; i++){
-	      //in case of multiple vertices select the vertex with the higher multiplicities
-	      if (vertices[i].getNContributors()>hm) {
-		      hm = vertices[i].getNContributors(); index=i;
-	             } 
-	      }
+        int index = 0;
+        int hm = 0;
+        for (int i = 0; i < n_vertices; i++) {
+          //in case of multiple vertices select the vertex with the higher multiplicities
+          if (vertices[i].getNContributors() > hm) {
+            hm = vertices[i].getNContributors();
+            index = i;
+          }
+        }
         collision.fPosX = vertices[index].getX();
         collision.fPosY = vertices[index].getY();
         collision.fPosZ = vertices[index].getZ();
@@ -607,7 +608,6 @@ int createO2tables(const char* inputFile = "delphes.root",
         collision.fFlags = 0;
         collision.fChi2 = vertices[index].getChi2();
         collision.fN = vertices[index].getNContributors();
-	     
       }
     } else {
       collision.fPosX = 0.f;
