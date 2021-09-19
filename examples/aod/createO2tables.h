@@ -282,11 +282,13 @@ struct {
   Float_t fTOFChi2 = -999.f;    /// chi2 TOF match (?)
 
   // PID
-  Float_t fTPCSignal = -999.f; /// dE/dX TPC
-  Float_t fTRDSignal = -999.f; /// dE/dX TRD
-  Float_t fTOFSignal = -999.f; /// TOFsignal
-  Float_t fLength = -999.f;    /// Int.Lenght @ TOF
-  Float_t fTOFExpMom = -999.f; /// TOF Expected momentum based on the expected time of pions
+  Float_t fTPCSignal = -999.f;    /// dE/dX TPC
+  Float_t fTRDSignal = -999.f;    /// dE/dX TRD
+  Float_t fTOFSignal = -999.f;    /// TOFsignal
+  Float_t fTrackTime = -999.f;    /// fTrackTime
+  Float_t fTrackTimeRes = -999.f; /// fTrackTimeRes
+  Float_t fLength = -999.f;       /// Int.Lenght @ TOF
+  Float_t fTOFExpMom = -999.f;    /// TOF Expected momentum based on the expected time of pions
 
   // Track extrapolation to EMCAL surface
   Float_t fTrackEtaEMCAL = -999.f; /// Track eta at the EMCAL surface
@@ -349,6 +351,8 @@ void MakeTreeO2trackExtra()
   tTracksExtra->Branch("fTPCSignal", &aod_track.fTPCSignal, "fTPCSignal/F");
   tTracksExtra->Branch("fTRDSignal", &aod_track.fTRDSignal, "fTRDSignal/F");
   tTracksExtra->Branch("fTOFSignal", &aod_track.fTOFSignal, "fTOFSignal/F");
+  tTracksExtra->Branch("fTrackTime", &aod_track.fTrackTime, "fTrackTime/F");
+  tTracksExtra->Branch("fTrackTimeRes", &aod_track.fTrackTimeRes, "fTrackTimeRes/F");
   tTracksExtra->Branch("fLength", &aod_track.fLength, "fLength/F");
   tTracksExtra->Branch("fTOFExpMom", &aod_track.fTOFExpMom, "fTOFExpMom/F");
   tTracksExtra->Branch("fTrackEtaEMCAL", &aod_track.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
@@ -373,7 +377,7 @@ struct {
   Float_t fRICHNsigmaPi = -999.f;    /// Nsigma for Pi
   Float_t fRICHNsigmaKa = -999.f;    /// Nsigma for Ka
   Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
-} rich, frich;                              //! structure to keep RICH info
+} rich, frich;                       //! structure to keep RICH info
 
 void MakeTreeO2rich()
 {

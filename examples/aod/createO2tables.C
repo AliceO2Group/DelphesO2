@@ -419,14 +419,20 @@ int createO2tables(const char* inputFile = "delphes.root",
         }
 
         aod_track.fLength = track->L * 0.1;           // [cm]
+        aod_track.fTOFChi2 = 1.f;                     // Negative if TOF is not available
         aod_track.fTOFSignal = track->TOuter * 1.e12; // [ps]
+        aod_track.fTrackTime = track->TOuter * 1.e9;  // [ns]
+        aod_track.fTrackTimeRes = 200 * 1.e9;         // [ns]
         aod_track.fTOFExpMom = track->P * 0.029979246;
         // if primary push to TOF tracks
         if (fabs(aod_track.fY) < 3. * aod_track.fSigmaY && fabs(aod_track.fZ) < 3. * aod_track.fSigmaZ)
           tof_tracks.push_back(track);
       } else {
+        aod_track.fTOFChi2 = -1.f;
         aod_track.fLength = -999.f;
         aod_track.fTOFSignal = -999.f;
+        aod_track.fTrackTime = -999.f;
+        aod_track.fTrackTimeRes = 2000 * 1.e9;
         aod_track.fTOFExpMom = -999.f;
       }
 
