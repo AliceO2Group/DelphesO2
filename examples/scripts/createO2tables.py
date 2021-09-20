@@ -95,6 +95,8 @@ def main(configuration_file,
     sigmaT0 = opt("sigmaT0")
     tof_radius = opt("tof_radius")
     rich_radius = opt("rich_radius")
+    rich_index = opt("rich_index")
+    forward_rich_index = opt("forward_rich_index")
     minimum_track_radius = opt("minimum_track_radius")
     etaMax = opt("etamax")
     barrel_half_length = opt("barrel_half_length")
@@ -213,6 +215,9 @@ def main(configuration_file,
     msg("  tof_radius           =", tof_radius, "[cm]")
     msg(" --- with RICH configuration", color=bcolors.HEADER)
     msg("  rich_radius          =", rich_radius, "[cm]")
+    msg("  rich_index           =", rich_index)
+    msg(" --- with Forward RICH configuration", color=bcolors.HEADER)
+    msg("  forward_rich_index   =", forward_rich_index)
 
     aod_path = opt("aod_path")
     do_copy("createO2tables.h", in_path=aod_path)
@@ -279,7 +284,13 @@ def main(configuration_file,
     # set rich_radius
     set_config("createO2tables.C",
                "constexpr double rich_radius =", f"{rich_radius}""\;/")
-    # # set acceptance
+    # set forward_rich_index
+    set_config("createO2tables.C",
+               "const double rich_index =", f"{rich_index}""\;/")
+    # set forward_rich_index
+    set_config("createO2tables.C",
+               "const double forward_rich_index =", f"{forward_rich_index}""\;/")
+    # set acceptance
     set_config("propagate.tcl", "set barrel_Acceptance",
                "\{ 0.0 + 1.0 * fabs(eta) < "f"{etaMax}"" \}/")
     # set time resolution
