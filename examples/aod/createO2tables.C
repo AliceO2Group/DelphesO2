@@ -33,6 +33,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TOFLayer.hh"
 #include "RICHdetector.hh"
 #include "ECALdetector.hh"
+#include "PhotonConversion.hh"
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
@@ -187,6 +188,10 @@ int createO2tables(const char* inputFile = "delphes.root",
   // ECAL detector
   o2::delphes::ECALdetector ecal_detector;
 
+  // Photon Conversion Method
+  o2::delphes::PhotonConversion photon_conversion;
+  TLorentzVector photonConv;
+
   // MID detector
   o2::delphes::MIDdetector mid_detector;
   const bool isMID = mid_detector.setup(inputFileAccMuonPID);
@@ -205,6 +210,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2rich();
   MakeTreeO2ecal();
   MakeTreeO2frich();
+  MakeTreeO2photon();
   MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
@@ -314,6 +320,21 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
 
       // fill debug information
+
+     // info for the PhotonConversion
+      std::array<float, 3> pos;
+      float energy = 0;
+      if (photon_conversion.hasPhotonConversion(*particle)) {
+        if (photon_conversion.makeSignal(*particle, photonConv)) {
+          photon.fIndexCollisions = ientry + eventOffset;
+          photon.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+          photon.fPx = photonConv.Px();
+          photon.fPy = photonConv.Py();
+          photon.fPz = photonConv.Pz();
+          FillTree(kA3Photon);
+	}
+      }
+
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
           debugEffDenPart[particle->PID] = new TH1F(Form("denPart%i", particle->PID), Form("denPart%i;#it{p}_{T} (GeV/#it{c})", particle->PID), 1000, 0, 10);

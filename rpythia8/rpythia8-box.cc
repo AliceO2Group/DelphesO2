@@ -73,7 +73,7 @@ int main(int argc, char** argv)
   }
 
   // check valid pdg code
-  if (!pythia.particleData.isParticle(pdg)) {
+  if (!pythia.particleData.isParticle(pdg) ) {
     std::cout << "Error: invalid PDG code \"" << pdg << "\" is not in the particle list" << std::endl;
     return 1;
   }
@@ -85,6 +85,7 @@ int main(int argc, char** argv)
       return 1;
     } else if (abs(pdg) == 22) {
       std::cout << "PDG code \"" << pdg << "\" stands for a gamma" << std::endl;
+
     } else {
       std::cout << "PDG code \"" << pdg << "\" stands for a nucleous" << std::endl;
     }

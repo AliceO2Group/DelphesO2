@@ -33,6 +33,7 @@ enum TreeIndex { // Index of the output trees
   kMID,
   kFTOF,
   kA3ECAL,
+  kA3Photon,
   kTrees
 };
 
@@ -70,7 +71,8 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2frich",
                                   "O2mid",
                                   "O2ftof",
-                                  "O2a3ecal"};
+                                  "O2a3ecal",
+                                  "O2photonconv"};
 
 const TString TreeTitle[kTrees] = {"Collision tree",
                                    "Collision extra",
@@ -103,7 +105,8 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "Forward RICH info",
                                    "MID info",
                                    "Forward TOF info",
-                                   "ALICE3 ECAL"};
+                                   "ALICE3 ECAL",
+                                   "PhotonConversion"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -476,6 +479,35 @@ void MakeTreeO2ftof()
   tFTOF->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
   tFTOF->SetBasketSize("*", fBasketSizeTracks);
 }
+
+
+struct {
+  // ALICE3 PhotonConversion
+  Int_t fIndexCollisions = -1;  /// Collision ID
+  Int_t fIndexMcParticles = -1; /// Particle ID
+  Int_t fIndexTracks = -1;      /// Track ID
+
+  Float_t fPx = -999.f; /// x component of momentum
+  Float_t fPy = -999.f; /// y component of momentum
+  Float_t fPz = -999.f; /// z component of momentum
+
+
+} photon;                     //! structure to keep PhotonConversion info
+
+void MakeTreeO2photon()
+{
+  TTree* tPhoton = CreateTree(kA3Photon);
+  tPhoton->Branch("fIndexCollisions", &photon.fIndexCollisions, "fIndexCollisions/I");
+  tPhoton->Branch("fIndexMcParticles", &photon.fIndexMcParticles, "fIndexMcParticles/I");
+  tPhoton->Branch("fIndexTracks", &photon.fIndexTracks, "fIndexTracks/I");
+  tPhoton->Branch("fPosX", &photon.fPX, "fPX");
+  tPhoton->Branch("fPosY", &photon.fPY, "fPY");
+  tPhoton->Branch("fPosZ", &photon.fPZ, "fPZ");
+  tPhoton->SetBasketSize("*", fBasketSizeTracks);
+}
+
+
+
 
 struct {
   // ALICE3 ECAL data
