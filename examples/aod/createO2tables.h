@@ -285,11 +285,13 @@ struct {
   Float_t fTOFChi2 = -999.f;    /// chi2 TOF match (?)
 
   // PID
-  Float_t fTPCSignal = -999.f; /// dE/dX TPC
-  Float_t fTRDSignal = -999.f; /// dE/dX TRD
-  Float_t fTOFSignal = -999.f; /// TOFsignal
-  Float_t fLength = -999.f;    /// Int.Lenght @ TOF
-  Float_t fTOFExpMom = -999.f; /// TOF Expected momentum based on the expected time of pions
+  Float_t fTPCSignal = -999.f;    /// dE/dX TPC
+  Float_t fTRDSignal = -999.f;    /// dE/dX TRD
+  Float_t fTOFSignal = -999.f;    /// TOFsignal
+  Float_t fTrackTime = -999.f;    /// fTrackTime
+  Float_t fTrackTimeRes = -999.f; /// fTrackTimeRes
+  Float_t fLength = -999.f;       /// Int.Lenght @ TOF
+  Float_t fTOFExpMom = -999.f;    /// TOF Expected momentum based on the expected time of pions
 
   // Track extrapolation to EMCAL surface
   Float_t fTrackEtaEMCAL = -999.f; /// Track eta at the EMCAL surface
@@ -352,6 +354,8 @@ void MakeTreeO2trackExtra()
   tTracksExtra->Branch("fTPCSignal", &aod_track.fTPCSignal, "fTPCSignal/F");
   tTracksExtra->Branch("fTRDSignal", &aod_track.fTRDSignal, "fTRDSignal/F");
   tTracksExtra->Branch("fTOFSignal", &aod_track.fTOFSignal, "fTOFSignal/F");
+  tTracksExtra->Branch("fTrackTime", &aod_track.fTrackTime, "fTrackTime/F");
+  tTracksExtra->Branch("fTrackTimeRes", &aod_track.fTrackTimeRes, "fTrackTimeRes/F");
   tTracksExtra->Branch("fLength", &aod_track.fLength, "fLength/F");
   tTracksExtra->Branch("fTOFExpMom", &aod_track.fTOFExpMom, "fTOFExpMom/F");
   tTracksExtra->Branch("fTrackEtaEMCAL", &aod_track.fTrackEtaEMCAL, "fTrackEtaEMCAL/F");
@@ -376,7 +380,7 @@ struct {
   Float_t fRICHNsigmaPi = -999.f;    /// Nsigma for Pi
   Float_t fRICHNsigmaKa = -999.f;    /// Nsigma for Ka
   Float_t fRICHNsigmaPr = -999.f;    /// Nsigma for Pr
-} rich, frich;                              //! structure to keep RICH info
+} rich, frich;                       //! structure to keep RICH info
 
 void MakeTreeO2rich()
 {
@@ -403,18 +407,18 @@ void MakeTreeO2frich()
   TTree* tFRICH = CreateTree(kFRICH);
   tFRICH->Branch("fIndexCollisions", &frich.fIndexCollisions, "fIndexCollisions/I");
   tFRICH->Branch("fIndexTracks", &frich.fIndexTracks, "fIndexTracks/I");
-  tFRICH->Branch("fRICHSignal", &frich.fRICHSignal, "fRICHSignal/F");
-  tFRICH->Branch("fRICHSignalError", &frich.fRICHSignalError, "fRICHSignalError/F");
-  tFRICH->Branch("fRICHDeltaEl", &frich.fRICHDeltaEl, "fRICHDeltaEl/F");
-  tFRICH->Branch("fRICHDeltaMu", &frich.fRICHDeltaMu, "fRICHDeltaMu/F");
-  tFRICH->Branch("fRICHDeltaPi", &frich.fRICHDeltaPi, "fRICHDeltaPi/F");
-  tFRICH->Branch("fRICHDeltaKa", &frich.fRICHDeltaKa, "fRICHDeltaKa/F");
-  tFRICH->Branch("fRICHDeltaPr", &frich.fRICHDeltaPr, "fRICHDeltaPr/F");
-  tFRICH->Branch("fRICHNsigmaEl", &frich.fRICHNsigmaEl, "fRICHNsigmaEl/F");
-  tFRICH->Branch("fRICHNsigmaMu", &frich.fRICHNsigmaMu, "fRICHNsigmaMu/F");
-  tFRICH->Branch("fRICHNsigmaPi", &frich.fRICHNsigmaPi, "fRICHNsigmaPi/F");
-  tFRICH->Branch("fRICHNsigmaKa", &frich.fRICHNsigmaKa, "fRICHNsigmaKa/F");
-  tFRICH->Branch("fRICHNsigmaPr", &frich.fRICHNsigmaPr, "fRICHNsigmaPr/F");
+  tFRICH->Branch("fFRICHSignal", &frich.fRICHSignal, "fFRICHSignal/F");
+  tFRICH->Branch("fFRICHSignalError", &frich.fRICHSignalError, "fFRICHSignalError/F");
+  tFRICH->Branch("fFRICHDeltaEl", &frich.fRICHDeltaEl, "fFRICHDeltaEl/F");
+  tFRICH->Branch("fFRICHDeltaMu", &frich.fRICHDeltaMu, "fFRICHDeltaMu/F");
+  tFRICH->Branch("fFRICHDeltaPi", &frich.fRICHDeltaPi, "fFRICHDeltaPi/F");
+  tFRICH->Branch("fFRICHDeltaKa", &frich.fRICHDeltaKa, "fFRICHDeltaKa/F");
+  tFRICH->Branch("fFRICHDeltaPr", &frich.fRICHDeltaPr, "fFRICHDeltaPr/F");
+  tFRICH->Branch("fFRICHNsigmaEl", &frich.fRICHNsigmaEl, "fFRICHNsigmaEl/F");
+  tFRICH->Branch("fFRICHNsigmaMu", &frich.fRICHNsigmaMu, "fFRICHNsigmaMu/F");
+  tFRICH->Branch("fFRICHNsigmaPi", &frich.fRICHNsigmaPi, "fFRICHNsigmaPi/F");
+  tFRICH->Branch("fFRICHNsigmaKa", &frich.fRICHNsigmaKa, "fFRICHNsigmaKa/F");
+  tFRICH->Branch("fFRICHNsigmaPr", &frich.fRICHNsigmaPr, "fFRICHNsigmaPr/F");
   tFRICH->SetBasketSize("*", fBasketSizeTracks);
 }
 

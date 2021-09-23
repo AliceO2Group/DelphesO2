@@ -41,10 +41,11 @@ R__LOAD_LIBRARY(libDelphesO2)
 // Detector parameters
 const double Bz = 5.e-1;
 // TOF
-const double tof_radius = 100.;
-const double tof_length = 200.;
-const double tof_sigmat = 0.020;
-const double tof_sigmat0 = 0.20;
+constexpr double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
+const double tof_length = 200.;     // [cm] Length of the TOF detector (used to compute acceptance)
+const double tof_sigmat = 0.02;     // [ns] Resolution of the TOF detector
+const double tof_sigmat0 = 0.2;     // [ns] Time spread of the vertex
+const char* tof_mismatch_file = "tofMM.root";
 // Forward TOF
 const double forward_tof_radius = 100.;   // [cm] Radius of the Forward TOF detector (used to compute acceptance)
 const double forward_tof_radius_in = 10.; // [cm] Inner radius of the Forward TOF detector (used to compute acceptance)
@@ -52,7 +53,7 @@ const double forward_tof_length = 200.;   // [cm] Length of the Forward TOF dete
 const double forward_tof_sigmat = 0.02;   // [ns] Resolution of the Forward TOF detector
 const double forward_tof_sigmat0 = 0.2;   // [ns] Time spread of the vertex
 // RICH
-const double rich_radius = 100.;        // [cm] Radius of the RICH detector (used to compute acceptance)
+constexpr double rich_radius = 100.;    // [cm] Radius of the RICH detector (used to compute acceptance)
 const double rich_length = 200.;        // [cm] Length of the RICH detector (used to compute acceptance)
 const double rich_index = 1.03;         // Refraction index of the RICH detector
 const double rich_radiator_length = 2.; // Radiator length of the RICH detector
@@ -73,6 +74,7 @@ const char* inputFileAccMuonPID = "muonAccEffPID.root";
 constexpr bool do_vertexing = true;  // Vertexing with the O2
 constexpr bool enable_nuclei = true;
 constexpr bool debug_qa = false;     // Debug QA histograms
+constexpr int tof_mismatch = 0;      // Flag to configure the TOF mismatch running mode: 0 off, 1 create, 2 use
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -143,6 +145,19 @@ int createO2tables(const char* inputFile = "delphes.root",
   // TOF layer
   o2::delphes::TOFLayer tof_layer;
   tof_layer.setup(tof_radius, tof_length, tof_sigmat, tof_sigmat0);
+  TH1F* hTOFMismatchTemplate = nullptr;
+  if constexpr (tof_mismatch == 1) { // Create mode
+    hTOFMismatchTemplate = new TH1F("hTOFMismatchTemplate", "", 3000., -5., 25.);
+  } else if (tof_mismatch == 2) { // User mode
+    TFile f(tof_mismatch_file, "READ");
+    if (!f.IsOpen()) {
+      Printf("Did not find file for input TOF mismatch distribution");
+      return 1;
+    }
+    f.GetObject("hTOFMismatchTemplate", hTOFMismatchTemplate);
+    hTOFMismatchTemplate->SetDirectory(0);
+    f.Close();
+  }
 
   // Forward TOF layer
   o2::delphes::TOFLayer forward_tof_layer;
@@ -339,7 +354,7 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
 
       // get track and corresponding particle
-      auto track = (Track*)tracks->At(itrack);
+      const auto track = (Track*)tracks->At(itrack);
       auto particle = (GenParticle*)track->Particle.GetObject();
 
       O2Track o2track; // tracks in internal O2 format
@@ -406,15 +421,42 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       // check if has hit the TOF
       if (tof_layer.hasTOF(*track)) {
+
+        if constexpr (tof_mismatch != 0) {
+          const auto L = std::sqrt(track->XOuter * track->XOuter + track->YOuter * track->YOuter + track->ZOuter * track->ZOuter);
+          if constexpr (tof_mismatch == 1) { // Created mode: fill output mismatch template
+            hTOFMismatchTemplate->Fill(track->TOuter * 1.e9 - L / 299.79246);
+          } else if constexpr (tof_mismatch == 2) { // User mode: do some random mismatch
+            auto lutEntry = smearer.getLUTEntry(track->PID, dNdEta, 0., o2track.getEta(), 1. / o2track.getQ2Pt());
+            if (lutEntry && lutEntry->valid) {  // Check that LUT entry is valid
+              if constexpr (tof_radius < 50.) { // Inner TOF
+                if (gRandom->Uniform() < (1.f - lutEntry->itof)) {
+                  track->TOuter = (hTOFMismatchTemplate->GetRandom() + L / 299.79246) * 1.e-9;
+                }
+              } else { // Outer TOF
+                if (gRandom->Uniform() < (1.f - lutEntry->otof)) {
+                  track->TOuter = (hTOFMismatchTemplate->GetRandom() + L / 299.79246) * 1.e-9;
+                }
+              }
+            }
+          }
+        }
+
         aod_track.fLength = track->L * 0.1;           // [cm]
+        aod_track.fTOFChi2 = 1.f;                     // Negative if TOF is not available
         aod_track.fTOFSignal = track->TOuter * 1.e12; // [ps]
+        aod_track.fTrackTime = track->TOuter * 1.e9;  // [ns]
+        aod_track.fTrackTimeRes = 200 * 1.e9;         // [ns]
         aod_track.fTOFExpMom = track->P * 0.029979246;
         // if primary push to TOF tracks
         if (fabs(aod_track.fY) < 3. * aod_track.fSigmaY && fabs(aod_track.fZ) < 3. * aod_track.fSigmaZ)
           tof_tracks.push_back(track);
       } else {
+        aod_track.fTOFChi2 = -1.f;
         aod_track.fLength = -999.f;
         aod_track.fTOFSignal = -999.f;
+        aod_track.fTrackTime = -999.f;
+        aod_track.fTrackTimeRes = 2000 * 1.e9;
         aod_track.fTOFExpMom = -999.f;
       }
 
@@ -559,7 +601,6 @@ int createO2tables(const char* inputFile = "delphes.root",
                                               v2tRefs,
                                               gsl::span<const o2::MCCompLabel>{lblTracks},
                                               lblVtx);
-      // Printf("Found %i vertices with %zu tracks", n_vertices, tracks_for_vertexing.size());
       if (n_vertices == 0) {
         collision.fPosX = 0.f;
         collision.fPosY = 0.f;
@@ -574,18 +615,27 @@ int createO2tables(const char* inputFile = "delphes.root",
         collision.fChi2 = 0.01f;
         collision.fN = 0;
       } else {
-        collision.fPosX = vertices[0].getX();
-        collision.fPosY = vertices[0].getY();
-        collision.fPosZ = vertices[0].getZ();
-        collision.fCovXX = vertices[0].getSigmaX2();
-        collision.fCovXY = vertices[0].getSigmaXY();
-        collision.fCovXZ = vertices[0].getSigmaXZ();
-        collision.fCovYY = vertices[0].getSigmaY2();
-        collision.fCovYZ = vertices[0].getSigmaYZ();
-        collision.fCovZZ = vertices[0].getSigmaZ2();
+        int index = 0;
+        int hm = 0;
+        for (int i = 0; i < n_vertices; i++) {
+          //in case of multiple vertices select the vertex with the higher multiplicities
+          if (vertices[i].getNContributors() > hm) {
+            hm = vertices[i].getNContributors();
+            index = i;
+          }
+        }
+        collision.fPosX = vertices[index].getX();
+        collision.fPosY = vertices[index].getY();
+        collision.fPosZ = vertices[index].getZ();
+        collision.fCovXX = vertices[index].getSigmaX2();
+        collision.fCovXY = vertices[index].getSigmaXY();
+        collision.fCovXZ = vertices[index].getSigmaXZ();
+        collision.fCovYY = vertices[index].getSigmaY2();
+        collision.fCovYZ = vertices[index].getSigmaYZ();
+        collision.fCovZZ = vertices[index].getSigmaZ2();
         collision.fFlags = 0;
-        collision.fChi2 = vertices[0].getChi2();
-        collision.fN = vertices[0].getNContributors();
+        collision.fChi2 = vertices[index].getChi2();
+        collision.fN = vertices[index].getNContributors();
       }
     } else {
       collision.fPosX = 0.f;
@@ -655,5 +705,9 @@ int createO2tables(const char* inputFile = "delphes.root",
   fout->Close();
 
   Printf("AOD written!");
+  if constexpr (tof_mismatch == 1) {
+    Printf("Writing the template for TOF mismatch");
+    hTOFMismatchTemplate->SaveAs(Form("tof_mismatch_template_%s.root", out_dir.Data()));
+  }
   return 0;
 }
