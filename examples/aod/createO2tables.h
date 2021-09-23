@@ -483,12 +483,12 @@ struct {
   Int_t fIndexMcParticles = -1; /// Particle ID
   Int_t fIndexTracks = -1;      /// Track ID
 
-  Double_t fPx = -1.e10; /// px
-  Double_t fPy = -1.e10; /// py
-  Double_t fPz = -1.e10; /// pz
-  Double_t fE  = -1.e10; /// E
-  Float_t fPosZ   = -999.f;   /// Position in Z
-  Float_t fPosPhi = -999.f;   /// Position in phi
+  Double_t fPx = -1.e10;    /// px
+  Double_t fPy = -1.e10;    /// py
+  Double_t fPz = -1.e10;    /// pz
+  Double_t fE = -1.e10;     /// E
+  Float_t fPosZ = -999.f;   /// Position in Z
+  Float_t fPosPhi = -999.f; /// Position in phi
 } ecal;                     //! structure to keep ECAL info
 
 void MakeTreeO2ecal()
@@ -497,11 +497,11 @@ void MakeTreeO2ecal()
   tECAL->Branch("fIndexCollisions", &ecal.fIndexCollisions, "fIndexCollisions/I");
   tECAL->Branch("fIndexMcParticles", &ecal.fIndexMcParticles, "fIndexMcParticles/I");
   tECAL->Branch("fIndexTracks", &ecal.fIndexTracks, "fIndexTracks/I");
-  tECAL->Branch("fPx"    , &ecal.fPx    , "fPx/D");
-  tECAL->Branch("fPy"    , &ecal.fPy    , "fPy/D");
-  tECAL->Branch("fPz"    , &ecal.fPz    , "fPz/D");
-  tECAL->Branch("fE"     , &ecal.fE     , "fE/D" );
-  tECAL->Branch("fPosZ"  , &ecal.fPosZ  , "fPosZ/F");
+  tECAL->Branch("fPx", &ecal.fPx, "fPx/D");
+  tECAL->Branch("fPy", &ecal.fPy, "fPy/D");
+  tECAL->Branch("fPz", &ecal.fPz, "fPz/D");
+  tECAL->Branch("fE", &ecal.fE, "fE/D");
+  tECAL->Branch("fPosZ", &ecal.fPosZ, "fPosZ/F");
   tECAL->Branch("fPosPhi", &ecal.fPosPhi, "fPosPhi/F");
   tECAL->SetBasketSize("*", fBasketSizeTracks);
 }

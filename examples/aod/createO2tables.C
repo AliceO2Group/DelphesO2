@@ -71,10 +71,10 @@ const double forward_rich_sigma = 7.e-3;        // Resolution of the Forward RIC
 const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
-constexpr bool do_vertexing = true;  // Vertexing with the O2
+constexpr bool do_vertexing = true; // Vertexing with the O2
 constexpr bool enable_nuclei = true;
-constexpr bool debug_qa = false;     // Debug QA histograms
-constexpr int tof_mismatch = 0;      // Flag to configure the TOF mismatch running mode: 0 off, 1 create, 2 use
+constexpr bool debug_qa = false; // Debug QA histograms
+constexpr int tof_mismatch = 0;  // Flag to configure the TOF mismatch running mode: 0 off, 1 create, 2 use
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -295,18 +295,18 @@ int createO2tables(const char* inputFile = "delphes.root",
       float posZ, posPhi;
       TLorentzVector pECAL;
       if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
-	printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g)\n",
-	       particle->PID,particle->Px,particle->Py,particle->Pz,particle->E);
-	printf("ECAL p=(%g,%g,%g,%g)\n",
-	       pECAL.Px(),pECAL.Py(),pECAL.Pz(),pECAL.E());
-        ecal.fIndexCollisions  = ientry + eventOffset;
+        printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g)\n",
+               particle->PID, particle->Px, particle->Py, particle->Pz, particle->E);
+        printf("ECAL p=(%g,%g,%g,%g)\n",
+               pECAL.Px(), pECAL.Py(), pECAL.Pz(), pECAL.E());
+        ecal.fIndexCollisions = ientry + eventOffset;
         ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
-	ecal.fPx     = pECAL.Px();
-	ecal.fPy     = pECAL.Py();
-	ecal.fPz     = pECAL.Pz();
-	ecal.fE      = pECAL.E();
-	ecal.fPosZ   = 0.f;
-	ecal.fPosPhi = 0.f;
+        ecal.fPx = pECAL.Px();
+        ecal.fPy = pECAL.Py();
+        ecal.fPz = pECAL.Pz();
+        ecal.fE = pECAL.E();
+        ecal.fPosZ = 0.f;
+        ecal.fPosPhi = 0.f;
         FillTree(kA3ECAL);
       }
       if constexpr (debug_qa) {
