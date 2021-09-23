@@ -39,12 +39,12 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "createO2tables.h"
 
 // Detector parameters
-const double Bz = 0.2; // [T]
+const double Bz = 5.e-1;
 // TOF
-const double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
-const double tof_length = 200.; // [cm] Length of the TOF detector (used to compute acceptance)
-const double tof_sigmat = 0.02; // [ns] Resolution of the TOF detector
-const double tof_sigmat0 = 0.2; // [ns] Time spread of the vertex
+const double tof_radius = 100.;
+const double tof_length = 200.;
+const double tof_sigmat = 0.020;
+const double tof_sigmat0 = 0.20;
 // Forward TOF
 const double forward_tof_radius = 100.;   // [cm] Radius of the Forward TOF detector (used to compute acceptance)
 const double forward_tof_radius_in = 10.; // [cm] Inner radius of the Forward TOF detector (used to compute acceptance)
@@ -71,7 +71,7 @@ const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
 constexpr bool do_vertexing = true;  // Vertexing with the O2
-constexpr bool enable_nuclei = true; // Nuclei LUTs
+constexpr bool enable_nuclei = true;
 constexpr bool debug_qa = false;     // Debug QA histograms
 
 int createO2tables(const char* inputFile = "delphes.root",
@@ -277,15 +277,21 @@ int createO2tables(const char* inputFile = "delphes.root",
       FillTree(kMcParticle);
 
       // info for the ECAL
-      std::array<float, 3> pos;
-      float energy = 0;
-      if (ecal_detector.makeSignal(*particle, pos, energy)) {
-        ecal.fIndexCollisions = ientry + eventOffset;
+      float posZ, posPhi;
+      TLorentzVector pECAL;
+      if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
+	printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g)\n",
+	       particle->PID,particle->Px,particle->Py,particle->Pz,particle->E);
+	printf("ECAL p=(%g,%g,%g,%g)\n",
+	       pECAL.Px(),pECAL.Py(),pECAL.Pz(),pECAL.E());
+        ecal.fIndexCollisions  = ientry + eventOffset;
         ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
-        ecal.fEnergy = energy;
-        ecal.fPosX = pos[0];
-        ecal.fPosY = pos[1];
-        ecal.fPosZ = pos[2];
+	ecal.fPx     = pECAL.Px();
+	ecal.fPy     = pECAL.Py();
+	ecal.fPz     = pECAL.Pz();
+	ecal.fE      = pECAL.E();
+	ecal.fPosZ   = 0.f;
+	ecal.fPosPhi = 0.f;
         FillTree(kA3ECAL);
       }
       if constexpr (debug_qa) {

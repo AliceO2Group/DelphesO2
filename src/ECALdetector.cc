@@ -41,15 +41,25 @@ namespace o2
     }
 
     /*****************************************************************/
-    // bool ECALdetector::makeSignal(const GenParticle& particle, std::array<float, 3>& pos, float& energy) const
-    bool ECALdetector::makeSignal(const GenParticle& particle, TLorentzVector &pECAL, float & posZ, float & posPhi)
+    bool ECALdetector::makeSignal(const GenParticle& particle,
+				  TLorentzVector &p4ECAL,
+				  float & posZ,
+				  float & posPhi)
     {
+      // Simulate fast response of ECAL to photons:
+      // take generated particle as input and calculate its smeared 4-momentum p4ECAL
+      // and hit coordinates posZ, posPhi
+      
       const int pid = particle.PID;
-      if (pid != 22) {
+      if (pid != 22) { // only photons are treated so far. e+- and MIPs will be added later.
 	return false;
       }
 
       TLorentzVector p4True = particle.P4(); // true 4-momentum
+      if (TMath::Abs(p4True.Eta())>4) { // ECAL acceptance is rougly limited by |eta|<4
+	return false;
+      }
+      
       Float_t vtX = particle.X; // particle vertex X
       Float_t vtY = particle.Y; // particle vertex Y
       Float_t vtZ = particle.Z; // particle vertex Z
@@ -58,8 +68,8 @@ namespace o2
       posZ   = mRadius * particle.CtgTheta; // z-coodrinate  of a photon hit
 
       Double_t eSmeared = smearPhotonE(particle.E); // smeared photon energy
-      TLorentzVector p4Smeared = smearPhotonP4(p4True);
-
+      p4ECAL = smearPhotonP4(p4True);
+      
       return true;
     }
 
