@@ -322,8 +322,9 @@ int createO2tables(const char* inputFile = "delphes.root",
       // fill debug information
 
      // info for the PhotonConversion
-      std::array<float, 3> pos;
-      float energy = 0;
+      //      std::array<float, 3> pos;
+      TLorentzVector photonConv;
+      //float energy = 0;
       if (photon_conversion.hasPhotonConversion(*particle)) {
         if (photon_conversion.makeSignal(*particle, photonConv)) {
           photon.fIndexCollisions = ientry + eventOffset;
