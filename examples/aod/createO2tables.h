@@ -522,9 +522,13 @@ struct {
   Float_t fPosZ = -999.f;   /// Position in Z
   Float_t fPosPhi = -999.f; /// Position in phi
 } ecal;                     //! structure to keep ECAL info
+=======
+} photon;                     //! structure to keep photon conv info
+>>>>>>> fixing some errors
 
-void MakeTreeO2ecal()
+void MakeTreeO2photon()
 {
+<<<<<<< HEAD
   TTree* tECAL = CreateTree(kA3ECAL);
   tECAL->Branch("fIndexCollisions", &ecal.fIndexCollisions, "fIndexCollisions/I");
   tECAL->Branch("fIndexMcParticles", &ecal.fIndexMcParticles, "fIndexMcParticles/I");
@@ -536,6 +540,17 @@ void MakeTreeO2ecal()
   tECAL->Branch("fPosZ", &ecal.fPosZ, "fPosZ/F");
   tECAL->Branch("fPosPhi", &ecal.fPosPhi, "fPosPhi/F");
   tECAL->SetBasketSize("*", fBasketSizeTracks);
+=======
+  TTree* tPhoton = CreateTree(kA3Photon);
+  tPhoton->Branch("fIndexCollisions", &photon.fIndexCollisions, "fIndexCollisions/I");
+  tPhoton->Branch("fIndexMcParticles", &photon.fIndexMcParticles, "fIndexMcParticles/I");
+  tPhoton->Branch("fIndexTracks", &photon.fIndexTracks, "fIndexTracks/I");
+  tPhoton->Branch("fEnergy", &photon.fEnergy, "fEnergy");
+  tPhoton->Branch("fPosX", &photon.fPX, "fPX");
+  tPhoton->Branch("fPosY", &photon.fPY, "fPY");
+  tPhoton->Branch("fPosZ", &photon.fPZ, "fPZ");
+  tPhoton->SetBasketSize("*", fBasketSizeTracks);
+>>>>>>> fixing some errors
 }
 
 struct {
