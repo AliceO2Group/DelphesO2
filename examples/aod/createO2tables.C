@@ -34,8 +34,10 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "RICHdetector.hh"
 #include "ECALdetector.hh"
 #include "PhotonConversion.hh"
+#include "PreShower.hh"
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
+
 
 #include "createO2tables.h"
 
@@ -192,6 +194,10 @@ int createO2tables(const char* inputFile = "delphes.root",
   o2::delphes::PhotonConversion photon_conversion;
   TLorentzVector photonConv;
 
+  // PreShower detector
+  o2::delphes::PreShower pre_shower;
+  pre_shower.setup();
+
   // MID detector
   o2::delphes::MIDdetector mid_detector;
   const bool isMID = mid_detector.setup(inputFileAccMuonPID);
@@ -211,6 +217,7 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2ecal();
   MakeTreeO2frich();
   MakeTreeO2photon();
+  MakeTreeO2pres();
   MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
@@ -333,8 +340,9 @@ int createO2tables(const char* inputFile = "delphes.root",
           fphoton.fPy = photonConv.Py();
           fphoton.fPz = photonConv.Pz();
           FillTree(kA3Photon);
-	}
+      	}
       }
+
 
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
@@ -535,6 +543,16 @@ int createO2tables(const char* inputFile = "delphes.root",
         ftof_tracks.push_back(track);
         ftof_tracks_indices.push_back(std::pair<int, int>{ientry + eventOffset, fTrackCounter});
       }
+
+
+      // check if has Preshower
+      if(pre_shower.hasPreShower(*track)){
+	pres.fIndexCollisions = ientry + eventOffset;
+	pres.fIndexTracks = fTrackCounter; // Index in the Track table
+	pres.fPresIsElectron = pre_shower.isElectron(*track, multiplicity);
+	FillTree(kPres);
+      }
+
 
       // check if it is within the acceptance of the MID
       if (isMID) {
