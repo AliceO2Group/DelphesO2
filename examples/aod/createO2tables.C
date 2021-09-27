@@ -249,6 +249,7 @@ int createO2tables(const char* inputFile = "delphes.root",
     treeReader->ReadEntry(ientry);
     constexpr float multEtaRange = 2.f; // Range in eta to count the charged particles
     float dNdEta = 0.f;                 // Charged particle multiplicity to use in the efficiency evaluation
+    TLorentzVector pECAL; // 4-momentum of photon in ECAL
 
     for (Int_t iparticle = 0; iparticle < particles->GetEntries(); ++iparticle) { // Loop over particles
       auto particle = (GenParticle*)particles->At(iparticle);
@@ -293,10 +294,9 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       // info for the ECAL
       float posZ, posPhi;
-      TLorentzVector pECAL;
       if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
-        printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g)\n",
-               particle->PID, particle->Px, particle->Py, particle->Pz, particle->E);
+        printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g), posZ=%f, posPhi=%f\n",
+               particle->PID, particle->Px, particle->Py, particle->Pz, particle->E,posZ,posPhi);
         printf("ECAL p=(%g,%g,%g,%g)\n",
                pECAL.Px(), pECAL.Py(), pECAL.Pz(), pECAL.E());
         ecal.fIndexCollisions = ientry + eventOffset;
@@ -304,9 +304,9 @@ int createO2tables(const char* inputFile = "delphes.root",
         ecal.fPx = pECAL.Px();
         ecal.fPy = pECAL.Py();
         ecal.fPz = pECAL.Pz();
-        ecal.fE = pECAL.E();
-        ecal.fPosZ = 0.f;
-        ecal.fPosPhi = 0.f;
+        ecal.fE  = pECAL.E();
+        ecal.fPosZ   = posZ;
+        ecal.fPosPhi = posPhi;
         FillTree(kA3ECAL);
       }
       if constexpr (debug_qa) {

@@ -64,8 +64,12 @@ bool ECALdetector::makeSignal(const GenParticle& particle,
   Float_t vtY = particle.Y; // particle vertex Y
   Float_t vtZ = particle.Z; // particle vertex Z
 
-  posPhi = particle.Phi;              // azimuth angle of a photon hit
-  posZ = mRadius * particle.CtgTheta; // z-coodrinate  of a photon hit
+  posPhi = p4True.Phi();         // azimuth angle of a photon hit
+  posZ   = -1e6;
+  Double_t tanTheta = TMath::Tan(p4True.Theta());
+  if (tanTheta != 0.) {
+    posZ   = mRadius / tanTheta; // z-coodrinate  of a photon hit
+  }
 
   Double_t eSmeared = smearPhotonE(particle.E); // smeared photon energy
   p4ECAL = smearPhotonP4(p4True);

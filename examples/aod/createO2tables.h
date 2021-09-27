@@ -486,7 +486,7 @@ struct {
   Double_t fPx = -1.e10;    /// px
   Double_t fPy = -1.e10;    /// py
   Double_t fPz = -1.e10;    /// pz
-  Double_t fE = -1.e10;     /// E
+  Double_t fE  = -1.e10;     /// E
   Float_t fPosZ = -999.f;   /// Position in Z
   Float_t fPosPhi = -999.f; /// Position in phi
 } ecal;                     //! structure to keep ECAL info
