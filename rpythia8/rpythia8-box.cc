@@ -79,6 +79,7 @@ int main(int argc, char** argv)
   }
   if (!pythia.particleData.isLepton(pdg) &&
       !pythia.particleData.isHadron(pdg) &&
+      !pythia.particleData.isGamma(pdg) &&
       !pythia.particleData.isResonance(pdg)) {
     if (abs(pdg) < 1000000000) {
       std::cout << "Error: invalid PDG code \"" << pdg << "\"" << std::endl;

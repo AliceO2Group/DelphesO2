@@ -6,6 +6,7 @@ set(SOURCES
   TrackUtils.cc
   TOFLayer.cc
   RICHdetector.cc
+  ECALdetector.cc
   MIDdetector.cc
   PreShower.cc
   )
@@ -16,6 +17,7 @@ set(HEADERS
   TrackUtils.hh
   TOFLayer.hh
   RICHdetector.hh
+  ECALdetector.hh
   MIDdetector.hh 
   PreShower.hh 
   )
