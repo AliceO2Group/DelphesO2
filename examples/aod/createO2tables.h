@@ -59,7 +59,7 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2v0",
                                   "O2cascade",
                                   "O2tof",
-				  "O2photonconv",
+                                  "O2photonconv",
                                   "O2mcparticle",
                                   "O2mccollision",
                                   "O2mctracklabel",
@@ -71,7 +71,7 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2hmpid",
                                   "O2rich",
                                   "O2frich",
-				  "O2pres",
+                                  "O2pres",
                                   "O2mid",
                                   "O2ftof",
                                   "O2a3ecal",
@@ -107,7 +107,7 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "HMPID info",
                                    "RICH info",
                                    "Forward RICH info",
-				   "Preshower info",
+                                   "Preshower info",
                                    "MID info",
                                    "Forward TOF info",
                                    "ALICE3 ECAL",
@@ -432,10 +432,10 @@ void MakeTreeO2frich()
 
 struct {
   // Preshower data
-  Int_t fIndexCollisions = -1; /// Collision ID
-  Int_t fIndexTracks = -1;     /// Track ID
-  Bool_t fPresIsElectron = kFALSE;  /// Preshower response for the electron hypothesis
-} pres;                         //! structure to keep preshower info
+  Int_t fIndexCollisions = -1;     /// Collision ID
+  Int_t fIndexTracks = -1;         /// Track ID
+  Bool_t fPresIsElectron = kFALSE; /// Preshower response for the electron hypothesis
+} pres;                            //! structure to keep preshower info
 
 void MakeTreeO2pres()
 {
@@ -501,7 +501,6 @@ void MakeTreeO2ftof()
   tFTOF->SetBasketSize("*", fBasketSizeTracks);
 }
 
-
 struct {
   // ALICE3 PhotonConversion
   Int_t fIndexCollisions = -1;  /// Collision ID
@@ -511,7 +510,6 @@ struct {
   Float_t fPx = -999.f; /// x component of momentum
   Float_t fPy = -999.f; /// y component of momentum
   Float_t fPz = -999.f; /// z component of momentum
-
 
 } photon;                     //! structure to keep PhotonConversion info
 

@@ -38,7 +38,6 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
-
 #include "createO2tables.h"
 
 // Detector parameters
@@ -306,6 +305,7 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
       FillTree(kMcParticle);
 
+<<<<<<< HEAD
       // info for the ECAL
       if constexpr (enable_ecal) {
         float posZ, posPhi;
@@ -332,6 +332,10 @@ int createO2tables(const char* inputFile = "delphes.root",
       //      std::array<float, 3> pos;
       TLorentzVector photonConv;
       //float energy = 0;
+=======
+      // info for the PhotonConversion
+
+>>>>>>> Suggestions from review followed
       if (photon_conversion.hasPhotonConversion(*particle)) {
         if (photon_conversion.makeSignal(*particle, photonConv)) {
           fphoton.fIndexCollisions = ientry + eventOffset;
@@ -340,9 +344,8 @@ int createO2tables(const char* inputFile = "delphes.root",
           fphoton.fPy = photonConv.Py();
           fphoton.fPz = photonConv.Pz();
           FillTree(kA3Photon);
-      	}
+        }
       }
-
 
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
@@ -544,15 +547,13 @@ int createO2tables(const char* inputFile = "delphes.root",
         ftof_tracks_indices.push_back(std::pair<int, int>{ientry + eventOffset, fTrackCounter});
       }
 
-
       // check if has Preshower
-      if(pre_shower.hasPreShower(*track)){
-	pres.fIndexCollisions = ientry + eventOffset;
-	pres.fIndexTracks = fTrackCounter; // Index in the Track table
-	pres.fPresIsElectron = pre_shower.isElectron(*track, multiplicity);
-	FillTree(kPres);
+      if (pre_shower.hasPreShower(*track)) {
+        pres.fIndexCollisions = ientry + eventOffset;
+        pres.fIndexTracks = fTrackCounter; // Index in the Track table
+        pres.fPresIsElectron = pre_shower.isElectron(*track, multiplicity);
+        FillTree(kPres);
       }
-
 
       // check if it is within the acceptance of the MID
       if (isMID) {

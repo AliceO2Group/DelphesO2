@@ -15,14 +15,7 @@ int main(int argc, char** argv)
   namespace po = boost::program_options;
   po::options_description desc("Options");
   try {
-    desc.add_options()
-      ("help", "Print help messages")
-      ("nevents,n"      , po::value<int>(&nevents)->default_value(10), "Number of events")
-      ("config,c"       , po::value<std::string>(&config), "Configuration file")
-      ("output,o"       , po::value<std::string>(&output)->default_value("pythia8.hepmc"), "Output HepMC file")
-      ("inject-config"  , po::value<std::string>(&inject_config), "Injected event configuration file")
-      ("inject-nevents" , po::value<int>(&inject_nevents)->default_value(1), "Number of events to inject")
-      ("seed"           , po::value<int>(&seed)->default_value(1), "initial seed");
+    desc.add_options()("help", "Print help messages")("nevents,n", po::value<int>(&nevents)->default_value(10), "Number of events")("config,c", po::value<std::string>(&config), "Configuration file")("output,o", po::value<std::string>(&output)->default_value("pythia8.hepmc"), "Output HepMC file")("inject-config", po::value<std::string>(&inject_config), "Injected event configuration file")("inject-nevents", po::value<int>(&inject_nevents)->default_value(1), "Number of events to inject")("seed", po::value<int>(&seed)->default_value(1), "initial seed");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);

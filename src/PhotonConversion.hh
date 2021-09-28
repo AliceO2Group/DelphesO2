@@ -8,31 +8,28 @@
 
 namespace o2
 {
-  namespace delphes
-  {
+namespace delphes
+{
 
-    class PhotonConversion
-    {
+class PhotonConversion
+{
 
-    public:
-      PhotonConversion() = default;
-      ~PhotonConversion() = default;
+ public:
+  PhotonConversion() = default;
+  ~PhotonConversion() = default;
 
-      void setup();
-      bool hasPhotonConversion(const GenParticle& particle) const;
-      bool makeSignal(const GenParticle& particle, TLorentzVector &pConv);
+  void setup();
+  bool hasPhotonConversion(const GenParticle& particle) const;
+  bool makeSignal(const GenParticle& particle, TLorentzVector& pConv);
 
-    protected:
-     
-      TLorentzVector smearPhotonP(const GenParticle&particle);
+ protected:
+  TLorentzVector smearPhotonP(const GenParticle& particle);
 
+  float sigmaPt0 = 0.0284;  // parameter  sigma0 for momentum resolution
+  float sigmaPt1 = 0.00577; // parameter sigma1 for momentum resolution
+};
 
-      float sigmaPt0   = 0.0284; // parameter  sigma0 for momentum resolution
-      float sigmaPt1   = 0.00577;  // parameter sigma1 for momentum resolution
-      
-    };
-
-  } // namespace delphes
+} // namespace delphes
 } // namespace o2
 
 #endif /** _DelphesO2_PhotonConversion_h_ **/
