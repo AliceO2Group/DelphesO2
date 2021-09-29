@@ -284,7 +284,7 @@ def main(configuration_file,
     # set rich_radius
     set_config("createO2tables.C",
                "constexpr double rich_radius =", f"{rich_radius}""\;/")
-    # set forward_rich_index
+    # set rich_index
     set_config("createO2tables.C",
                "const double rich_index =", f"{rich_index}""\;/")
     # set forward_rich_index
@@ -538,7 +538,7 @@ if __name__ == "__main__":
                         type=int,
                         default=0,
                         help="Option to use the TOF mismatch in simulation, accepted values 0, 1, 2")
-    parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
+    parser.add_argument("--avoid-config-copy", "--avoid_config_copy", "--grid",
                         action="store_true",
                         help="Option to avoid copying the configuration files and to use the ones directly in the current path e.g. for grid use")
     parser.add_argument("--use-preexisting-luts", "-l",
