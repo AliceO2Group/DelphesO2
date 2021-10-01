@@ -332,11 +332,11 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       if (photon_conversion.hasPhotonConversion(*particle)) {
         if (photon_conversion.makeSignal(*particle, photonConv)) {
-          fphoton.fIndexCollisions = ientry + eventOffset;
-          fphoton.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
-          fphoton.fPx = photonConv.Px();
-          fphoton.fPy = photonConv.Py();
-          fphoton.fPz = photonConv.Pz();
+          photon.fIndexCollisions = ientry + eventOffset;
+          photon.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+          photon.fPx = photonConv.Px();
+          photon.fPy = photonConv.Py();
+          photon.fPz = photonConv.Pz();
           FillTree(kA3Photon);
         }
       }

@@ -59,7 +59,6 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2v0",
                                   "O2cascade",
                                   "O2tof",
-                                  "O2photonconv",
                                   "O2mcparticle",
                                   "O2mccollision",
                                   "O2mctracklabel",
@@ -95,7 +94,6 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "V0s",
                                    "Cascades",
                                    "TOF hits",
-                                   "PhotonConversion",
                                    "Kinematics",
                                    "MC collisions",
                                    "MC track labels",
@@ -519,9 +517,9 @@ void MakeTreeO2photon()
   tPhoton->Branch("fIndexCollisions", &photon.fIndexCollisions, "fIndexCollisions/I");
   tPhoton->Branch("fIndexMcParticles", &photon.fIndexMcParticles, "fIndexMcParticles/I");
   tPhoton->Branch("fIndexTracks", &photon.fIndexTracks, "fIndexTracks/I");
-  tPhoton->Branch("fPX", &photon.fPX, "fPX");
-  tPhoton->Branch("fPY", &photon.fPY, "fPY");
-  tPhoton->Branch("fPZ", &photon.fPZ, "fPZ");
+  tPhoton->Branch("fPX", &photon.fPx, "fPx/F");
+  tPhoton->Branch("fPY", &photon.fPy, "fPy/F");
+  tPhoton->Branch("fPZ", &photon.fPz, "fPz/F");
   tPhoton->SetBasketSize("*", fBasketSizeTracks);
 }
 
@@ -539,7 +537,7 @@ struct {
   Float_t fPosPhi = -999.f; /// Position in phi
 } ecal;                     //! structure to keep ECAL info
 
-void MakeTreeO2ECAL()
+void MakeTreeO2ecal()
 {
   TTree* tECAL = CreateTree(kA3ECAL);
   tECAL->Branch("fIndexCollisions", &ecal.fIndexCollisions, "fIndexCollisions/I");
