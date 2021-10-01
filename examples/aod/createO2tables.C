@@ -328,7 +328,7 @@ int createO2tables(const char* inputFile = "delphes.root",
 
       // fill debug information
 
-     // info for the PhotonConversion
+      // info for the PhotonConversion
       //      std::array<float, 3> pos;
       TLorentzVector photonConv;
       //float energy = 0;

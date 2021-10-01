@@ -511,7 +511,7 @@ struct {
   Float_t fPy = -999.f; /// y component of momentum
   Float_t fPz = -999.f; /// z component of momentum
 
-} photon;                     //! structure to keep PhotonConversion info
+} photon; //! structure to keep PhotonConversion info
 
 void MakeTreeO2photon()
 {
@@ -524,8 +524,6 @@ void MakeTreeO2photon()
   tPhoton->Branch("fPZ", &photon.fPZ, "fPZ");
   tPhoton->SetBasketSize("*", fBasketSizeTracks);
 }
-
-
 
 struct {
   // ALICE3 ECAL data
