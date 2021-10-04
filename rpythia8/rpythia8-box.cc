@@ -23,7 +23,26 @@ int main(int argc, char** argv)
   namespace po = boost::program_options;
   po::options_description desc("Options");
   try {
-    desc.add_options()("help", "Print help messages")("nevents,n", po::value<int>(&nevents)->default_value(10), "Number of events to be generated")("pdg,p", po::value<int>(&pdg)->required(), "PDG code of the particle")("npart", po::value<int>(&npart)->default_value(1), "Number of particles per event in a box")("etamin", po::value<double>(&eta_min)->default_value(0.), "Minimum eta")("etamax", po::value<double>(&eta_max)->default_value(0.), "Maximum eta")("phimin", po::value<double>(&phi_min)->default_value(0.), "Minimum phi")("phimax", po::value<double>(&phi_max)->default_value(0.), "Maximum phi")("pmin", po::value<double>(&p_min)->default_value(0.), "Minimum momentum")("pmax", po::value<double>(&p_max)->default_value(0.), "Maximum momentum")("xProd", po::value<double>(&xProd)->default_value(0.), "Production vertex in the x-direction")("yProd", po::value<double>(&yProd)->default_value(0.), "Production vertex in the y-direction")("zProd", po::value<double>(&zProd)->default_value(0.), "Production vertex in the z-direction")("config,c", po::value<std::string>(&config), "Configuration file")("background-config", po::value<std::string>(&background_config), "Background configuration file")("output,o", po::value<std::string>(&output)->default_value("pythia-gun.hepmc"), "Output HepMC file")("decay,D", po::bool_switch(&decay)->default_value(false), "Decay particle at production vertex")("verbose,V", po::bool_switch(&verbose)->default_value(false), "Verbose event listing")("seed", po::value<int>(&seed)->default_value(1), "initial seed");
+    desc.add_options()
+    ("help", "Print help messages")
+    ("nevents,n", po::value<int>(&nevents)->default_value(10), "Number of events to be generated")
+    ("pdg,p", po::value<int>(&pdg)->required(), "PDG code of the particle")
+    ("npart", po::value<int>(&npart)->default_value(1), "Number of particles per event in a box")
+    ("etamin", po::value<double>(&eta_min)->default_value(0.), "Minimum eta")
+    ("etamax", po::value<double>(&eta_max)->default_value(0.), "Maximum eta")
+    ("phimin", po::value<double>(&phi_min)->default_value(0.), "Minimum phi")
+    ("phimax", po::value<double>(&phi_max)->default_value(0.), "Maximum phi")
+    ("pmin", po::value<double>(&p_min)->default_value(0.), "Minimum momentum")
+    ("pmax", po::value<double>(&p_max)->default_value(0.), "Maximum momentum")
+    ("xProd", po::value<double>(&xProd)->default_value(0.), "Production vertex in the x-direction")
+    ("yProd", po::value<double>(&yProd)->default_value(0.), "Production vertex in the y-direction")
+    ("zProd", po::value<double>(&zProd)->default_value(0.), "Production vertex in the z-direction")
+    ("config,c", po::value<std::string>(&config), "Configuration file")
+    ("background-config", po::value<std::string>(&background_config), "Background configuration file")
+    ("output,o", po::value<std::string>(&output)->default_value("pythia-gun.hepmc"), "Output HepMC file")
+    ("decay,D", po::bool_switch(&decay)->default_value(false), "Decay particle at production vertex")
+    ("verbose,V", po::bool_switch(&verbose)->default_value(false), "Verbose event listing")
+    ("seed", po::value<int>(&seed)->default_value(1), "initial seed");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
