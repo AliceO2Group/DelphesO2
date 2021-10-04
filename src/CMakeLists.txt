@@ -9,6 +9,7 @@ set(SOURCES
   ECALdetector.cc
   MIDdetector.cc
   PreShower.cc
+  PhotonConversion.cc
   )
 
 set(HEADERS
@@ -20,6 +21,7 @@ set(HEADERS
   ECALdetector.hh
   MIDdetector.hh 
   PreShower.hh 
+  PhotonConversion.hh
   )
 
 get_target_property(DELPHES_INCLUDE_DIRECTORIES

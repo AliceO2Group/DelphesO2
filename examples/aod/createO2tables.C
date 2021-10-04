@@ -33,6 +33,8 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TOFLayer.hh"
 #include "RICHdetector.hh"
 #include "ECALdetector.hh"
+#include "PhotonConversion.hh"
+#include "PreShower.hh"
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
@@ -187,6 +189,14 @@ int createO2tables(const char* inputFile = "delphes.root",
   // ECAL detector
   o2::delphes::ECALdetector ecal_detector;
 
+  // Photon Conversion Method
+  o2::delphes::PhotonConversion photon_conversion;
+  TLorentzVector photonConv;
+
+  // PreShower detector
+  o2::delphes::PreShower pre_shower;
+  pre_shower.setup();
+
   // MID detector
   o2::delphes::MIDdetector mid_detector;
   const bool isMID = mid_detector.setup(inputFileAccMuonPID);
@@ -205,6 +215,8 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2rich();
   MakeTreeO2ecal();
   MakeTreeO2frich();
+  MakeTreeO2photon();
+  MakeTreeO2pres();
   MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
@@ -314,6 +326,21 @@ int createO2tables(const char* inputFile = "delphes.root",
       }
 
       // fill debug information
+
+      // info for the PhotonConversion
+      TLorentzVector photonConv;
+
+      if (photon_conversion.hasPhotonConversion(*particle)) {
+        if (photon_conversion.makeSignal(*particle, photonConv)) {
+          photon.fIndexCollisions = ientry + eventOffset;
+          photon.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+          photon.fPx = photonConv.Px();
+          photon.fPy = photonConv.Py();
+          photon.fPz = photonConv.Pz();
+          FillTree(kA3Photon);
+        }
+      }
+
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
           debugEffDenPart[particle->PID] = new TH1F(Form("denPart%i", particle->PID), Form("denPart%i;#it{p}_{T} (GeV/#it{c})", particle->PID), 1000, 0, 10);
@@ -512,6 +539,14 @@ int createO2tables(const char* inputFile = "delphes.root",
       if (forward_tof_layer.hasTOF(*track)) {
         ftof_tracks.push_back(track);
         ftof_tracks_indices.push_back(std::pair<int, int>{ientry + eventOffset, fTrackCounter});
+      }
+
+      // check if has Preshower
+      if (pre_shower.hasPreShower(*track)) {
+        pres.fIndexCollisions = ientry + eventOffset;
+        pres.fIndexTracks = fTrackCounter; // Index in the Track table
+        pres.fPresIsElectron = pre_shower.isElectron(*track, multiplicity);
+        FillTree(kPres);
       }
 
       // check if it is within the acceptance of the MID
