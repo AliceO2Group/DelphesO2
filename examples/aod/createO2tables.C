@@ -33,6 +33,8 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "TOFLayer.hh"
 #include "RICHdetector.hh"
 #include "ECALdetector.hh"
+#include "PhotonConversion.hh"
+#include "PreShower.hh"
 #include "MIDdetector.hh"
 #include "TrackUtils.hh"
 
@@ -56,25 +58,26 @@ const double forward_tof_sigmat0 = 0.2;   // [ns] Time spread of the vertex
 constexpr double rich_radius = 100.;    // [cm] Radius of the RICH detector (used to compute acceptance)
 const double rich_length = 200.;        // [cm] Length of the RICH detector (used to compute acceptance)
 const double rich_index = 1.03;         // Refraction index of the RICH detector
-const double rich_radiator_length = 2.; // Radiator length of the RICH detector
+const double rich_radiator_length = 2.; // [cm] Radiator length of the RICH detector
 const double rich_efficiency = 0.4;     // Efficiency of the RICH detector
-const double rich_sigma = 7.e-3;        // Resolution of the RICH detector
+const double rich_sigma = 7.e-3;        // [rad] Resolution of the RICH detector
 // Forward RICH
 const double forward_rich_radius = 100.;        // [cm] Radius of the Forward RICH detector (used to compute acceptance)
 const double forward_rich_radius_in = 10.;      // [cm] Inner radius of the Forward RICH detector (used to compute acceptance)
 const double forward_rich_length = 200.;        // [cm] Length of the Forward RICH detector (used to compute acceptance)
-const double forward_rich_index = 1.03;         // Refraction index of the Forward RICH detector
-const double forward_rich_radiator_length = 2.; // Radiator length of the Forward RICH detector
-const double forward_rich_efficiency = 0.4;     // Efficiency of the Forward RICH detector
-const double forward_rich_sigma = 7.e-3;        // Resolution of the Forward RICH detector
+const double forward_rich_index = 1.0014;       // Refraction index of the Forward RICH detector
+const double forward_rich_radiator_length = 95; // [cm] Radiator length of the Forward RICH detector
+const double forward_rich_efficiency = 0.2;     // Efficiency of the Forward RICH detector
+const double forward_rich_sigma = 1.5e-3;       // [rad] Resolution of the Forward RICH detector
 // MID
 const char* inputFileAccMuonPID = "muonAccEffPID.root";
 
 // Simulation parameters
-constexpr bool do_vertexing = true; // Vertexing with the O2
-constexpr bool enable_nuclei = true;
-constexpr bool debug_qa = false; // Debug QA histograms
-constexpr int tof_mismatch = 0;  // Flag to configure the TOF mismatch running mode: 0 off, 1 create, 2 use
+constexpr bool do_vertexing = true;  // Vertexing with the O2
+constexpr bool enable_nuclei = true; // Nuclei LUTs
+constexpr bool enable_ecal = true;   // Enable ECAL filling
+constexpr bool debug_qa = false;     // Debug QA histograms
+constexpr int tof_mismatch = 0;      // Flag to configure the TOF mismatch running mode: 0 off, 1 create, 2 use
 
 int createO2tables(const char* inputFile = "delphes.root",
                    const char* outputFile = "AODRun5.root",
@@ -175,16 +178,24 @@ int createO2tables(const char* inputFile = "delphes.root",
 
   // Forward RICH layer
   o2::delphes::RICHdetector forward_rich_detector;
-  forward_rich_detector.setup(rich_radius, rich_length);
-  forward_rich_detector.setIndex(rich_index);
-  forward_rich_detector.setRadiatorLength(rich_radiator_length);
-  forward_rich_detector.setEfficiency(rich_efficiency);
-  forward_rich_detector.setSigma(rich_sigma);
+  forward_rich_detector.setup(forward_rich_radius, forward_rich_length);
+  forward_rich_detector.setIndex(forward_rich_index);
+  forward_rich_detector.setRadiatorLength(forward_rich_radiator_length);
+  forward_rich_detector.setEfficiency(forward_rich_efficiency);
+  forward_rich_detector.setSigma(forward_rich_sigma);
   forward_rich_detector.setType(o2::delphes::RICHdetector::kForward);
   forward_rich_detector.setRadiusIn(forward_rich_radius_in);
 
   // ECAL detector
   o2::delphes::ECALdetector ecal_detector;
+
+  // Photon Conversion Method
+  o2::delphes::PhotonConversion photon_conversion;
+  TLorentzVector photonConv;
+
+  // PreShower detector
+  o2::delphes::PreShower pre_shower;
+  pre_shower.setup();
 
   // MID detector
   o2::delphes::MIDdetector mid_detector;
@@ -204,6 +215,8 @@ int createO2tables(const char* inputFile = "delphes.root",
   MakeTreeO2rich();
   MakeTreeO2ecal();
   MakeTreeO2frich();
+  MakeTreeO2photon();
+  MakeTreeO2pres();
   MakeTreeO2mid();
   MakeTreeO2collision();
   MakeTreeO2collisionExtra();
@@ -293,22 +306,41 @@ int createO2tables(const char* inputFile = "delphes.root",
       FillTree(kMcParticle);
 
       // info for the ECAL
-      float posZ, posPhi;
-      if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
-        printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g), posZ=%f, posPhi=%f\n",
-               particle->PID, particle->Px, particle->Py, particle->Pz, particle->E,posZ,posPhi);
-        printf("ECAL p=(%g,%g,%g,%g)\n",
-               pECAL.Px(), pECAL.Py(), pECAL.Pz(), pECAL.E());
-        ecal.fIndexCollisions = ientry + eventOffset;
-        ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
-        ecal.fPx = pECAL.Px();
-        ecal.fPy = pECAL.Py();
-        ecal.fPz = pECAL.Pz();
-        ecal.fE  = pECAL.E();
-        ecal.fPosZ   = posZ;
-        ecal.fPosPhi = posPhi;
-        FillTree(kA3ECAL);
+      if constexpr (enable_ecal) {
+        float posZ, posPhi;
+        if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
+          printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g), posZ=%f, posPhi=%f\n",
+                 particle->PID, particle->Px, particle->Py, particle->Pz, particle->E, posZ, posPhi);
+          printf("ECAL p=(%g,%g,%g,%g)\n",
+                 pECAL.Px(), pECAL.Py(), pECAL.Pz(), pECAL.E());
+          ecal.fIndexCollisions = ientry + eventOffset;
+          ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+          ecal.fPx = pECAL.Px();
+          ecal.fPy = pECAL.Py();
+          ecal.fPz = pECAL.Pz();
+          ecal.fE = pECAL.E();
+          ecal.fPosZ = posZ;
+          ecal.fPosPhi = posPhi;
+          FillTree(kA3ECAL);
+        }
       }
+
+      // fill debug information
+
+      // info for the PhotonConversion
+      TLorentzVector photonConv;
+
+      if (photon_conversion.hasPhotonConversion(*particle)) {
+        if (photon_conversion.makeSignal(*particle, photonConv)) {
+          photon.fIndexCollisions = ientry + eventOffset;
+          photon.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
+          photon.fPx = photonConv.Px();
+          photon.fPy = photonConv.Py();
+          photon.fPz = photonConv.Pz();
+          FillTree(kA3Photon);
+        }
+      }
+
       if constexpr (debug_qa) {
         if (!debugEffDenPart[particle->PID]) {
           debugEffDenPart[particle->PID] = new TH1F(Form("denPart%i", particle->PID), Form("denPart%i;#it{p}_{T} (GeV/#it{c})", particle->PID), 1000, 0, 10);
@@ -419,6 +451,7 @@ int createO2tables(const char* inputFile = "delphes.root",
       aod_track.fTrackEtaEMCAL = 0; //track->GetTrackEtaOnEMCal();
       aod_track.fTrackPhiEMCAL = 0; //track->GetTrackPhiOnEMCal();
 
+      aod_track.fLength = track->L * 0.1; // [cm]
       // check if has hit the TOF
       if (tof_layer.hasTOF(*track)) {
 
@@ -442,7 +475,6 @@ int createO2tables(const char* inputFile = "delphes.root",
           }
         }
 
-        aod_track.fLength = track->L * 0.1;           // [cm]
         aod_track.fTOFChi2 = 1.f;                     // Negative if TOF is not available
         aod_track.fTOFSignal = track->TOuter * 1.e12; // [ps]
         aod_track.fTrackTime = track->TOuter * 1.e9;  // [ns]
@@ -453,7 +485,6 @@ int createO2tables(const char* inputFile = "delphes.root",
           tof_tracks.push_back(track);
       } else {
         aod_track.fTOFChi2 = -1.f;
-        aod_track.fLength = -999.f;
         aod_track.fTOFSignal = -999.f;
         aod_track.fTrackTime = -999.f;
         aod_track.fTrackTimeRes = 2000 * 1.e9;
@@ -508,6 +539,14 @@ int createO2tables(const char* inputFile = "delphes.root",
       if (forward_tof_layer.hasTOF(*track)) {
         ftof_tracks.push_back(track);
         ftof_tracks_indices.push_back(std::pair<int, int>{ientry + eventOffset, fTrackCounter});
+      }
+
+      // check if has Preshower
+      if (pre_shower.hasPreShower(*track)) {
+        pres.fIndexCollisions = ientry + eventOffset;
+        pres.fIndexTracks = fTrackCounter; // Index in the Track table
+        pres.fPresIsElectron = pre_shower.isElectron(*track, multiplicity);
+        FillTree(kPres);
       }
 
       // check if it is within the acceptance of the MID

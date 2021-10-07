@@ -30,9 +30,11 @@ enum TreeIndex { // Index of the output trees
   kHMPID,
   kRICH,
   kFRICH,
+  kPres,
   kMID,
   kFTOF,
   kA3ECAL,
+  kA3Photon,
   kTrees
 };
 
@@ -68,9 +70,11 @@ const TString TreeName[kTrees] = {"O2collision",
                                   "O2hmpid",
                                   "O2rich",
                                   "O2frich",
+                                  "O2pres",
                                   "O2mid",
                                   "O2ftof",
-                                  "O2a3ecal"};
+                                  "O2a3ecal",
+                                  "O2photonconv"};
 
 const TString TreeTitle[kTrees] = {"Collision tree",
                                    "Collision extra",
@@ -101,9 +105,11 @@ const TString TreeTitle[kTrees] = {"Collision tree",
                                    "HMPID info",
                                    "RICH info",
                                    "Forward RICH info",
+                                   "Preshower info",
                                    "MID info",
                                    "Forward TOF info",
-                                   "ALICE3 ECAL"};
+                                   "ALICE3 ECAL",
+                                   "PhotonConversion"};
 
 TTree* Trees[kTrees] = {nullptr}; // Array of created TTrees
 TTree* CreateTree(TreeIndex t)
@@ -423,6 +429,22 @@ void MakeTreeO2frich()
 }
 
 struct {
+  // Preshower data
+  Int_t fIndexCollisions = -1;     /// Collision ID
+  Int_t fIndexTracks = -1;         /// Track ID
+  Bool_t fPresIsElectron = kFALSE; /// Preshower response for the electron hypothesis
+} pres;                            //! structure to keep preshower info
+
+void MakeTreeO2pres()
+{
+  TTree* tPres = CreateTree(kPres);
+  tPres->Branch("fIndexCollisions", &pres.fIndexCollisions, "fIndexCollisions/I");
+  tPres->Branch("fIndexTracks", &pres.fIndexTracks, "fIndexTracks/I");
+  tPres->Branch("fPresIsElectron", &pres.fPresIsElectron, "fPresIsElectron/b");
+  tPres->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
   // MID data
   Int_t fIndexCollisions = -1; /// Collision ID
   Int_t fIndexTracks = -1;     /// Track ID
@@ -475,6 +497,30 @@ void MakeTreeO2ftof()
   tFTOF->Branch("fFTOFNsigmaKa", &ftof.fFTOFNsigmaKa, "fFTOFNsigmaKa/F");
   tFTOF->Branch("fFTOFNsigmaPr", &ftof.fFTOFNsigmaPr, "fFTOFNsigmaPr/F");
   tFTOF->SetBasketSize("*", fBasketSizeTracks);
+}
+
+struct {
+  // ALICE3 PhotonConversion
+  Int_t fIndexCollisions = -1;  /// Collision ID
+  Int_t fIndexMcParticles = -1; /// Particle ID
+  Int_t fIndexTracks = -1;      /// Track ID
+
+  Float_t fPx = -999.f; /// x component of momentum
+  Float_t fPy = -999.f; /// y component of momentum
+  Float_t fPz = -999.f; /// z component of momentum
+
+} photon; //! structure to keep PhotonConversion info
+
+void MakeTreeO2photon()
+{
+  TTree* tPhoton = CreateTree(kA3Photon);
+  tPhoton->Branch("fIndexCollisions", &photon.fIndexCollisions, "fIndexCollisions/I");
+  tPhoton->Branch("fIndexMcParticles", &photon.fIndexMcParticles, "fIndexMcParticles/I");
+  tPhoton->Branch("fIndexTracks", &photon.fIndexTracks, "fIndexTracks/I");
+  tPhoton->Branch("fPX", &photon.fPx, "fPx/F");
+  tPhoton->Branch("fPY", &photon.fPy, "fPy/F");
+  tPhoton->Branch("fPZ", &photon.fPz, "fPz/F");
+  tPhoton->SetBasketSize("*", fBasketSizeTracks);
 }
 
 struct {

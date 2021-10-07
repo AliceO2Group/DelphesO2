@@ -119,7 +119,7 @@ def main(configuration_file,
             else:
                 verbose_msg("Copying", in_file, "to",
                             out_file, "because of --avoid-config-copy")
-                run_cmd(f"cp {in_file} {out_file}")
+                run_cmd(f"cp {in_file} {out_file}", comment="Copying files without python")
             return
         verbose_msg("Copying", in_file, "to", out_file)
         shutil.copy2(in_file, out_file)
@@ -252,6 +252,9 @@ def main(configuration_file,
     if turn_off_vertexing:
         set_config("createO2tables.C",
                    "constexpr bool do_vertexing = ", "false\;/")
+    else:  # Check that the geometry file for the vertexing is there
+        if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
+            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
     if use_nuclei:
         set_config("createO2tables.C",
                    "constexpr bool enable_nuclei = ", "true\;/")
@@ -263,9 +266,6 @@ def main(configuration_file,
             fatal_msg("tof_mismatch", tof_mismatch, "is not 1 or 2")
         set_config("createO2tables.C",
                    "constexpr int tof_mismatch = ", f"{tof_mismatch}\;/")
-    else:  # Check that the geometry file for the vertexing is there
-        if not os.path.isfile("o2sim_grp.root") or not os.path.isfile("o2sim_geometry.root"):
-            run_cmd("mkdir tmpo2sim && cd tmpo2sim && o2-sim -m PIPE ITS MFT -g boxgen -n 1 -j 1 --configKeyValues 'BoxGun.number=1' && cp o2sim_grp.root .. && cp o2sim_geometry.root .. && cd .. && rm -r tmpo2sim")
     if qa:
         set_config("dpl-config_std.json", "\\\"d_bz\\\":",
                    "\\\""f"{bField}""\\\"\,/")
@@ -284,7 +284,7 @@ def main(configuration_file,
     # set rich_radius
     set_config("createO2tables.C",
                "constexpr double rich_radius =", f"{rich_radius}""\;/")
-    # set forward_rich_index
+    # set rich_index
     set_config("createO2tables.C",
                "const double rich_index =", f"{rich_index}""\;/")
     # set forward_rich_index
@@ -412,6 +412,7 @@ def main(configuration_file,
             copy_and_link(aod_file)
             if clean_delphes_files:
                 write_to_runner(f"rm {delphes_file}")
+                write_to_runner(f"rm {generator_cfg}")
                 if hepmc_file is not None:
                     write_to_runner(f"rm {hepmc_file}")
             write_to_runner("exit 0\n")
@@ -538,7 +539,7 @@ if __name__ == "__main__":
                         type=int,
                         default=0,
                         help="Option to use the TOF mismatch in simulation, accepted values 0, 1, 2")
-    parser.add_argument("--avoid-config-copy", "--avoid_config_copy",
+    parser.add_argument("--avoid-config-copy", "--avoid_config_copy", "--grid",
                         action="store_true",
                         help="Option to avoid copying the configuration files and to use the ones directly in the current path e.g. for grid use")
     parser.add_argument("--use-preexisting-luts", "-l",
