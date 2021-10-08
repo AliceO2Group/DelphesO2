@@ -71,14 +71,13 @@ bool ECALdetector::makeSignal(const GenParticle& particle,
     posZ = mRadius / tanTheta; // z-coodrinate  of a photon hit
   }
 
-  Double_t eSmeared = smearPhotonE(particle.E); // smeared photon energy
   p4ECAL = smearPhotonP4(p4True);
 
   return true;
 }
 
 /*****************************************************************/
-TLorentzVector ECALdetector::smearPhotonP4(const TLorentzVector pTrue)
+TLorentzVector ECALdetector::smearPhotonP4(const TLorentzVector& pTrue)
 {
   // This function smears the photon 4-momentum from the true one via applying
   // parametrized energy and coordinate resolution
@@ -98,7 +97,7 @@ TLorentzVector ECALdetector::smearPhotonP4(const TLorentzVector pTrue)
   return pSmeared;
 }
 /*****************************************************************/
-Double_t ECALdetector::sigmaX(const Double_t eTrue)
+Double_t ECALdetector::sigmaX(const Double_t& eTrue)
 {
   // Calculate sigma of photon coordinate smearing [cm]
   // E is the photon energy
@@ -106,14 +105,14 @@ Double_t ECALdetector::sigmaX(const Double_t eTrue)
   return dX;
 }
 /*****************************************************************/
-Double_t ECALdetector::smearPhotonE(const Double_t eTrue)
+Double_t ECALdetector::smearPhotonE(const Double_t& eTrue)
 {
   // Smear a photon energy eTrue according to a Gaussian distribution with energy resolution parameters
   // sigma of Gaussian smearing is calculated from parameters A,B,C and true energy
 
-  Double_t sigmaE = eTrue * sqrt(mEnergyResolutionA * mEnergyResolutionA / eTrue / eTrue +
-                                 mEnergyResolutionB * mEnergyResolutionB / eTrue +
-                                 mEnergyResolutionC * mEnergyResolutionC);
+  const Double_t sigmaE = eTrue * sqrt(mEnergyResolutionA * mEnergyResolutionA / eTrue / eTrue +
+                                       mEnergyResolutionB * mEnergyResolutionB / eTrue +
+                                       mEnergyResolutionC * mEnergyResolutionC);
   Double_t eSmeared = gRandom->Gaus(eTrue, sigmaE);
   if (eSmeared < 0)
     eSmeared = 0;

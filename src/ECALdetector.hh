@@ -23,9 +23,9 @@ class ECALdetector
   bool makeSignal(const GenParticle& particle, TLorentzVector& pECAL, float& posZ, float& posPhi);
 
  protected:
-  Double_t smearPhotonE(const Double_t eTrue);
-  Double_t sigmaX(const Double_t eTrue);
-  TLorentzVector smearPhotonP4(const TLorentzVector pTrue);
+  Double_t smearPhotonE(const Double_t& eTrue);
+  Double_t sigmaX(const Double_t& eTrue);
+  TLorentzVector smearPhotonP4(const TLorentzVector& pTrue);
 
   float mRadius = 120.; // ECAL barrel inner radius [cm]
   float mLength = 200.; // ECAL half-length along beam axis [cm]
