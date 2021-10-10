@@ -32,7 +32,7 @@ class ECALdetector
 
   float mEnergyResolutionA = 0.002;  // parameter A of energy resolution in GeV
   float mEnergyResolutionB = 0.02;   // parameter B of energy resolution in GeV^{1/2}
-  float mEnergyResolutionC = 0.10;   // parameter C of energy resolution
+  float mEnergyResolutionC = 0.01;   // parameter C of energy resolution
   float mPositionResolutionA = 0.15; // parameter A of coordinate resolution in cm
   float mPositionResolutionB = 0.30; // parameter B of coordinate resolution in cm*GeV^{1/2}
 };
