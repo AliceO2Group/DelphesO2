@@ -309,10 +309,6 @@ int createO2tables(const char* inputFile = "delphes.root",
       if constexpr (enable_ecal) {
         float posZ, posPhi;
         if (ecal_detector.makeSignal(*particle, pECAL, posZ, posPhi)) { // to be updated 13.09.2021
-          printf("ECAL particle: pid=%d, p=(%g,%g,%g,%g), posZ=%f, posPhi=%f\n",
-                 particle->PID, particle->Px, particle->Py, particle->Pz, particle->E, posZ, posPhi);
-          printf("ECAL p=(%g,%g,%g,%g)\n",
-                 pECAL.Px(), pECAL.Py(), pECAL.Pz(), pECAL.E());
           ecal.fIndexCollisions = ientry + eventOffset;
           ecal.fIndexMcParticles = TMath::Abs(iparticle + fOffsetLabel);
           ecal.fPx = pECAL.Px();

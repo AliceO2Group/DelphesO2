@@ -23,16 +23,16 @@ class ECALdetector
   bool makeSignal(const GenParticle& particle, TLorentzVector& pECAL, float& posZ, float& posPhi);
 
  protected:
-  Double_t smearPhotonE(const Double_t eTrue);
-  Double_t sigmaX(const Double_t eTrue);
-  TLorentzVector smearPhotonP4(const TLorentzVector pTrue);
+  Double_t smearPhotonE(const Double_t& eTrue);
+  Double_t sigmaX(const Double_t& eTrue);
+  TLorentzVector smearPhotonP4(const TLorentzVector& pTrue);
 
   float mRadius = 120.; // ECAL barrel inner radius [cm]
   float mLength = 200.; // ECAL half-length along beam axis [cm]
 
   float mEnergyResolutionA = 0.002;  // parameter A of energy resolution in GeV
   float mEnergyResolutionB = 0.02;   // parameter B of energy resolution in GeV^{1/2}
-  float mEnergyResolutionC = 0.10;   // parameter C of energy resolution
+  float mEnergyResolutionC = 0.01;   // parameter C of energy resolution
   float mPositionResolutionA = 0.15; // parameter A of coordinate resolution in cm
   float mPositionResolutionB = 0.30; // parameter B of coordinate resolution in cm*GeV^{1/2}
 };
