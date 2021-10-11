@@ -87,7 +87,7 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
         return result
 
 
-def run_cmd(cmd, comment="", check_status=True, log_file=None):
+def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=False):
     """
     Function to run a command in bash, allows to check the status of the command and to log the command output
     """
@@ -101,6 +101,9 @@ def run_cmd(cmd, comment="", check_status=True, log_file=None):
             content = content.strip()
             for i in content.strip().split("\n"):
                 verbose_msg("++", i)
+            if print_output:
+                for i in content.strip().split("\n"):
+                    msg(i)
             if log_file is not None:
                 with open(log_file, "a") as f_log:
                     f_log.write(f" -- {datetime.datetime.now()}\n")
@@ -112,5 +115,6 @@ def run_cmd(cmd, comment="", check_status=True, log_file=None):
         if check_status:
             if "OK" not in content and "root" not in cmd:
                 fatal_msg("Command", cmd, "does not have the OK tag", content)
+        return content
     except:
         fatal_msg("Error while running", f"'{cmd}'")
