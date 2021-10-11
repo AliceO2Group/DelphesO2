@@ -160,15 +160,27 @@ def main(mode,
         if len(file_list) != len(set(file_list)):  # Check that runlist does not have duplicates
             fatal_msg("Runlist has duplicated entries, fix runlist!")
         not_readable = []
+        recovered_files = []
         for i in file_list:  # Check that input files can be open
             f = TFile(i.strip(), "READ")
+            if f.TestBit(TFile.kRecovered):
+                recovered_files.append(i)
             if not f.IsOpen():
                 verbose_msg("Cannot open AOD file:", i, color=bcolors.WARNING)
                 not_readable.append(i)
+        if len(recovered_files) > 0:
+            bad_files = ""
+            for i in recovered_files:
+                bad_files += f"{i.strip()} "
+            msg("Recovered", len(recovered_files),
+                "files:\n", )
+            not_readable = not_readable + recovered_files
         if len(not_readable) > 0:
-            warning_msg(len(not_readable),
+            warning_msg(len(not_readable), "over", len(file_list),
                         "files cannot be read and will be skipped")
             for i in not_readable:
+                if i not in file_list:
+                    warning_msg("did not find file to remove", f"'{i}'")
                 file_list.remove(i)
 
         files_per_batch = []
