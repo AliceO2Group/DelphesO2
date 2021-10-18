@@ -27,6 +27,7 @@ def listfiles(Path, What, MakeXML=False, MustHave="", SubDirs="", User=None, Mai
     Puts the content to file if required.
     Can also form the output in the xml format so as to run on grid, this is done if the output filename has the xml extension.
     """
+    verbose_msg("Listing files", What, "in path", Path)
     if User is None:
         User = getpass.getuser()
         msg("Getting user:", User)
@@ -91,6 +92,10 @@ def writefiles(FileList, Outfile, append=False):
 
 def check_root_file(file_name):
     if not file_name.endswith(".root"):
+        warning_msg("Testing a non root file:", file_name)
+        return True
+    if not path.isfile(file_name):
+        warning_msg("Testing a non existing file:", file_name)
         return True
     f = TFile(file_name, "READ")
     if f.TestBit(TFile.kRecovered):
@@ -175,10 +180,12 @@ def copyfile(toget, Version=None, replace_preexisting=False, n_retry_root_files=
 
 def copied(fname, extra_msg="", last_time=None, check_root_files=True):
     """Checks if how many files of a text list were correctly copied from grid to the PC"""
+    verbose_msg("Checking how many files were copied from from list", fname)
     fname = fname.strip()
     f = open(fname, "r")
     n_to_copy = 0
     n_copied = 0
+    not_sane = []
     for line in f:
         if "%" in line:
             break
@@ -189,20 +196,24 @@ def copied(fname, extra_msg="", last_time=None, check_root_files=True):
         if path.isfile(line):
             n_copied += 1
             if check_root_files:
-                check_root_file(line)
+                if not check_root_file(line):
+                    msg(f"'{line}' downloaded but with issues",
+                        color=bcolors.WARNING)
+                    not_sane.append(line)
         else:
             msg(f"'{line}' yet to download", color=bcolors.OKBLUE)
     if last_time is not None:
         n_copied -= last_time[1]
     msg(extra_msg, "downloaded {}/{}, {:.1f}%".format(n_copied,
         n_to_copy, 100 * float(n_copied) / float(n_to_copy)),
-        f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "")
+        f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "", f"{len(not_sane)}" if len(not_sane) > 0 else "")
 
     return n_to_copy, n_copied
 
 
 def copylist(fname, jobs=1):
     """Takes a text file and downloads the files from grid"""
+    verbose_msg("Copying files from list", fname, "with", jobs, "jobs")
     fname = path.normpath(fname)
     if not path.isfile(fname):
         warning_msg("Input file not provided! Aborting")
@@ -223,28 +234,43 @@ def copylist(fname, jobs=1):
         else:
             Group.append(line)
     if jobs > 1:
+        msg("Copying list in parallel with", jobs, "jobs")
         run_in_parallel(processes=jobs, job_runner=copyfile,
                         job_arguments=Group, job_message="Downloading files")
     copied(fname, extra_msg="In recent run", last_time=sofar)
 
 
-def main(input_files, do_list_files=False, do_write_files=None, do_copy=False, do_copied=False, do_copylist=False, what="AO2D.root", jobs=1):
-
+def main(input_files,
+         do_list_files=False,
+         do_write_files=None,
+         do_copy=False,
+         do_copied=False,
+         do_copylist=False,
+         what="AO2D.root",
+         jobs=1):
+    done_something = False
     if do_list_files:
         for i in input_files:
             list_of_files = listfiles(i, what, False)
             if do_write_files:
                 writefiles(list_of_files, do_write_files,
                            append=(i == list_of_files[0]))
+        done_something = True
 
-    if do_copy:
+    if do_copy or do_copylist:
         for i in input_files:
             if do_copylist:
                 copylist(i, jobs=jobs)
             else:
                 copyfile(i)
+        done_something = True
     if do_copied:
-        print(copied(input_files))
+        for i in input_files:
+            print(copied(i))
+        done_something = True
+
+    if not done_something:
+        warning_msg("Did not do anything")
 
 
 if __name__ == "__main__":
@@ -259,8 +285,6 @@ if __name__ == "__main__":
                         help=copyfile.__doc__)
     parser.add_argument("--copylist", "-C",
                         action="store_true", help=copylist.__doc__)
-    parser.add_argument("--jobs", type=int, default=1,
-                        help="Number of parallel jobs to use")
     parser.add_argument("--copied", "-K",
                         action="store_true", help=copied.__doc__)
     parser.add_argument("--what", "-w",
@@ -274,5 +298,5 @@ if __name__ == "__main__":
          do_copy=args.copy,
          do_copylist=args.copylist,
          what=args.what,
-         jobs=args.jobs,
+         jobs=args.njobs,
          do_copied=args.copied)

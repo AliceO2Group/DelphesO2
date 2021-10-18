@@ -269,7 +269,7 @@ def main(mode,
                 for j in files_per_type[i]:
                     fmerge.write(j+"\n")
             run_cmd(f"hadd -j {njobs} -f {merged_file} `cat {merge_file_list}`",
-                    log_file=merge_file_list.replace(".txt", ".log"))
+                    log_file=merge_file_list.replace(".txt", ".log"), time_it=True)
         if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:

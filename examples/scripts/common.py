@@ -6,6 +6,7 @@ Author: Nicolo' Jacazio, nicolo.jacazio@cern.ch
 """
 
 import argparse
+import time
 import multiprocessing
 import sys
 import os
@@ -29,7 +30,7 @@ def get_default_parser(description):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--verbose", "-v",
                         action="store_true", help="Verbose mode.")
-    parser.add_argument("--njobs", "-j", type=int,
+    parser.add_argument("--njobs", "--jobs", "-j", type=int,
                         default=10,
                         help="Number of concurrent jobs, by default 10.")
     return parser
@@ -87,12 +88,14 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
         return result
 
 
-def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=False):
+def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=False, time_it=False):
     """
     Function to run a command in bash, allows to check the status of the command and to log the command output
     """
     verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
     try:
+        if time_it:
+            processing_time = time.time()
         to_run = cmd
         if check_status:
             to_run = f"{cmd} && echo OK"
@@ -115,6 +118,10 @@ def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=Fals
         if check_status:
             if "OK" not in content and "root" not in cmd:
                 fatal_msg("Command", cmd, "does not have the OK tag", content)
+        if time_it:
+            processing_time = time.time() - processing_time
+            msg(f"-- took {processing_time} seconds --",
+                color=bcolors.BOKGREEN)
         return content
     except:
         fatal_msg("Error while running", f"'{cmd}'")
