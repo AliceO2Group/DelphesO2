@@ -34,7 +34,11 @@ bool PhotonConversion::hasPhotonConversion(const GenParticle& particle) const
   TLorentzVector p4True = particle.P4();
   if (pid == 22) {
     float convProb = 3.55541e-02 * TMath::Power(p4True.Pt(), 1.50281) / (1.39201e-02 + TMath::Power(p4True.Pt(), 1.45348));
+    if (convProb > 0.04)
+      convProb = 0.04;
     float eff = 5.72297e-01 * TMath::Power(p4True.Pt(), 3.35915) / (6.86633e-02 + TMath::Power(p4True.Pt(), 3.08761));
+    if (eff > 1.)
+      eff = 1.;
     // convProb =1;
     // eff=1;
     return (gRandom->Uniform() < (convProb * eff));
@@ -53,7 +57,10 @@ bool PhotonConversion::makeSignal(const GenParticle& particle, TLorentzVector& p
   if (pid != 22) {
     return false;
   }
-
+  // Eta coverage of the central barrel. Region where the conv prob., rec effciency and momentum resolution have been parametrized.
+  if (TMath::Abs(particle.Eta) > 1.5) {
+    return false;
+  }
   TLorentzVector p4Smeared = smearPhotonP(particle);
   photonConv = p4Smeared;
   return true;
@@ -67,6 +74,9 @@ TLorentzVector PhotonConversion::smearPhotonP(const GenParticle& particle)
   // parametrized pt and pz resolution
 
   TLorentzVector p4True = particle.P4();
+  // std::cout<< "Particle px,py,pz,pt,p,m,Eta,phi::   "<< particle.Px << "  " << particle.Py << "  " << particle.Pz    << "  "<<
+  //   particle.P << "  "<< particle.M1 << "  "<< particle.Eta << "  " << particle.Phi << "  "   << std::endl;
+
   // Get true energy from true 4-momentum and smear this energy
   double pTrue = p4True.P();
   double phi = p4True.Phi();
@@ -82,6 +92,7 @@ TLorentzVector PhotonConversion::smearPhotonP(const GenParticle& particle)
   Double_t pxSmeared = pSmearedMag * TMath::Cos(phi) * TMath::Sin(theta);
   Double_t pySmeared = pSmearedMag * TMath::Sin(phi) * TMath::Sin(theta);
   Double_t pzSmeared = pSmearedMag * TMath::Cos(theta);
+
   // Construct new 4-momentum from smeared energy and 3-momentum
   TLorentzVector pSmeared;
   pSmeared.SetXYZM(pxSmeared, pySmeared, pzSmeared, 0.);
