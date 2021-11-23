@@ -66,14 +66,39 @@ def fatal_msg(*args, fatal_message="Fatal Error!"):
     raise RuntimeError(fatal_message)
 
 
-def warning_msg(*args):
+list_of_warnings = multiprocessing.Manager().list()
+
+
+def warning_msg(*args, add=True):
+    global list_of_warnings
+    if add:
+        list_of_warnings.append(args)
     msg("[WARNING]", *args, color=bcolors.BWARNING)
 
 
-def run_in_parallel(processes, job_runner, job_arguments, job_message):
+def print_all_warnings():
+    if len(list_of_warnings) > 0:
+        warning_msg("There were some warnings", add=False)
+        for i in list_of_warnings:
+            warning_msg(*i, add=False)
+
+
+def run_in_parallel(processes, job_runner, job_arguments, job_message, linearize_single_core=False):
     """
     In parallel processer of functions with a nice progress printing
+    If linearize_single_core is True and processes is 1 then the processing is not on multiple cores
     """
+    if processes == 1 and linearize_single_core:
+        msg(job_message, "using 1 core i.e. no multicores")
+        if "tqdm" not in sys.modules:
+            for i in enumerate(job_arguments):
+                msg(f"Done: {i[0]+1},", len(job_arguments)-i[0]-1, "to go")
+                job_runner(i[1])
+        else:
+            for i in tqdm.tqdm(job_arguments, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'):
+                job_runner(i)
+        return
+
     with multiprocessing.Pool(processes=processes) as pool:
         msg(job_message)
         result = []
@@ -88,9 +113,11 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message):
         return result
 
 
-def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=False, time_it=False):
+def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=False, time_it=False, throw_fatal=True):
     """
-    Function to run a command in bash, allows to check the status of the command and to log the command output
+    Function to run a command in bash, allows to check the status of the command and to log the command output.
+    If throw_fatal is true and check_status is true then it will throw a fatal message if the command is not OK
+    If throw_fatal is true and check_status is true then it will return False if the command is not OK
     """
     verbose_msg("Running", f"'{cmd}'", bcolors.BOKBLUE + comment)
     try:
@@ -117,7 +144,11 @@ def run_cmd(cmd, comment="", check_status=True, log_file=None, print_output=Fals
             warning_msg("Error encountered runtime error in", cmd)
         if check_status:
             if "OK" not in content and "root" not in cmd:
-                fatal_msg("Command", cmd, "does not have the OK tag", content)
+                if throw_fatal:
+                    fatal_msg("Command", cmd,
+                              "does not have the OK tag", content)
+                else:
+                    return False
         if time_it:
             processing_time = time.time() - processing_time
             msg(f"-- took {processing_time} seconds --",

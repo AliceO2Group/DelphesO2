@@ -13,7 +13,7 @@ import configparser
 from itertools import islice
 import os
 from ROOT import TFile
-from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd
+from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd, print_all_warnings
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -105,10 +105,25 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
     return tmp_script_name
 
 
-def run_o2_analysis(tmp_script_name, remove_tmp_script=False):
+def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=True):
     verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
-    run_cmd(cmd)
+    if explore_bad_files:
+        if run_cmd(cmd, check_status=True, throw_fatal=False) == False:
+            list_name = os.listdir(os.path.dirname(tmp_script_name))
+            for i in list_name:
+                if "ListForRun5Analysis" in i:
+                    list_name = i
+                    break
+            if type(list_name) != list:
+                with open(os.path.join(os.path.dirname(tmp_script_name), list_name)) as f:
+                    list_name = []
+                    for i in f:
+                        list_name.append(i)
+            warning_msg("Issue when running",
+                        tmp_script_name, "with", list_name)
+    else:
+        run_cmd(cmd)
     if remove_tmp_script:
         os.remove(tmp_script_name)
     verbose_msg("< end run with", tmp_script_name)
@@ -157,21 +172,28 @@ def main(mode,
     input_file_list = []
 
     def build_list_of_files(file_list):
-        if len(file_list) != len(set(file_list)):  # Check that runlist does not have duplicates
-            fatal_msg("Runlist has duplicated entries, fix runlist!")
+        verbose_msg("Building list of files from", file_list)
+        # Check that runlist does not have duplicates
+        unique_file_list = set(file_list)
+        if len(file_list) != len(unique_file_list):
+            # for i in file_list
+            fatal_msg("Runlist has duplicated entries, fix runlist!",
+                      len(unique_file_list), "unique files, while got", len(file_list), "files")
         not_readable = []
         recovered_files = []
         for i in file_list:  # Check that input files can be open
-            f = TFile(i.strip(), "READ")
-            if f.TestBit(TFile.kRecovered):
-                recovered_files.append(i)
+            f = i.strip()
+            verbose_msg("Checking that TFile", f, "can be processed")
+            f = TFile(f, "READ")
             if not f.IsOpen():
-                verbose_msg("Cannot open AOD file:", i, color=bcolors.WARNING)
+                warning_msg("Cannot open AOD file:", i)
                 not_readable.append(i)
+            elif f.TestBit(TFile.kRecovered):
+                verbose_msg(f, "was a recovered file")
+                recovered_files.append(i)
+            else:
+                verbose_msg(f, "is OK")
         if len(recovered_files) > 0:
-            bad_files = ""
-            for i in recovered_files:
-                bad_files += f"{i.strip()} "
             msg("Recovered", len(recovered_files),
                 "files:\n", )
             not_readable = not_readable + recovered_files
@@ -214,6 +236,8 @@ def main(mode,
                 "inputs, limiting to", n_max_files)
             if len(lines) > n_max_files:
                 lines = lines[0:n_max_files]
+            lines = [os.path.join(os.path.dirname(os.path.abspath(input_file)), i)
+                     for i in lines]
             input_file_list = build_list_of_files(lines)
     else:
         input_file_list = [os.path.join(os.getcwd(), input_file)]
@@ -234,7 +258,8 @@ def main(mode,
                         job_arguments=run_list, job_message="Running analysis")
         if clean_localhost_after_running:
             run_cmd(
-                "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v")
+                "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v 2>&1",
+                check_status=False)
 
     if (merge_output or merge_only) and len(run_list) > 1:
         files_to_merge = []
@@ -344,7 +369,12 @@ if __name__ == "__main__":
             fatal_msg(f"Did not fid configuration file '{i}'")
         workflows.read(i)
     for i in workflows.sections():
-        analyses[i] = workflows.get(i, "w").split("\n")
+        full_workflow = workflows.get(i, "w").split("\n")
+        analyses[i] = full_workflow
+        if "|" in full_workflow:
+            fatal_msg("`|` present in workflow", i)
+        if len(analyses[i]) == 0:
+            fatal_msg("Empty workflow for analysis", i)
 
     for i in args.modes:
         if i not in analyses.keys():
@@ -369,3 +399,5 @@ if __name__ == "__main__":
              avoid_overwriting_merge=args.avoid_overwriting_merge,
              shm_mem_size=args.mem,
              clean_localhost_after_running=not args.no_clean)
+
+    print_all_warnings()
