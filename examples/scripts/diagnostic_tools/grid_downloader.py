@@ -104,7 +104,7 @@ def check_root_file(file_name):
     if not f.IsOpen():
         msg("File", file_name, "is not open", color=bcolors.WARNING)
         return False
-    verbose_msg(file_name, "is ok")
+    verbose_msg(file_name, "is ok and has size", os.path.getsize(file_name)*1e-6, "MB")
     return True
 
 
