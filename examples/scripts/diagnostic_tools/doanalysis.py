@@ -271,8 +271,8 @@ def main(mode,
         if len(files_to_merge) == 0:
             warning_msg("Did not find any file to merge for tag", tag)
             return
-        if len(files_to_merge) > len(run_list):
-            fatal_msg("Trying to merge too many files!", tag)
+        if len(files_to_merge) % len(run_list) != 0:
+            fatal_msg("Trying to merge too many files!", tag, len(files_to_merge), "vs", len(run_list))
         msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
         files_per_type = {}  # List of files to be merged per type
         for i in files_to_merge:
@@ -294,7 +294,7 @@ def main(mode,
                 for j in files_per_type[i]:
                     fmerge.write(j+"\n")
             run_cmd(f"hadd -j {njobs} -f {merged_file} `cat {merge_file_list}`",
-                    log_file=merge_file_list.replace(".txt", ".log"), time_it=True)
+                    log_file=merge_file_list.replace(".txt", ".log"), time_it=True, comment=f"Merging to {merged_file}")
         if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:
