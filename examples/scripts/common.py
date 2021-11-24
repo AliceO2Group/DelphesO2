@@ -83,14 +83,14 @@ def print_all_warnings():
             warning_msg(*i, add=False)
 
 
-def run_in_parallel(processes, job_runner, job_arguments, job_message, linearize_single_core=False):
+def run_in_parallel(processes, job_runner, job_arguments, job_message, linearize_single_core=False, force_no_progress_line=False):
     """
     In parallel processer of functions with a nice progress printing
     If linearize_single_core is True and processes is 1 then the processing is not on multiple cores
     """
     if processes == 1 and linearize_single_core:
         msg(job_message, "using 1 core i.e. no multicores")
-        if "tqdm" not in sys.modules:
+        if "tqdm" not in sys.modules or force_no_progress_line:
             for i in enumerate(job_arguments):
                 msg(f"Done: {i[0]+1},", len(job_arguments)-i[0]-1, "to go")
                 job_runner(i[1])
@@ -102,7 +102,7 @@ def run_in_parallel(processes, job_runner, job_arguments, job_message, linearize
     with multiprocessing.Pool(processes=processes) as pool:
         msg(job_message)
         result = []
-        if "tqdm" not in sys.modules:
+        if "tqdm" not in sys.modules or force_no_progress_line:
             for i in enumerate(pool.imap(job_runner, job_arguments)):
                 msg(f"Done: {i[0]+1},", len(job_arguments)-i[0]-1, "to go")
                 result.append(i)

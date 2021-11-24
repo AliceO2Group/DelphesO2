@@ -23,24 +23,29 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                     output_files=["AnalysisResults.root",
                                   "AnalysisResults_trees.root",
                                   "QAResults.root"],
-                    dpl_configuration_file=None):
+                    dpl_configuration_file=None,
+                    resume_previous_analysis=False,
+                    write_runner_script=True):
     """
     Function to prepare everything you need for your O2 analysis.
     From the output folder to the script containing the O2 workflow.
     The output can be found in the same directory as the input data.
     """
+    # Creating output directory
+    output_path = os.path.dirname(os.path.abspath(input_file))
+    # Creating the script to run O2
+    tmp_script_name = os.path.join(output_path, f"tmpscript_{tag.lower()}.sh")
+    if not write_runner_script:  # Returning in case write_runner_script is False
+        return tmp_script_name
     # Defining log file
     log_file = f"log_{tag.lower()}.log"
     verbose_msg("Configuring the tasks with O2", color=bcolors.BOKBLUE)
-    # Creating output directory
-    output_path = os.path.dirname(os.path.abspath(input_file))
     # Checking input file
     verbose_msg("Using", input_file, "as input file")
     if not input_file.endswith(".root"):
         input_file = f"@{os.path.join(os.getcwd(), input_file)}"
 
-    # Creating the script to run O2
-    tmp_script_name = os.path.join(output_path, f"tmpscript_{tag.lower()}.sh")
+    # Writing instructions to runner script
     with open(tmp_script_name, "w") as tmp_script:
 
         verbose_msg("Writing o2 instructions to", f"'{tmp_script_name}'")
@@ -63,10 +68,17 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         # Print run dir
         write_instructions(f"pwd", n=2)
 
+        def get_tagged_output_file(output_file_name):
+            return output_file_name.replace(".root", f"_{tag}.root")
+
         for i in output_files:  # Removing old output
             write_instructions(f"[ -f {i} ] && rm -v {i} 2>&1")
-            i = i.replace(".root", f"_{tag}")
-            write_instructions(f"[ -f {i} ] && rm -v {i}.root 2>&1")
+            i = get_tagged_output_file(i)
+            if resume_previous_analysis:
+                write_instructions(
+                    f"[ -f {i} ] && echo 'file {i} already present, continuing' && exit 0")
+            else:
+                write_instructions(f"[ -f {i} ] && rm -v {i}.root 2>&1")
         write_instructions("")
 
         o2_workflow = ""
@@ -98,8 +110,8 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("")
 
         for i in output_files:  # renaming output with tag
-            r = i.replace(".root", f"_{tag}.root")
-            write_instructions(f"[ -f {i} ] && mv {i} {r} 2>&1")
+            write_instructions(
+                f"[ -f {i} ] && mv {i} {get_tagged_output_file(i)} 2>&1")
 
         write_instructions("\nexit 0")
     return tmp_script_name
@@ -148,7 +160,9 @@ def main(mode,
          readers=1,
          avoid_overwriting_merge=False,
          clean_localhost_after_running=True,
-         extra_arguments=""):
+         extra_arguments="",
+         resume_previous_analysis=False,
+         check_input_file_integrity=True):
     if len(input_file) == 1:
         input_file = input_file[0]
     else:
@@ -181,18 +195,19 @@ def main(mode,
                       len(unique_file_list), "unique files, while got", len(file_list), "files")
         not_readable = []
         recovered_files = []
-        for i in file_list:  # Check that input files can be open
-            f = i.strip()
-            verbose_msg("Checking that TFile", f, "can be processed")
-            f = TFile(f, "READ")
-            if not f.IsOpen():
-                warning_msg("Cannot open AOD file:", i)
-                not_readable.append(i)
-            elif f.TestBit(TFile.kRecovered):
-                verbose_msg(f, "was a recovered file")
-                recovered_files.append(i)
-            else:
-                verbose_msg(f, "is OK")
+        if check_input_file_integrity:  # Check that input files can be open
+            for i in file_list:
+                f = i.strip()
+                verbose_msg("Checking that TFile", f, "can be processed")
+                f = TFile(f, "READ")
+                if not f.IsOpen():
+                    warning_msg("Cannot open AOD file:", i)
+                    not_readable.append(i)
+                elif f.TestBit(TFile.kRecovered):
+                    verbose_msg(f, "was a recovered file")
+                    recovered_files.append(i)
+                else:
+                    verbose_msg(f, "is OK")
         if len(recovered_files) > 0:
             msg("Recovered", len(recovered_files),
                 "files:\n", )
@@ -252,7 +267,9 @@ def main(mode,
                                         o2_arguments=o2_arguments,
                                         input_file=j,
                                         tag=tag,
-                                        dpl_configuration_file=dpl_configuration_file))
+                                        dpl_configuration_file=dpl_configuration_file,
+                                        resume_previous_analysis=resume_previous_analysis,
+                                        write_runner_script=not merge_only))
     if not merge_only:
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message="Running analysis")
@@ -271,9 +288,6 @@ def main(mode,
         if len(files_to_merge) == 0:
             warning_msg("Did not find any file to merge for tag", tag)
             return
-        if len(files_to_merge) % len(run_list) != 0:
-            fatal_msg("Trying to merge too many files!", tag, len(files_to_merge), "vs", len(run_list))
-        msg("Merging", len(files_to_merge), "results", color=bcolors.BOKBLUE)
         files_per_type = {}  # List of files to be merged per type
         for i in files_to_merge:
             fn = os.path.basename(i)
@@ -293,6 +307,10 @@ def main(mode,
             with open(merge_file_list, "w") as fmerge:
                 for j in files_per_type[i]:
                     fmerge.write(j+"\n")
+            if len(files_per_type[i]) > len(run_list):
+                fatal_msg("Trying to merge too many files of type", i, "for tag", tag, ":",
+                          len(files_per_type[i]), "vs", len(run_list), "runs")
+            msg("Merging", len(files_per_type[i]), "files to", merged_file)
             run_cmd(f"hadd -j {njobs} -f {merged_file} `cat {merge_file_list}`",
                     log_file=merge_file_list.replace(".txt", ".log"), time_it=True, comment=f"Merging to {merged_file}")
         if len(merged_files) == 0:
@@ -358,6 +376,12 @@ if __name__ == "__main__":
                         action="store_true", help="Flag to show the workflow of the current tag")
     parser.add_argument("--no_clean", "-nc",
                         action="store_true", help="Flag to avoid cleaning the localhost files after running")
+    parser.add_argument("--resume_previous_analysis", "--continue_analysis", "--resume_analysis", "--continue",
+                        action="store_true",
+                        help="Flag to continue the analysis from the input files that have been already built and not overwriting the output results")
+    parser.add_argument("--dont_check_input_integrity", "--no_check_input_integrity", "--NC", "--nocheck",
+                        action="store_true",
+                        help="Flag to avoid checking the input file integrity so as to gain time")
     args = parser.parse_args()
     set_verbose_mode(args)
 
@@ -398,6 +422,8 @@ if __name__ == "__main__":
              extra_arguments=args.extra_arguments,
              avoid_overwriting_merge=args.avoid_overwriting_merge,
              shm_mem_size=args.mem,
-             clean_localhost_after_running=not args.no_clean)
+             clean_localhost_after_running=not args.no_clean,
+             resume_previous_analysis=args.resume_previous_analysis,
+             check_input_file_integrity=not args.dont_check_input_integrity)
 
     print_all_warnings()
