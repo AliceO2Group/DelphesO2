@@ -25,7 +25,8 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                                   "QAResults.root"],
                     dpl_configuration_file=None,
                     resume_previous_analysis=False,
-                    write_runner_script=True):
+                    write_runner_script=True,
+                    analysis_timeout=None):
     """
     Function to prepare everything you need for your O2 analysis.
     From the output folder to the script containing the O2 workflow.
@@ -82,6 +83,8 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("")
 
         o2_workflow = ""
+        if analysis_timeout is not None:
+            o2_workflow = f"timeout {analysis_timeout} "
         for i in o2_analyses:
             line = f"{i} {o2_arguments}"
             if i == o2_analyses[0]:
@@ -162,7 +165,8 @@ def main(mode,
          clean_localhost_after_running=True,
          extra_arguments="",
          resume_previous_analysis=False,
-         check_input_file_integrity=True):
+         check_input_file_integrity=True,
+         analysis_timeout=None):
     if len(input_file) == 1:
         input_file = input_file[0]
     else:
@@ -185,6 +189,22 @@ def main(mode,
     # Build input file list
     input_file_list = []
 
+    def is_root_file_sane(file_name_to_check):
+        file_name_to_check = file_name_to_check.strip()
+        if not os.path.isfile(file_name_to_check):
+            warning_msg("File", file_name_to_check, "does not exist")
+            return 3
+        file_to_check = TFile(file_name_to_check, "READ")
+        if not file_to_check.IsOpen():
+            warning_msg("Cannot open AOD file:", file_name_to_check)
+            return 1
+        elif file_to_check.TestBit(TFile.kRecovered):
+            verbose_msg(file_name_to_check, "was a recovered file")
+            return 2
+        else:
+            verbose_msg(file_name_to_check, "is OK")
+            return 0
+
     def build_list_of_files(file_list):
         verbose_msg("Building list of files from", file_list)
         # Check that runlist does not have duplicates
@@ -197,17 +217,13 @@ def main(mode,
         recovered_files = []
         if check_input_file_integrity:  # Check that input files can be open
             for i in file_list:
-                f = i.strip()
-                verbose_msg("Checking that TFile", f, "can be processed")
-                f = TFile(f, "READ")
-                if not f.IsOpen():
-                    warning_msg("Cannot open AOD file:", i)
+                verbose_msg("Checking that TFile",
+                            i.strip(), "can be processed")
+                file_sane_code = is_root_file_sane(i)
+                if file_sane_code == 1:
                     not_readable.append(i)
-                elif f.TestBit(TFile.kRecovered):
-                    verbose_msg(f, "was a recovered file")
+                elif file_sane_code == 2:
                     recovered_files.append(i)
-                else:
-                    verbose_msg(f, "is OK")
         if len(recovered_files) > 0:
             msg("Recovered", len(recovered_files),
                 "files:\n", )
@@ -269,7 +285,8 @@ def main(mode,
                                         tag=tag,
                                         dpl_configuration_file=dpl_configuration_file,
                                         resume_previous_analysis=resume_previous_analysis,
-                                        write_runner_script=not merge_only))
+                                        write_runner_script=not merge_only,
+                                        analysis_timeout=analysis_timeout))
     if not merge_only:
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message="Running analysis")
@@ -289,10 +306,20 @@ def main(mode,
             warning_msg("Did not find any file to merge for tag", tag)
             return
         files_per_type = {}  # List of files to be merged per type
+        # List of files to be merged per type that are not declared sane
+        non_sane_files_per_type = {}
         for i in files_to_merge:
+            if is_root_file_sane(i) != 0:
+                non_sane_files_per_type[fn].setdefault(fn, []).append(i)
+                warning_msg("Result file", i, "is not sane")
+                continue
             fn = os.path.basename(i)
             files_per_type.setdefault(fn, [])
             files_per_type[fn].append(i)
+        for i in non_sane_files_per_type:
+            warning_msg("Non sane files for type", i)
+            for j in non_sane_files_per_type[i]:
+                msg(j)
         merged_files = []
         for i in files_per_type:
             merged_file = os.path.join(out_path, i)
@@ -339,6 +366,10 @@ if __name__ == "__main__":
                         type=str,
                         default="",
                         help="Tag for output files")
+    parser.add_argument("--timeout", "-T",
+                        type=int,
+                        default=None,
+                        help="Timeout to give to the analyses. If negative no timeout is used")
     parser.add_argument("--batch-size", "-B",
                         type=int,
                         default=10,
@@ -424,6 +455,7 @@ if __name__ == "__main__":
              shm_mem_size=args.mem,
              clean_localhost_after_running=not args.no_clean,
              resume_previous_analysis=args.resume_previous_analysis,
-             check_input_file_integrity=not args.dont_check_input_integrity)
+             check_input_file_integrity=not args.dont_check_input_integrity,
+             analysis_timeout=args.timeout)
 
     print_all_warnings()
