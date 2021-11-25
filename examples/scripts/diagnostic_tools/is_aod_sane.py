@@ -21,8 +21,6 @@ def main(input_file_name="/tmp/AO2D.root", verbose=False):
     list_of_keys = input_file.GetListOfKeys()
 
     def inspect(name, tree_name):
-        if name == "metaData":
-            return 0
         tree_name = f"{name}/{tree_name}"
         t = input_file.Get(tree_name)
         if not t:
@@ -34,6 +32,13 @@ def main(input_file_name="/tmp/AO2D.root", verbose=False):
         return t.GetEntries()
 
     for df_index, i in enumerate(list_of_keys):
+        if i.GetName() == "metaData":
+            continue
+
+        def add_bad():
+            # print(i.GetName())
+            bad_files.setdefault(input_file_name, []).append(i.GetName())
+
         dictionary_of_counts = {"O2bc": None,
                                 "O2collision": None,
                                 "O2track": None,
@@ -41,6 +46,8 @@ def main(input_file_name="/tmp/AO2D.root", verbose=False):
                                 "O2trackextra": None}
         for j in dictionary_of_counts:
             dictionary_of_counts[j] = inspect(i.GetName(), j)
+            if dictionary_of_counts[j] < 0:
+                add_bad()
 
         def must_be_same(*args):
             counts = []
@@ -49,7 +56,7 @@ def main(input_file_name="/tmp/AO2D.root", verbose=False):
                 counts.append(dictionary_of_counts[k])
                 names.append(k)
             if len(set(counts)) != 1:
-                bad_files.setdefault(input_file_name, []).append(i.GetName())
+                add_bad()
                 warning_msg("Did not get equal counts for", ", ".join(names),
                             counts, "in DF", df_index, "/", len(list_of_keys), ":", i.GetName())
         must_be_same("O2track", "O2trackcov", "O2trackextra")
