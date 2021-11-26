@@ -2,7 +2,7 @@
 
 """
 Common header for AOD python scripts
-Author: Nicolo' Jacazio, nicolo.jacazio@cern.ch
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 import argparse

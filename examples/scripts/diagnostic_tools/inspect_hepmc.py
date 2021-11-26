@@ -2,6 +2,7 @@
 
 """
 Inspector of the HepMC file
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 import pyhepmc_ng as hep

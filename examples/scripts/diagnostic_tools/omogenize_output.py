@@ -2,6 +2,7 @@
 
 """
 Script to split the directories of a file into several ones with the same structure, useful for ML processing
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from multiprocessing import Pool

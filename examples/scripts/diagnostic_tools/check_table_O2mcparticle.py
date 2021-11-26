@@ -2,6 +2,7 @@
 
 """
 Script to check the consistency of the written MC particles, in particular focusing on the order particles are written
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from ROOT import TFile
