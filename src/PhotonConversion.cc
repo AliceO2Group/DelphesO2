@@ -32,15 +32,26 @@ bool PhotonConversion::hasPhotonConversion(const GenParticle& particle) const
 
   const int pid = particle.PID;
   TLorentzVector p4True = particle.P4();
+  float convProb,eff;
+  
   if (pid == 22) {
-    float convProb = 3.55541e-02 * TMath::Power(p4True.Pt(), 1.50281) / (1.39201e-02 + TMath::Power(p4True.Pt(), 1.45348));
-    if (convProb > 0.04)
-      convProb = 0.04;
-    float eff = 5.72297e-01 * TMath::Power(p4True.Pt(), 3.35915) / (6.86633e-02 + TMath::Power(p4True.Pt(), 3.08761));
-    if (eff > 1.)
-      eff = 1.;
-    // convProb =1;
-    // eff=1;
+    if (TMath::Abs(particle.Eta) < 1.3) {
+      convProb = 3.54334e-02 * TMath::Power(p4True.Pt(), 1.47512) / (1.56461e-02 + TMath::Power(p4True.Pt(), 1.43599));
+      if (convProb > 0.04)
+	convProb = 0.04;
+      eff = 5.89182e-01 * TMath::Power(p4True.Pt(), 3.85834) / (2.96558e-03 + TMath::Power(p4True.Pt(), 3.72573));
+      if (eff > 1.)
+	eff = 1.;
+
+    } else  if (TMath::Abs(particle.Eta) > 1.75 && TMath::Abs(particle.Eta) < 4.) {
+      convProb = -8.24825e-03  *( TMath::Power(p4True.P(), -5.03182e-01 )-1.13113e+01*p4True.P()) / (2.23495e-01 + TMath::Power(p4True.P(), 1.08338e+00 ));
+      eff = 5.89182e-01 * TMath::Power(p4True.P(), 3.85834) / (2.96558e-03 + TMath::Power(p4True.P(), 3.72573));
+      if (eff > 1.)
+	eff = 1.;
+    }else{
+      convProb = 0.;
+      eff=0.;
+    }
     return (gRandom->Uniform() < (convProb * eff));
   } else {
     const Float_t misConvProb = 0.0;
@@ -58,7 +69,7 @@ bool PhotonConversion::makeSignal(const GenParticle& particle, TLorentzVector& p
     return false;
   }
   // Eta coverage of the central barrel. Region where the conv prob., rec effciency and momentum resolution have been parametrized.
-  if (TMath::Abs(particle.Eta) > 1.5) {
+  if (( TMath::Abs(particle.Eta) > 1.3  && TMath::Abs(particle.Eta) < 1.75) || TMath::Abs(particle.Eta) > 4 ) {
     return false;
   }
   TLorentzVector p4Smeared = smearPhotonP(particle);
@@ -82,8 +93,13 @@ TLorentzVector PhotonConversion::smearPhotonP(const GenParticle& particle)
   double phi = p4True.Phi();
   double theta = p4True.Theta();
 
-  Double_t sigmaP = pTrue * TMath::Sqrt(sigmaPt0 * sigmaPt0 + (sigmaPt1 * pTrue) * (sigmaPt1 * pTrue));
-
+  double sigmaP;
+  if( TMath::Abs(particle.Eta) < 1.3) {
+    sigmaP = pTrue * TMath::Sqrt(sigmaPt0 * sigmaPt0 + (sigmaPt1 * pTrue) * (sigmaPt1 * pTrue));
+  } else if ( TMath::Abs(particle.Eta) > 1.75   &&  TMath::Abs(particle.Eta) < 4 ) {
+    sigmaP = pTrue * TMath::Sqrt(sigmaPF0 * sigmaPF0 );
+  }
+    
   double pSmearedMag = gRandom->Gaus(pTrue, sigmaP);
   if (pSmearedMag < 0)
     pSmearedMag = 0;
