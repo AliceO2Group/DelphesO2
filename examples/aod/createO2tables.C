@@ -27,6 +27,7 @@ R__LOAD_LIBRARY(libDelphesO2)
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
 #include "DataFormatsFT0/RecPoints.h"
+#include "Framework/DataTypes.h"
 
 // DelphesO2 includes
 #include "TrackSmearer.hh"
@@ -274,7 +275,9 @@ int createO2tables(const char* inputFile = "delphes.root",
       mcparticle.fStatusCode = particle->Status;
       mcparticle.fFlags = 0;
       if (IsSecondary(particles, iparticle)) {
-        mcparticle.fFlags |= 1;
+        mcparticle.fFlags |= o2::aod::mcparticle::enums::ProducedByTransport;
+      } else {
+        mcparticle.fFlags |= o2::aod::mcparticle::enums::PhysicalPrimary;
       }
       mcparticle.fIndexMcParticles_Mother0 = particle->M1;
       if (mcparticle.fIndexMcParticles_Mother0 > -1)
