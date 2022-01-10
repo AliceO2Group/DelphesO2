@@ -45,7 +45,7 @@ const double Bz = 0.2; // [T]
 constexpr double tof_radius = 100.; // [cm] Radius of the TOF detector (used to compute acceptance)
 const double tof_length = 200.;     // [cm] Length of the TOF detector (used to compute acceptance)
 const double tof_sigmat = 0.02;     // [ns] Resolution of the TOF detector
-const double tof_sigmat0 = 0.2;     // [ns] Time spread of the vertex 
+const double tof_sigmat0 = 0.2;     // [ns] Time spread of the vertex
 const char* tof_mismatch_file = "tofMM.root";
 // Forward TOF
 const double forward_tof_radius = 100.;   // [cm] Radius of the Forward TOF detector (used to compute acceptance)
@@ -54,7 +54,7 @@ const double forward_tof_length = 200.;   // [cm] Length of the Forward TOF dete
 const double forward_tof_sigmat = 0.02;   // [ns] Resolution of the Forward TOF detector
 const double forward_tof_sigmat0 = 0.2;   // [ns] Time spread of the vertex
 // RICH
-constexpr double rich_radius = 100.;    // [cm] Radius of the RICH detector (used to compute acceptance) 
+constexpr double rich_radius = 100.;    // [cm] Radius of the RICH detector (used to compute acceptance)
 const double rich_length = 200.;        // [cm] Length of the RICH detector (used to compute acceptance)
 const double rich_index = 1.03;         // Refraction index of the RICH detector
 const double rich_radiator_length = 2.; // [cm] Radiator length of the RICH detector
