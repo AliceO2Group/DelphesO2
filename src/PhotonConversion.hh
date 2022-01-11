@@ -25,8 +25,12 @@ class PhotonConversion
  protected:
   TLorentzVector smearPhotonP(const GenParticle& particle);
 
-  float sigmaPt0 = 0.0284;  // parameter  sigma0 for momentum resolution
-  float sigmaPt1 = 0.00577; // parameter sigma1 for momentum resolution
+  float sigmaPt0 = 0.0314;  // parameter  sigma0 for momentum resolution
+  float sigmaPt1 = 0.00406; // parameter sigma1 for momentum resolution
+
+  float sigmaPF0 = 0.04082;  // parameter  sigma0 for momentum resolution ~30% worst than eta~0
+
+
 };
 
 } // namespace delphes
