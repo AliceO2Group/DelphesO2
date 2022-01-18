@@ -77,7 +77,7 @@ def writefiles(FileList, Outfile, append=False):
     # Printing name of output list
     msg(f"Output will be into file '{Outfile}'")
     # Check on existing list file of this name
-    if path.isfile(Outfile):
+    if path.isfile(Outfile) and not append:
         msg("List file already existing, replace it? (y/[n])")
         if "y" not in input():
             return
@@ -97,14 +97,19 @@ def check_root_file(file_name):
     if not path.isfile(file_name):
         warning_msg("Testing a non existing file:", file_name)
         return True
-    f = TFile(file_name, "READ")
-    if f.TestBit(TFile.kRecovered):
-        msg("File", file_name, "was recovered", color=bcolors.WARNING)
+    try:
+        f = TFile(file_name, "READ")
+        if f.TestBit(TFile.kRecovered):
+            msg("File", file_name, "was recovered", color=bcolors.WARNING)
+            return False
+        if not f.IsOpen():
+            msg("File", file_name, "is not open", color=bcolors.WARNING)
+            return False
+    except OSError:
+        msg("Issue when checking file", file_name, color=bcolors.WARNING)
         return False
-    if not f.IsOpen():
-        msg("File", file_name, "is not open", color=bcolors.WARNING)
-        return False
-    verbose_msg(file_name, "is ok and has size", os.path.getsize(file_name)*1e-6, "MB")
+    verbose_msg(file_name, "is ok and has size",
+                os.path.getsize(file_name)*1e-6, "MB")
     return True
 
 
@@ -247,14 +252,15 @@ def main(input_files,
          do_copied=False,
          do_copylist=False,
          what="AO2D.root",
+         append=False,
          jobs=1):
     done_something = False
     if do_list_files:
         for i in input_files:
             list_of_files = listfiles(i, what, False)
-            if do_write_files:
+            if len(list_of_files) > 0 and do_write_files:
                 writefiles(list_of_files, do_write_files,
-                           append=(i == list_of_files[0]))
+                           append=(i == list_of_files[0]) or append)
         done_something = True
 
     if do_copy or do_copylist:
@@ -287,6 +293,8 @@ if __name__ == "__main__":
                         action="store_true", help=copylist.__doc__)
     parser.add_argument("--copied", "-K",
                         action="store_true", help=copied.__doc__)
+    parser.add_argument("--append", "-a",
+                        action="store_true", help="Apppend to file")
     parser.add_argument("--what", "-w",
                         type=str, default=None, help="Object that is looked for on alien")
 
@@ -299,4 +307,5 @@ if __name__ == "__main__":
          do_copylist=args.copylist,
          what=args.what,
          jobs=args.njobs,
+         append=args.append,
          do_copied=args.copied)

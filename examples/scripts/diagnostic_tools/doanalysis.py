@@ -12,8 +12,8 @@ You can check the help of the script (i.e. `./doanalysis.py --h`) to have inform
 import configparser
 from itertools import islice
 import os
-from ROOT import TFile
 from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd, print_all_warnings
+from ROOT import TFile
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
