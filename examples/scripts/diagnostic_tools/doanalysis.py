@@ -79,7 +79,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                 write_instructions(
                     f"[ -f {i} ] && echo 'file {i} already present, continuing' && exit 0")
             else:
-                write_instructions(f"[ -f {i} ] && rm -v {i}.root 2>&1")
+                write_instructions(f"[ -f {i} ] && rm -v {i} 2>&1")
         write_instructions("")
 
         o2_workflow = ""
