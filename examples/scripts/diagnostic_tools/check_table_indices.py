@@ -3,6 +3,7 @@
 
 """
 Script to test the indices of the AODs
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from ROOT import TFile, TCanvas, TH1F

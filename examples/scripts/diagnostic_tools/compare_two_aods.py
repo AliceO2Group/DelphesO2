@@ -3,6 +3,7 @@
 """
 Script to compare two AOD files.
 This can be used to compare the consistency of the branches of AODs 
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from ROOT import TFile

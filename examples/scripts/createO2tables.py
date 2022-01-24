@@ -2,7 +2,7 @@
 
 """
 Handler to run the DelphesO2 framework and to create O2 analysis tables.
-Author: Nicolo' Jacazio, nicolo.jacazio@cern.ch
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 import configparser

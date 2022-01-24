@@ -3,6 +3,7 @@
 """
 Script to check the consistency between O2 tables and delphes.
 This allows the user to check the consistency of variables in the AOD and in the delphes file.
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from ROOT import TFile

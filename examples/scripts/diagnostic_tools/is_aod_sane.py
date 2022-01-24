@@ -2,6 +2,7 @@
 
 """
 Script to check if an AOD is sane and can be used for analysis or not
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 from common import get_default_parser, msg, print_all_warnings, run_in_parallel, verbose_msg, warning_msg, set_verbose_mode

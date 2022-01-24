@@ -2,7 +2,7 @@
 
 """
 Utility script to download files from grid
-Author: Nicolo' Jacazio, nicolo.jacazio@cern.ch
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 
@@ -210,7 +210,7 @@ def copied(fname, extra_msg="", last_time=None, check_root_files=True):
     if last_time is not None:
         n_copied -= last_time[1]
     msg(extra_msg, "downloaded {}/{}, {:.1f}%".format(n_copied,
-        n_to_copy, 100 * float(n_copied) / float(n_to_copy)),
+                                                      n_to_copy, 100 * float(n_copied) / float(n_to_copy)),
         f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "", f"{len(not_sane)}" if len(not_sane) > 0 else "")
 
     return n_to_copy, n_copied
@@ -245,12 +245,50 @@ def copylist(fname, jobs=1):
     copied(fname, extra_msg="In recent run", last_time=sofar)
 
 
+def merge_aod(in_path, out_path="./", input_file="AO2D.root", must_have="ctf", bunch_size=50, skip_already_existing=True):
+    in_path = os.path.normpath(in_path)
+    out_path = os.path.normpath(out_path)
+    file_list = []
+    for root, dirs, files in os.walk(in_path):
+        for file in files:
+            if file == input_file:
+                to_merge = os.path.abspath(os.path.join(root, file))
+                print(to_merge)
+                if must_have is not None and must_have in to_merge:
+                    file_list.append(to_merge)
+    verbose_msg("Found", len(file_list), "files called", input_file)
+    # Divide it in bunches
+    file_list = [file_list[i:i+bunch_size]
+                 for i in range(0, len(file_list), bunch_size)]
+    for i in enumerate(file_list):
+        bunch_size = 0
+        with open("inputfile.txt", "w") as f:
+            for j in i[1]:
+                f.write(f"{j}\n")
+                bunch_size += os.path.getsize(j)
+        out_aod = os.path.join(out_path, f"AO2D_{i[0]}.root")
+        verbose_msg("Merging bunch of", len(i[1]),
+                    "files. I.e.", bunch_size*1e-6, "MB")
+        if skip_already_existing and os.path.isfile(out_aod):
+            verbose_msg(out_aod, "already existing, skipping")
+            continue
+        tmp_aod = os.path.join(out_path, "MergedAOD.root")
+        run_cmd(
+            f"o2-aod-merger --input inputfile.txt --output {tmp_aod} --skip-non-existing-files",
+            comment=f"Merging AODs into {out_aod}")
+        os.rename(tmp_aod, out_aod)
+        merged_size = os.path.getsize(out_aod)
+        msg("Produced a merged file of",
+            merged_size*1e-6, "MB from", bunch_size*1e-6, "MB, compression:", merged_size/bunch_size)
+
+
 def main(input_files,
          do_list_files=False,
          do_write_files=None,
          do_copy=False,
          do_copied=False,
          do_copylist=False,
+         do_merge=False,
          what="AO2D.root",
          append=False,
          jobs=1):
@@ -274,6 +312,11 @@ def main(input_files,
         for i in input_files:
             print(copied(i))
         done_something = True
+    if do_merge:
+        for i in input_files:
+            merge_aod(i,
+                      input_file=what)
+        done_something = True
 
     if not done_something:
         warning_msg("Did not do anything")
@@ -288,6 +331,8 @@ if __name__ == "__main__":
     parser.add_argument("--outfile", "-o", type=str, default=None,
                         help=writefiles.__doc__)
     parser.add_argument("--copy", "-c", action="store_true",
+                        help=copyfile.__doc__)
+    parser.add_argument("--merge", "-m", action="store_true",
                         help=copyfile.__doc__)
     parser.add_argument("--copylist", "-C",
                         action="store_true", help=copylist.__doc__)
@@ -308,4 +353,5 @@ if __name__ == "__main__":
          what=args.what,
          jobs=args.njobs,
          append=args.append,
+         do_merge=args.merge,
          do_copied=args.copied)

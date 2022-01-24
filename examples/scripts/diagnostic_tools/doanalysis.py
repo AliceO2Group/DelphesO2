@@ -7,6 +7,7 @@ Several analyses are implemented already, you can pick yours and run e.g.:
 `./doanalysis.py TrackQA -i ../AODRun5.0.root`
 Results will be available for each batch of files in the `AnalysisResults` directory.
 You can check the help of the script (i.e. `./doanalysis.py --h`) to have information on the available options and workflows.
+Author: Nicolò Jacazio, nicolo.jacazio@cern.ch
 """
 
 import configparser
@@ -107,7 +108,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("  eval \"${O2Workflow}\"")
         write_instructions("fi")
 
-        for i in ["ERROR", "FATAL"]:
+        for i in ["ERROR", "FATAL", "crash"]:
             write_instructions(
                 f"if grep -q \"\[{i}\]\" {log_file}; then echo \": got some {i}s in '{log_file}'\" && exit 1; fi")
         write_instructions("")
@@ -179,6 +180,10 @@ def main(mode,
     else:
         msg("Merging output of", f"'{mode}'",
             "analysis", color=bcolors.BOKBLUE)
+    if analysis_timeout is not None:
+        msg("Using analysis timeout of", analysis_timeout,
+            "seconds", color=bcolors.BOKBLUE)
+
     o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers}"
     o2_arguments += extra_arguments
     if mode not in analyses:
