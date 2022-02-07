@@ -241,7 +241,8 @@ def copylist(fname, jobs=1):
     if jobs > 1:
         msg("Copying list in parallel with", jobs, "jobs")
         run_in_parallel(processes=jobs, job_runner=copyfile,
-                        job_arguments=Group, job_message="Downloading files")
+                        job_arguments=Group, job_message="Downloading files",
+                        linearize_single_core=True)
     copied(fname, extra_msg="In recent run", last_time=sofar)
 
 
