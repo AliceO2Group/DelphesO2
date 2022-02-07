@@ -11,10 +11,6 @@ import multiprocessing
 import sys
 import os
 import datetime
-try:
-    import tqdm
-except ImportError as e:
-    print("Module tqdm is not imported. Progress bar will not be available (you can install tqdm for the progress bar)")
 
 
 # Global running flags
@@ -66,7 +62,12 @@ def fatal_msg(*args, fatal_message="Fatal Error!"):
     raise RuntimeError(fatal_message)
 
 
-list_of_warnings = multiprocessing.Manager().list()
+list_of_warnings = []
+try:
+    list_of_warnings = multiprocessing.Manager().list()
+except:
+    verbose_msg("Could not load warnings from manager",
+                "Will not be printed from parallel processing")
 
 
 def warning_msg(*args, add=True):
@@ -81,6 +82,13 @@ def print_all_warnings():
         warning_msg("There were some warnings", add=False)
         for i in list_of_warnings:
             warning_msg(*i, add=False)
+
+
+try:
+    import tqdm
+except ImportError as e:
+    verbose_msg("Module tqdm is not imported.",
+                "Progress bar will not be available (you can install tqdm for the progress bar)")
 
 
 def run_in_parallel(processes, job_runner, job_arguments, job_message, linearize_single_core=False, force_no_progress_line=False):
