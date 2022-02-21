@@ -13,7 +13,7 @@ poi = {}
 poi_names = {2212: "Proton", -2212: "AntiProton",
              2112: "Neutron", -2112: "AntiNeutron",
              3122: "Lambda0", 1000010020: "Deuteron",
-             1000020030: "Triton", 1000020040: "Alpha",
+             1000010030: "Triton", 1000020040: "Alpha",
              1000020030: "Helium3"}
 
 for i in poi_names:
