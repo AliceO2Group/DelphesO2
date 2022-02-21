@@ -11,9 +11,25 @@ from os import path
 from common import bcolors, msg, run_cmd, run_in_parallel, verbose_msg, get_default_parser, set_verbose_mode, warning_msg
 import getpass
 import datetime
+import inspect
 from ROOT import TFile
 
 alienprefix = "alien://"
+
+
+class InputArgument:
+    default = ""
+    helper = ""
+    aliases = []
+    thistype = str
+
+    def __init__(self, default, helper="", aliases=[], thistype=str):
+        self.default = default
+        self.helper = helper
+        self.aliases = aliases
+        if type(self.aliases) is not list:
+            self.aliases = [self.aliases]
+        self.thistype = thistype
 
 
 def print_now():
@@ -21,7 +37,15 @@ def print_now():
     msg("- Current date and time:", str(now), color=bcolors.OKBLUE)
 
 
-def listfiles(Path, What, MakeXML=False, MustHave="", SubDirs="", User=None, MainPath=""):
+def listfiles(Path=None,
+              What=InputArgument("AO2D.root",
+                                 "Name of the file to look for", "-w"),
+              MakeXML=False,
+              MustHave=InputArgument(None,
+                                     "String that must be in good files path", "-m"),
+              SubDirs="",
+              User=None,
+              MainPath=""):
     """
     Lists the content of the path given in input.
     Puts the content to file if required.
@@ -69,7 +93,9 @@ def listfiles(Path, What, MakeXML=False, MustHave="", SubDirs="", User=None, Mai
     return FilterList
 
 
-def writefiles(FileList, Outfile, append=False):
+def writefiles(FileList="", Outfile=InputArgument("listoffiles.txt",
+                                                  "Output file", "-o"),
+               append="Append to output file or create a new one"):
     """
     Writes the list of file to the output file given content of the path given in input.
     Can also form the output in the xml format so as to run on grid, this is done if the output filename has the xml extension.
@@ -113,7 +139,10 @@ def check_root_file(file_name):
     return True
 
 
-def copyfile(toget, Version=None, replace_preexisting=False, n_retry_root_files=4):
+def copyfile(toget="Full path of the file to get",
+             Version=None,
+             replace_preexisting=False,
+             n_retry_root_files=4):
     """Copies a file from grid and puts it in the same path as the grid one.
     The version lets you choose between old and new alien. Versions==None means that it will autoset it"""
     toget = toget.strip()
@@ -149,21 +178,21 @@ def copyfile(toget, Version=None, replace_preexisting=False, n_retry_root_files=
         tofile = path.basename(toget)
         todir = path.normpath("./" + path.dirname(toget.replace(alienprefix,
                                                                 "")))
-        out_file = path.join(todir,  tofile)
+        out_file = path.join(todir, tofile)
         verbose_msg(
             f"  --copyfile: Output dir. is '{todir}', file is '{tofile}'")
 
         if not path.isdir(todir):
             msg("Directory '{}' does not exist - creating it".format(todir))
             os.makedirs(todir)
-        if path.isfile(out_file):
+        if path.isfile(out_file) and check_root_file(out_file):
             if replace_preexisting:
                 msg("File '{}' already copied, overwriting".format(out_file))
             else:
                 msg("File '{}' already copied".format(out_file))
                 return
 
-        def proceed():
+        def proceed(handle_exit=True):
             msg(f"Downloading '{toget}'", color=bcolors.OKGREEN)
             print_now()
             if Version == 0:
@@ -171,10 +200,18 @@ def copyfile(toget, Version=None, replace_preexisting=False, n_retry_root_files=
             else:
                 cpycmd = "alien_cp -v {} file://{}".format(toget, todir)
             verbose_msg("Running command", cpycmd)
-            run_cmd(cpycmd)
+            if handle_exit:
+                try:
+                    run_cmd(cpycmd)
+                except KeyboardInterrupt:
+                    return False
+            else:
+                run_cmd(cpycmd)
+                return True
 
         for i in range(n_retry_root_files):
-            proceed()
+            if not proceed():
+                return
             if check_root_file(out_file):
                 break
 
@@ -183,7 +220,7 @@ def copyfile(toget, Version=None, replace_preexisting=False, n_retry_root_files=
         msg("Input: " + toget, color=bcolors.BWARNING)
 
 
-def copied(fname, extra_msg="", last_time=None, check_root_files=True):
+def copied(fname="", extra_msg="", last_time=None, check_root_files=True):
     """Checks if how many files of a text list were correctly copied from grid to the PC"""
     verbose_msg("Checking how many files were copied from from list", fname)
     fname = fname.strip()
@@ -211,13 +248,16 @@ def copied(fname, extra_msg="", last_time=None, check_root_files=True):
         n_copied -= last_time[1]
     msg(extra_msg, "downloaded {}/{}, {:.1f}%".format(n_copied,
                                                       n_to_copy, 100 * float(n_copied) / float(n_to_copy)),
-        f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "", f"{len(not_sane)}" if len(not_sane) > 0 else "")
+        f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "", f"{len(not_sane)} are not OK" if len(not_sane) > 0 else "")
 
     return n_to_copy, n_copied
 
 
-def copylist(fname, jobs=1):
+def copylist(fname="",
+             jobs=InputArgument(1, "Number of parallel jobs to use", ["-j"], int)):
     """Takes a text file and downloads the files from grid"""
+    if jobs is None:
+        jobs = 1
     verbose_msg("Copying files from list", fname, "with", jobs, "jobs")
     fname = path.normpath(fname)
     if not path.isfile(fname):
@@ -246,7 +286,7 @@ def copylist(fname, jobs=1):
     copied(fname, extra_msg="In recent run", last_time=sofar)
 
 
-def merge_aod(in_path, out_path="./", input_file="AO2D.root", must_have="ctf", bunch_size=50, skip_already_existing=True):
+def merge_aod(in_path="", out_path="./", input_file="AO2D.root", must_have="ctf", bunch_size=50, skip_already_existing=True):
     in_path = os.path.normpath(in_path)
     out_path = os.path.normpath(out_path)
     file_list = []
@@ -284,75 +324,74 @@ def merge_aod(in_path, out_path="./", input_file="AO2D.root", must_have="ctf", b
 
 
 def main(input_files,
-         do_list_files=False,
-         do_write_files=None,
-         do_copy=False,
-         do_copied=False,
-         do_copylist=False,
-         do_merge=False,
-         what="AO2D.root",
-         append=False,
-         jobs=1):
-    done_something = False
-    if do_list_files:
+         args=None):
+    if type(input_files) is not list:
+        input_files = [input_files]
+    if len(input_files) <= 0:
+        warning_msg("Passed no input, use: --input_files")
+        return
+    if args.command == "listfiles":
         for i in input_files:
-            list_of_files = listfiles(i, what, False)
+            list_of_files = listfiles(Path=i,
+                                      What=args.what,
+                                      MustHave=args.musthave)
+            append = args.append
+            do_write_files = args.outfile
             if len(list_of_files) > 0 and do_write_files:
                 writefiles(list_of_files, do_write_files,
                            append=(i == list_of_files[0]) or append)
-        done_something = True
-
-    if do_copy or do_copylist:
+    elif args.command == "copyfile":
         for i in input_files:
-            if do_copylist:
-                copylist(i, jobs=jobs)
-            else:
-                copyfile(i)
-        done_something = True
-    if do_copied:
+            copyfile(i)
+    elif args.command == "copylist":
+        for i in input_files:
+            copylist(i, jobs=args.jobs)
+    elif args.command == "copied":
         for i in input_files:
             print(copied(i))
-        done_something = True
-    if do_merge:
+    elif args.command == "merge_aod":
         for i in input_files:
             merge_aod(i,
-                      input_file=what)
-        done_something = True
-
-    if not done_something:
+                      input_file=args.what)
+    else:
         warning_msg("Did not do anything")
 
 
 if __name__ == "__main__":
     parser = get_default_parser(description=__doc__)
-    parser.add_argument("input_files", type=str, nargs="+",
+    parser.add_argument("input_files", type=str,  # nargs="+",
                         help="List of files in .txt file or files to download")
-    parser.add_argument("--list", "-l", action="store_true",
-                        help=listfiles.__doc__)
-    parser.add_argument("--outfile", "-o", type=str, default=None,
-                        help=writefiles.__doc__)
-    parser.add_argument("--copy", "-c", action="store_true",
-                        help=copyfile.__doc__)
-    parser.add_argument("--merge", "-m", action="store_true",
-                        help=copyfile.__doc__)
-    parser.add_argument("--copylist", "-C",
-                        action="store_true", help=copylist.__doc__)
-    parser.add_argument("--copied", "-K",
-                        action="store_true", help=copied.__doc__)
-    parser.add_argument("--append", "-a",
-                        action="store_true", help="Apppend to file")
-    parser.add_argument("--what", "-w",
-                        type=str, default=None, help="Object that is looked for on alien")
+    # parser.add_argument("--input_files", "--input", "-i", type=str,# nargs="+",
+    #                     default=[],
+    #                     help="List of files in .txt file or files to download")
+    subparsers = parser.add_subparsers(dest='command', help='sub-commands')
+
+    def add_subp(fn, g=None):
+        if g is None:
+            g = subparsers.add_parser(fn.__name__, help=fn.__doc__)
+        a = inspect.getfullargspec(fn)
+        for i, j in enumerate(a.args):
+            d = a.defaults[i]
+            if type(d) is str:
+                if d == "":
+                    continue
+                g.add_argument(f"--{j.lower()}", help=a.defaults[i])
+            elif type(d) is InputArgument:
+                g.add_argument(f"--{j.lower()}",
+                               *d.aliases, help=d.helper,
+                               default=d.default,
+                               type=d.thistype)
+        return g
+
+    gl = add_subp(listfiles)
+    add_subp(writefiles, gl)
+    add_subp(copyfile)
+    add_subp(copylist)
+    add_subp(copied)
+    add_subp(merge_aod)
 
     args = parser.parse_args()
+
     set_verbose_mode(args)
     main(args.input_files,
-         do_list_files=args.list,
-         do_write_files=args.outfile,
-         do_copy=args.copy,
-         do_copylist=args.copylist,
-         what=args.what,
-         jobs=args.njobs,
-         append=args.append,
-         do_merge=args.merge,
-         do_copied=args.copied)
+         args=args)

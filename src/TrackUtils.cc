@@ -177,7 +177,7 @@ TrackUtils::propagateToDCA(O2Track &o2track, std::array<float, 3> xyz, float Bz)
   o2::track::TrackParCov tmpT(o2track); // operate on the copy to recover after the failure
   alp += std::asin(sn);
   if (!tmpT.rotate(alp) || !tmpT.propagateTo(xv, Bz * 10.)) {
-    LOG(ERROR) << "failed to propagate to alpha=" << alp << " X=" << xv << " for vertex "
+    LOG(error) << "failed to propagate to alpha=" << alp << " X=" << xv << " for vertex "
 	       << xyz[0] << ' ' << xyz[1] << ' ' << xyz[2] << " | Track is: ";
     tmpT.print();
     return false;
