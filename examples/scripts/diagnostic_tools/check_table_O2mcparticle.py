@@ -9,14 +9,17 @@ from ROOT import RDataFrame, TCanvas, RDF, gPad, TLegend, gInterpreter, TDatabas
 import argparse
 import numpy
 from os import path
-from common import run_cmd, warning_msg, bcolors
+try:
+    from common import run_cmd, warning_msg, bcolors
+except:
+    raise FileNotFoundError("Cannot find common.py in path, you can download it via: wget https://raw.githubusercontent.com/AliceO2Group/DelphesO2/master/examples/scripts/common.py")
 import multiprocessing
 
 
 # Function to create indices for each particle
 gInterpreter.Declare("""
                         int part_index = 0;
-                        auto index_maker(Int_t ev) {
+                        int index_maker(Int_t ev) {
                             return part_index++;
                         }
                     """)
@@ -27,13 +30,13 @@ gInterpreter.Declare("""
                         FromBackgroundEvent = 0x2, // Particle from background event (may have been used several times)
                         PhysicalPrimary = 0x4      // Particle is a physical primary according to ALICE definition
                         };
-                        auto physPrim(UChar_t flag) {
+                        bool physPrim(UChar_t flag) {
                             return (flag & PhysicalPrimary) == PhysicalPrimary;
                             uint8_t f = static_cast<uint8_t>(flag);
                             //Printf("%i %c", f, flag);
                             return (f & PhysicalPrimary) == PhysicalPrimary;
                         }
-                        auto producedTransport(UChar_t flag) {
+                        bool producedTransport(UChar_t flag) {
                             return (flag & ProducedByTransport) == ProducedByTransport;
                             uint8_t f = static_cast<uint8_t>(flag);
                             //Printf("%i %c", f, flag);
@@ -117,8 +120,8 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
             px = npy["fPx"][i]
             py = npy["fPy"][i]
             pz = npy["fPz"][i]
-            is_ps = npy["isPhysicalPrimary"][i]
-            is_pt = npy["isProducedByTransport"][i]
+            is_ps = bool(npy["isPhysicalPrimary"][i])
+            is_pt = bool(npy["isProducedByTransport"][i])
             process = npy["fStatusCode"][i]
 
             def getpname(pdg_code):
