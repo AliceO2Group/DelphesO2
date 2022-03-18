@@ -12,7 +12,8 @@ from os import path
 try:
     from common import run_cmd, warning_msg, bcolors
 except:
-    raise FileNotFoundError("Cannot find common.py in path, you can download it via: wget https://raw.githubusercontent.com/AliceO2Group/DelphesO2/master/examples/scripts/common.py")
+    raise FileNotFoundError("Cannot find common.py in path, you can download it via:"
+                            "wget https://raw.githubusercontent.com/AliceO2Group/DelphesO2/master/examples/scripts/common.py")
 import multiprocessing
 
 
@@ -41,6 +42,15 @@ gInterpreter.Declare("""
                             uint8_t f = static_cast<uint8_t>(flag);
                             //Printf("%i %c", f, flag);
                             return (f & ProducedByTransport) == ProducedByTransport;
+                        }
+                    """)
+# Function to check eta and phi of the particle
+gInterpreter.Declare("""
+                        float pMag(float px, float py, float pz) {
+                            return TMath::Sqrt(px * px + py * py + pz * pz);
+                        }
+                        float etaValue(float p, float pz){
+                            return 0.5*TMath::Log((p + pz)/(p - pz));
                         }
                     """)
 
@@ -74,6 +84,10 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
                    "physPrim(fFlags)")
     df = df.Define("isProducedByTransport",
                    "producedTransport(fFlags)")
+    df = df.Define("p",
+                   "pMag(fPx, fPy, fPz)")
+    df = df.Define("eta",
+                   "etaValue(p, fPz)")
     counters = {}
 
     def count(label, index):
@@ -120,6 +134,7 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
             px = npy["fPx"][i]
             py = npy["fPy"][i]
             pz = npy["fPz"][i]
+            eta = npy["eta"][i]
             is_ps = bool(npy["isPhysicalPrimary"][i])
             is_pt = bool(npy["isProducedByTransport"][i])
             process = npy["fStatusCode"][i]
@@ -143,7 +158,7 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
                 else:
                     warning_msg("d0 > d1 for", part_index)
 
-            def daughters():
+            def get_the_daughters():
                 idaughters = []
                 if d0 > -1 and d1 > -1:
                     for j in range(d0, d1+1):
@@ -186,56 +201,57 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
                                      idaughters)
                 return idaughters
 
-            def daughters_pxpypz():
+            def daughters_pxpypz(daughters):
                 d_px = 0
                 d_py = 0
                 d_pz = 0
-                d = daughters()
-                if len(d) == 0:
+                if len(daughters) == 0:
                     return None
-                for j in d:
+                for j in daughters:
                     d_px += npy["fPx"][j]
                     d_py += npy["fPy"][j]
                     d_pz += npy["fPz"][j]
                 return d_px, d_py, d_pz
 
-            def daughters_pdg():
-                d = daughters()
+            def daughters_pdg(daughters):
                 d_pdgs = []
-                for j in d:
+                for j in daughters:
                     d_pdgs.append(npy["fPdgCode"][j])
                 return d_pdgs
 
-            def check_momentum():
-                d_p = daughters_pxpypz()
+            def check_momentum(daughters):
+                d_p = daughters_pxpypz(daughters)
                 if d_p is None:
                     return
                 m_p = [px, py, pz]
                 m_p_d = {0: "Px", 1: "Py", 2: "Pz"}
+                momentum_format = "(px={:.5f}, py={:.5f}, pz={:.5f})"
                 for j in enumerate(m_p):
-                    if (j[1] - d_p[j[0]]) > 0.001:
-                        e_msg = ["Non-closure in", m_p_d[j[0]], "=", d_p]
+                    if abs(j[1] - d_p[j[0]]) > 0.001:
+                        e_msg = ["Non-closure in", m_p_d[j[0]],
+                                 "=", momentum_format.format(*d_p)]
                         if not continue_on_inconsistency:
                             raise ValueError(*e_msg)
                         else:
                             warning_msg(*e_msg)
+                            warning_msg("           mother =",
+                                        momentum_format.format(*m_p))
 
-            def is_decay_channel(desired_pdg_codes, fill_counter=True, min_prongs=0, max_prongs=10):
-                d = daughters()
-                d_pdgs = daughters_pdg()
-                if len(d) >= min_prongs and len(d) <= max_prongs:
-                    print(pdg, part, "decaying in")
+            def is_decay_channel(desired_pdg_codes, daughters, fill_counter=True, min_prongs=0, max_prongs=10):
+                d_pdgs = daughters_pdg(daughters)
+                if len(daughters) >= min_prongs and len(daughters) <= max_prongs:
+                    print(pdg, part, "decaying in", len(d_pdgs), "particles")
                     for i, j in enumerate(d_pdgs):
                         if 0:
-                            this_m0 = npy["fMother0"][d[i]]
-                            this_m1 = npy["fMother1"][d[i]]
+                            this_m0 = npy["fMother0"][daughters[i]]
+                            this_m1 = npy["fMother1"][daughters[i]]
                         else:
-                            this_m0 = npy["fIndexArray_Mothers"][d[i]][0]
-                            this_m1 = npy["fIndexArray_Mothers"][d[i]][int(
-                                npy["fIndexArray_Mothers_size"][d[i]])-1]
+                            this_m0 = npy["fIndexArray_Mothers"][daughters[i]][0]
+                            this_m1 = npy["fIndexArray_Mothers"][daughters[i]][int(
+                                npy["fIndexArray_Mothers_size"][daughters[i]])-1]
 
                         print(" >", j, getpname(j),
-                              "index", d[i], npy["part_index"][d[i]], "m0", this_m0, "m1", this_m1, " -> physical primary", npy["isPhysicalPrimary"][d[i]])
+                              "index", daughters[i], npy["part_index"][daughters[i]], "m0", this_m0, "m1", this_m1, " -> physical primary", npy["isPhysicalPrimary"][daughters[i]])
                 if desired_pdg_codes is not None:
                     for i in desired_pdg_codes:
                         if i not in d_pdgs:
@@ -251,16 +267,21 @@ def main(filename, verbose=True, pdg_of_interest=[421], event_filters=None, summ
             if d1 < 0 and d1 != d0:
                 extra.append(bcolors.BWARNING + "Problematic" + bcolors.ENDC)
             if pdg in pdg_of_interest:
+                extra.append(
+                    ", px={:.3f} py={:.2f} pz={:.2f}".format(px, py, pz))
+                extra.append(", eta={:.4f}".format(eta))
                 extra.append(bcolors.BOKGREEN +
                              "PDG of interest" + bcolors.ENDC)
             extra = " ".join(extra)
+            extra = extra.strip()
 
             count(part, part_index)
             if verbose or pdg in pdg_of_interest:
                 print(summary_line, extra)
             if pdg in pdg_of_interest:
-                check_momentum()
-                is_decay_channel(None, fill_counter=True)
+                daughters = get_the_daughters()
+                check_momentum(daughters)
+                is_decay_channel(None, daughters=daughters, fill_counter=True)
 
     if event_filters is None:
         print_evt()

@@ -84,8 +84,6 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("")
 
         o2_workflow = ""
-        if analysis_timeout is not None:
-            o2_workflow = f"timeout {analysis_timeout} "
         for i in o2_analyses:
             line = f"{i} {o2_arguments}"
             if i == o2_analyses[0]:
@@ -183,8 +181,10 @@ def main(mode,
     if analysis_timeout is not None:
         msg("Using analysis timeout of", analysis_timeout,
             "seconds", color=bcolors.BOKBLUE)
+    else:
+        analysis_timeout = 0
 
-    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers}"
+    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers} --time-limit {analysis_timeout}"
     o2_arguments += extra_arguments
     if mode not in analyses:
         raise ValueError("Did not find analyses matching mode",
@@ -198,17 +198,17 @@ def main(mode,
         file_name_to_check = file_name_to_check.strip()
         if not os.path.isfile(file_name_to_check):
             warning_msg("File", file_name_to_check, "does not exist")
-            return 3
+            return "Does not exist"
         file_to_check = TFile(file_name_to_check, "READ")
         if not file_to_check.IsOpen():
             warning_msg("Cannot open AOD file:", file_name_to_check)
-            return 1
+            return "Cannot be open"
         elif file_to_check.TestBit(TFile.kRecovered):
             verbose_msg(file_name_to_check, "was a recovered file")
-            return 2
+            return "Was recovered"
         else:
             verbose_msg(file_name_to_check, "is OK")
-            return 0
+            return "Is Ok"
 
     def build_list_of_files(file_list):
         verbose_msg("Building list of files from", file_list)
@@ -218,21 +218,24 @@ def main(mode,
             # for i in file_list
             fatal_msg("Runlist has duplicated entries, fix runlist!",
                       len(unique_file_list), "unique files, while got", len(file_list), "files")
-        not_readable = []
-        recovered_files = []
+        file_status = {"Does not exist": [],
+                       "Cannot be open": [],
+                       "Was recovered": [],
+                       "Is Ok": []}
         if check_input_file_integrity:  # Check that input files can be open
             for i in file_list:
                 verbose_msg("Checking that TFile",
                             i.strip(), "can be processed")
-                file_sane_code = is_root_file_sane(i)
-                if file_sane_code == 1:
-                    not_readable.append(i)
-                elif file_sane_code == 2:
-                    recovered_files.append(i)
+                file_status[is_root_file_sane(i)] = i
+        recovered_files = file_status["Was recovered"]
+        not_readable = []
+        for i in file_status:
+            if i == "Is Ok":
+                continue
+            not_readable += file_status[i]
         if len(recovered_files) > 0:
             msg("Recovered", len(recovered_files),
                 "files:\n", )
-            not_readable = not_readable + recovered_files
         if len(not_readable) > 0:
             warning_msg(len(not_readable), "over", len(file_list),
                         "files cannot be read and will be skipped")
@@ -294,7 +297,7 @@ def main(mode,
                                         analysis_timeout=analysis_timeout))
     if not merge_only:
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
-                        job_arguments=run_list, job_message="Running analysis")
+                        job_arguments=run_list, job_message="Running analysis", linearize_single_core=True)
         if clean_localhost_after_running:
             run_cmd(
                 "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v 2>&1",
@@ -314,7 +317,7 @@ def main(mode,
         # List of files to be merged per type that are not declared sane
         non_sane_files_per_type = {}
         for i in files_to_merge:
-            if is_root_file_sane(i) != 0:
+            if is_root_file_sane(i) != "Is Ok":
                 non_sane_files_per_type[fn].setdefault(fn, []).append(i)
                 warning_msg("Result file", i, "is not sane")
                 continue

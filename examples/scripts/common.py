@@ -22,13 +22,14 @@ def set_verbose_mode(parser):
     verbose_mode = parser.verbose
 
 
-def get_default_parser(description):
+def get_default_parser(description, njobs=True):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--verbose", "-v",
                         action="store_true", help="Verbose mode.")
-    parser.add_argument("--njobs", "--jobs", "-j", type=int,
-                        default=10,
-                        help="Number of concurrent jobs, by default 10.")
+    if njobs:
+        parser.add_argument("--njobs", "--jobs", "-j", type=int,
+                            default=10,
+                            help="Number of concurrent jobs, by default 10.")
     return parser
 
 
