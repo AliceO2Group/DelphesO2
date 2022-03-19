@@ -42,7 +42,9 @@ def listfiles(Path=None,
                                  "Name of the file to look for", "-w"),
               MakeXML=False,
               MustHave=InputArgument(None,
-                                     "String that must be in good files path", "-m"),
+                                     "String that must be in good files path", ["-m"]),
+              MustNotHave=InputArgument(None,
+                                        "String that must not be in good files path", ["-M"]),
               SubDirs="",
               User=None,
               MainPath=""):
@@ -78,6 +80,10 @@ def listfiles(Path=None,
             continue
         if MustHave and MustHave not in i:
             msg(f"Discarding line '{i}' as it doesn't have '{MustHave}'",
+                color=bcolors.OKBLUE)
+            continue
+        if MustNotHave and MustNotHave in i:
+            msg(f"Discarding line '{i}' as it has '{MustNotHave}'",
                 color=bcolors.OKBLUE)
             continue
         if SubDirs:
@@ -254,7 +260,7 @@ def copied(fname="", extra_msg="", last_time=None, check_root_files=True):
 
 
 def copylist(fname="",
-             jobs=InputArgument(1, "Number of parallel jobs to use", ["-j"], int)):
+             jobs=InputArgument(1, "Number of parallel jobs to use", ["--njobs", "-j"], int)):
     """Takes a text file and downloads the files from grid"""
     if jobs is None:
         jobs = 1
@@ -358,7 +364,7 @@ def main(input_files,
 
 
 if __name__ == "__main__":
-    parser = get_default_parser(description=__doc__)
+    parser = get_default_parser(description=__doc__, njobs=False)
     parser.add_argument("input_files", type=str,  # nargs="+",
                         help="List of files in .txt file or files to download")
     # parser.add_argument("--input_files", "--input", "-i", type=str,# nargs="+",
