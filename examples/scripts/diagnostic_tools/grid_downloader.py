@@ -340,7 +340,8 @@ def main(input_files,
         for i in input_files:
             list_of_files = listfiles(Path=i,
                                       What=args.what,
-                                      MustHave=args.musthave)
+                                      MustHave=args.musthave,
+                                      MustNotHave=args.mustnothave)
             append = args.append
             do_write_files = args.outfile
             if len(list_of_files) > 0 and do_write_files:
