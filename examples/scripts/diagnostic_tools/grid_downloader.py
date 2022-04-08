@@ -153,7 +153,7 @@ def copyfile(toget="Full path of the file to get",
     The version lets you choose between old and new alien. Versions==None means that it will autoset it"""
     toget = toget.strip()
     if Version == None:
-        stream = os.popen("which aliensh")
+        stream = os.popen("which aliensh 2>/dev/null")
         stream = stream.read()
         stream = stream.strip()
         print(stream)
