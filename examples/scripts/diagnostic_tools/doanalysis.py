@@ -15,6 +15,7 @@ from itertools import islice
 import os
 from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd, print_all_warnings
 from ROOT import TFile
+import datetime
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -26,8 +27,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                                   "QAResults.root"],
                     dpl_configuration_file=None,
                     resume_previous_analysis=False,
-                    write_runner_script=True,
-                    analysis_timeout=None):
+                    write_runner_script=True):
     """
     Function to prepare everything you need for your O2 analysis.
     From the output folder to the script containing the O2 workflow.
@@ -293,11 +293,11 @@ def main(mode,
                                         tag=tag,
                                         dpl_configuration_file=dpl_configuration_file,
                                         resume_previous_analysis=resume_previous_analysis,
-                                        write_runner_script=not merge_only,
-                                        analysis_timeout=analysis_timeout))
+                                        write_runner_script=not merge_only))
     if not merge_only:
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
-                        job_arguments=run_list, job_message="Running analysis", linearize_single_core=True)
+                        job_arguments=run_list, job_message=f"Running analysis, it's {datetime.datetime.now()}",
+                         linearize_single_core=True)
         if clean_localhost_after_running:
             run_cmd(
                 "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v 2>&1",
