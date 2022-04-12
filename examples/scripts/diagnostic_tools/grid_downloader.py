@@ -22,14 +22,23 @@ class InputArgument:
     helper = ""
     aliases = []
     thistype = str
+    nargs = "?"
 
-    def __init__(self, default, helper="", aliases=[], thistype=str):
+    def __init__(self, default, helper="", aliases=[], thistype=str, nargs="?"):
         self.default = default
         self.helper = helper
         self.aliases = aliases
         if type(self.aliases) is not list:
             self.aliases = [self.aliases]
         self.thistype = thistype
+        self.nargs = nargs
+
+    def print(self):
+        print(f"default = {self.default}",
+              f"helper = {self.helper}",
+              f"aliases = {self.aliases}",
+              f"thistype = {self.thistype}",
+              f"nargs = {self.nargs}")
 
 
 def print_now():
@@ -42,7 +51,9 @@ def listfiles(Path=None,
                                  "Name of the file to look for", "-w"),
               MakeXML=False,
               MustHave=InputArgument(None,
-                                     "String that must be in good files path", ["-m"]),
+                                     "String that must be in good files path", [
+                                         "-m"],
+                                     nargs="+"),
               MustNotHave=InputArgument(None,
                                         "String that must not be in good files path", ["-M"]),
               SubDirs="",
@@ -78,10 +89,18 @@ def listfiles(Path=None,
     for i in list_of_found_files:
         if not MakeXML and What not in i:
             continue
-        if MustHave and MustHave not in i:
-            msg(f"Discarding line '{i}' as it doesn't have '{MustHave}'",
-                color=bcolors.OKBLUE)
-            continue
+        if MustHave is not None:
+            hasit = True
+            if type(MustHave) is str:
+                hasit = MustHave in i
+            else:
+                for e in MustHave:
+                    if e not in i:
+                        hasit = False
+            if not hasit:
+                msg(f"Discarding line '{i}' as it doesn't have '{MustHave}'",
+                    color=bcolors.OKBLUE)
+                continue
         if MustNotHave and MustNotHave in i:
             msg(f"Discarding line '{i}' as it has '{MustNotHave}'",
                 color=bcolors.OKBLUE)
@@ -387,7 +406,8 @@ if __name__ == "__main__":
                 g.add_argument(f"--{j.lower()}",
                                *d.aliases, help=d.helper,
                                default=d.default,
-                               type=d.thistype)
+                               type=d.thistype,
+                               nargs=d.nargs)
         return g
 
     gl = add_subp(listfiles)
