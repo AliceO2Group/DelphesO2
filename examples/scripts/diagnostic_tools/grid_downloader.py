@@ -54,8 +54,14 @@ def listfiles(Path=None,
                                      "String that must be in good files path", [
                                          "-m"],
                                      nargs="+"),
+              MustHaveCount=InputArgument(1,
+                                          "How many times the MustHave string must be present",
+                                          ["-nm"], thistype=int),
               MustNotHave=InputArgument(None,
                                         "String that must not be in good files path", ["-M"]),
+              MustNotHaveCount=InputArgument(1,
+                                             "How many times the MustHave string must be present",
+                                             ["-NM"], thistype=int),
               SubDirs="",
               User=None,
               MainPath=""):
@@ -65,6 +71,8 @@ def listfiles(Path=None,
     Can also form the output in the xml format so as to run on grid, this is done if the output filename has the xml extension.
     """
     verbose_msg("Listing files", What, "in path", Path)
+    if Path is None or Path == "":
+        raise ValueError("Passed empty path", Path)
     if User is None:
         User = getpass.getuser()
         msg("Getting user:", User)
@@ -91,20 +99,22 @@ def listfiles(Path=None,
             continue
         if MustHave is not None:
             hasit = True
-            if type(MustHave) is str:
-                hasit = MustHave in i
-            else:
-                for e in MustHave:
-                    if e not in i:
-                        hasit = False
+            if type(MustHave) is not list:
+                raise ValueError("Musthave is not a list!", MustHave)
+            for e in MustHave:
+                if e not in i:
+                    hasit = False
+                if i.count(e) < MustHaveCount:
+                    hasit = False
             if not hasit:
-                msg(f"Discarding line '{i}' as it doesn't have '{MustHave}'",
+                msg(f"Discarding line '{i}' as it doesn't have '{MustHave}' {MustHaveCount} times",
                     color=bcolors.OKBLUE)
                 continue
         if MustNotHave and MustNotHave in i:
-            msg(f"Discarding line '{i}' as it has '{MustNotHave}'",
-                color=bcolors.OKBLUE)
-            continue
+            if i.count(MustNotHave) >= MustNotHaveCount:
+                msg(f"Discarding line '{i}' as it has '{MustNotHave}' {MustNotHaveCount} times",
+                    color=bcolors.OKBLUE)
+                continue
         if SubDirs:
             istrip = i.replace(PathToScan, "").strip().strip("/")
             verbose_msg(istrip)
@@ -357,10 +367,30 @@ def main(input_files,
         return
     if args.command == "listfiles":
         for i in input_files:
-            list_of_files = listfiles(Path=i,
-                                      What=args.what,
-                                      MustHave=args.musthave,
-                                      MustNotHave=args.mustnothave)
+            list_of_files = []
+            if os.path.isfile(i):
+                paths_to_list = []
+                with open(i) as fsecondary:
+                    for j in fsecondary:
+                        j = j.strip().strip(" ").strip(",")
+                        if j == "":
+                            continue
+                        for k in j.split(","):
+                            paths_to_list.append(k)
+                for j in paths_to_list:
+                    list_of_files += listfiles(Path=j,
+                                               What=args.what,
+                                               MustHave=args.musthave,
+                                               MustHaveCount=args.musthavecount,
+                                               MustNotHaveCount=args.mustnothavecount,
+                                               MustNotHave=args.mustnothave)
+            else:
+                list_of_files = listfiles(Path=i,
+                                          What=args.what,
+                                          MustHave=args.musthave,
+                                          MustHaveCount=args.musthavecount,
+                                          MustNotHaveCount=args.mustnothavecount,
+                                          MustNotHave=args.mustnothave)
             append = args.append
             do_write_files = args.outfile
             if len(list_of_files) > 0 and do_write_files:
@@ -398,11 +428,14 @@ if __name__ == "__main__":
         a = inspect.getfullargspec(fn)
         for i, j in enumerate(a.args):
             d = a.defaults[i]
+            # print(fn, i, j, d)
             if type(d) is str:
                 if d == "":
                     continue
+                # print("Add argument without defaults")
                 g.add_argument(f"--{j.lower()}", help=a.defaults[i])
             elif type(d) is InputArgument:
+                # print("Add argument", j, "with defaults")
                 g.add_argument(f"--{j.lower()}",
                                *d.aliases, help=d.helper,
                                default=d.default,
