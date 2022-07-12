@@ -106,6 +106,8 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("  eval \"${O2Workflow}\"")
         write_instructions("fi")
 
+        write_instructions("pwd")
+
         for i in ["ERROR", "FATAL", "crash"]:
             write_instructions(
                 f"if grep -q \"\[{i}\]\" {log_file}; then echo \": got some {i}s in '{log_file}'\" && exit 1; fi")
@@ -119,11 +121,29 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
     return tmp_script_name
 
 
-def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=True):
+def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=False, time_it=True, do_bash_script=True):
+    global number_of_runs
     verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
+    if do_bash_script:
+        with open("parallelbash.sh", "a") as fout:
+            with open("parallelbash.sh", "r") as fin:
+                lastline = fin.readlines()[-1]
+                if lastline.startswith("#"):
+                    lastline = int(lastline.strip("#"))
+                else:
+                    lastline = 0
+                fout.write(f"{cmd} &\n")
+                lastline += 1
+                # if lastline % 5 == 0:
+                if lastline % 11 == 0:
+                    fout.write(f"wait\n")
+                fout.write(f"\n#{lastline}\n")
+
+        return
+
     if explore_bad_files:
-        if run_cmd(cmd, check_status=True, throw_fatal=False) == False:
+        if run_cmd(cmd, check_status=True, throw_fatal=False, time_it=time_it) == False:
             list_name = os.listdir(os.path.dirname(tmp_script_name))
             for i in list_name:
                 if "ListForRun5Analysis" in i:
@@ -137,7 +157,7 @@ def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=
             warning_msg("Issue when running",
                         tmp_script_name, "with", list_name)
     else:
-        run_cmd(cmd)
+        run_cmd(cmd, log_file=f"{tmp_script_name}.log", time_it=time_it)
     if remove_tmp_script:
         os.remove(tmp_script_name)
     verbose_msg("< end run with", tmp_script_name)
@@ -165,7 +185,13 @@ def main(mode,
          extra_arguments="",
          resume_previous_analysis=False,
          check_input_file_integrity=True,
-         analysis_timeout=None):
+         analysis_timeout=None,
+         linearize_single_core=True,
+         do_bash_script=False):
+    if do_bash_script:
+        njobs = 1
+        linearize_single_core = True
+
     if len(input_file) == 1:
         input_file = input_file[0]
     else:
@@ -181,10 +207,11 @@ def main(mode,
     if analysis_timeout is not None:
         msg("Using analysis timeout of", analysis_timeout,
             "seconds", color=bcolors.BOKBLUE)
+        analysis_timeout = f"--time-limit {analysis_timeout}"
     else:
-        analysis_timeout = 0
+        analysis_timeout = ""
 
-    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers} --time-limit {analysis_timeout}"
+    o2_arguments = f"-b --shm-segment-size {shm_mem_size} --aod-memory-rate-limit {rate_lim} --readers {readers} {analysis_timeout}"
     o2_arguments += extra_arguments
     if mode not in analyses:
         raise ValueError("Did not find analyses matching mode",
@@ -295,9 +322,16 @@ def main(mode,
                                         resume_previous_analysis=resume_previous_analysis,
                                         write_runner_script=not merge_only))
     if not merge_only:
+        if do_bash_script:
+            with open("parallelbash.sh", "w") as f:
+                f.write(f"#!/bin/bash\n\n")
+
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message=f"Running analysis, it's {datetime.datetime.now()}",
-                         linearize_single_core=True)
+                        linearize_single_core=linearize_single_core)
+        if do_bash_script:
+            msg("Now run bash script `bash parallelbash.sh`")
+            return
         if clean_localhost_after_running:
             run_cmd(
                 "find /tmp/ -maxdepth 1 -name localhost* -user $(whoami) | xargs rm -v 2>&1",
@@ -413,8 +447,10 @@ if __name__ == "__main__":
                         action="store_true", help="Flag avoid running the analysis and to merge the output files into one")
     parser.add_argument("--show", "-s",
                         action="store_true", help="Flag to show the workflow of the current tag")
-    parser.add_argument("--no_clean", "-nc",
+    parser.add_argument("--no_clean", "--noclean", "-nc",
                         action="store_true", help="Flag to avoid cleaning the localhost files after running")
+    parser.add_argument("--do_bash_script", "-P",
+                        action="store_true", help="Flag to create a bash script that runs all the tasks in cascade")
     parser.add_argument("--resume_previous_analysis", "--continue_analysis", "--resume_analysis", "--continue",
                         action="store_true",
                         help="Flag to continue the analysis from the input files that have been already built and not overwriting the output results")
@@ -464,6 +500,7 @@ if __name__ == "__main__":
              clean_localhost_after_running=not args.no_clean,
              resume_previous_analysis=args.resume_previous_analysis,
              check_input_file_integrity=not args.dont_check_input_integrity,
-             analysis_timeout=args.timeout)
+             analysis_timeout=args.timeout,
+             do_bash_script=args.do_bash_script)
 
     print_all_warnings()
