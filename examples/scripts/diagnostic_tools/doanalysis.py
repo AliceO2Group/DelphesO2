@@ -16,6 +16,7 @@ import os
 from common import bcolors, msg, fatal_msg, verbose_msg, run_in_parallel, set_verbose_mode, get_default_parser, warning_msg, run_cmd, print_all_warnings
 from ROOT import TFile
 import datetime
+from sys import argv
 
 
 def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-kine:4,qa-tracking-resolution:4"],
@@ -27,7 +28,8 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
                                   "QAResults.root"],
                     dpl_configuration_file=None,
                     resume_previous_analysis=False,
-                    write_runner_script=True):
+                    write_runner_script=True,
+                    allow_errors_in_logs=True):
     """
     Function to prepare everything you need for your O2 analysis.
     From the output folder to the script containing the O2 workflow.
@@ -112,6 +114,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         # Print run dir
         write_instructions("pwd")
 
+        if not allow_errors_in_logs:
         for i in ["ERROR", "FATAL", "crash"]:
             write_instructions(
                 f"if grep -q \"\[{i}\]\" {log_file}; then echo \": got some {i}s in '{log_file}'\" && exit 1; fi")
@@ -140,6 +143,10 @@ def run_o2_analysis(tmp_script_name,
     verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
     if do_bash_script:
+        if 1:
+            with open("listofscripts.sh", "a") as fout:
+                fout.write(f"{tmp_script_name}\n")
+        else:
         with open("parallelbash.sh", "a") as fout:
             with open("parallelbash.sh", "r") as fin:
                 lastline = fin.readlines()[-1]
@@ -207,8 +214,9 @@ def main(mode,
 
     if len(input_file) == 1:
         input_file = input_file[0]
-    else:
+    elif n_max_files >= 0:
         input_file = input_file[0:n_max_files]
+
     if not merge_only:
         msg("Running", f"'{mode}'", "analysis on",
             f"'{input_file}'", color=bcolors.BOKBLUE)
@@ -313,7 +321,7 @@ def main(mode,
             lines = f.readlines()
             msg("Building input list from", len(lines),
                 "inputs, limiting to", n_max_files)
-            if len(lines) > n_max_files:
+            if len(lines) > n_max_files and n_max_files > 0:
                 lines = lines[0:n_max_files]
             lines = [os.path.join(os.path.dirname(os.path.abspath(input_file)), i)
                      for i in lines]
@@ -336,25 +344,44 @@ def main(mode,
                                         write_runner_script=not merge_only))
     if not merge_only:
         if do_bash_script:
+            with open("listofscripts.sh", "w") as f:
+                pass
             with open("parallelbash.sh", "w") as f:
                 f.write(f"#!/bin/bash\n\n")
+                f.write(f"# To repeat this script run\n\n")
+                f.write("# `{}`\n\n".format(" ".join(argv)))
                 f.write(f"echo \"Start running\"\n\n")
                 f.write(f"date\n\n")
                 f.write("""function trap_ctrlc (){
                             # perform cleanup here
-                            echo "Ctrl-C caught...performing clean up"
+                        """)
+                f.write("""    echo "Ctrl-C caught...performing clean up"\n""")
+                for i in an:
+                    i = i.split(" ")[0]
+                    i = i.strip()
+                    if "o2-analysis-" not in i:
+                        continue
+                    f.write(
+                        f"                              killall -9 -u $(whoami) {i}\n")
+                f.write("""
                             exit 2
                         }\n\n""")
-                f.write("""trap "trap_ctrlc" 2\n""")
-
+                f.write("""trap "trap_ctrlc" 2\n\n\n""")
+                f.write(f"time parallel -j {bash_parallel_jobs} -a listofscripts.sh bash\n")
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message=f"Running analysis, it's {datetime.datetime.now()}",
                         linearize_single_core=linearize_single_core)
         if do_bash_script:
             with open("parallelbash.sh", "a") as f:
-                f.write(f"wait\n\n")
+                f.write(f"\n\nwait\n\n")
                 f.write(f"date\n\n")
-            msg("Now run bash script `bash parallelbash.sh`")
+                if 1:
+                    f.write(f"echo now merging!\n\n")
+                    merge_cmd = " ".join(argv)
+                    f.write(f"{merge_cmd} --merge-only \n\n")
+                f.write(f"date\n\n")
+            os.popen("chmod +x parallelbash.sh")
+            msg("Now run bash script `./parallelbash.sh`")
             return
         if clean_localhost_after_running:
             run_cmd(
@@ -409,7 +436,8 @@ def main(mode,
         if len(merged_files) == 0:
             warning_msg("Merged no files")
         else:
-            msg("Merging completed, merged:", *merged_files,
+            m = [os.path.abspath(i) for i in merged_files]
+            msg("Merging completed, merged:", *m,
                 color=bcolors.BOKGREEN)
 
 
@@ -438,11 +466,11 @@ if __name__ == "__main__":
                         help="Timeout to give to the analyses. If negative no timeout is used")
     parser.add_argument("--batch-size", "-B",
                         type=int,
-                        default=10,
+                        default=1,
                         help="Size of the batch of files to analyze for multiple threads")
     parser.add_argument("--max-files", "-M",
                         type=int,
-                        default=10,
+                        default=-1,
                         help="Maximum files to process")
     parser.add_argument("--configuration", "--dpl", "-D",
                         type=str,

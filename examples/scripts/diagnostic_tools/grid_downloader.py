@@ -58,7 +58,8 @@ def listfiles(Path=None,
                                           "How many times the MustHave string must be present",
                                           ["-nm"], thistype=int),
               MustNotHave=InputArgument(None,
-                                        "String that must not be in good files path", ["-M"]),
+                                        "String that must not be in good files path", ["-M"],
+                                        nargs="+"),
               MustNotHaveCount=InputArgument(1,
                                              "How many times the MustHave string must be present",
                                              ["-NM"], thistype=int),
@@ -110,11 +111,23 @@ def listfiles(Path=None,
                 msg(f"Discarding line '{i}' as it doesn't have '{MustHave}' {MustHaveCount} times",
                     color=bcolors.OKBLUE)
                 continue
-        if MustNotHave and MustNotHave in i:
-            if i.count(MustNotHave) >= MustNotHaveCount:
-                msg(f"Discarding line '{i}' as it has '{MustNotHave}' {MustNotHaveCount} times",
-                    color=bcolors.OKBLUE)
-                continue
+        if MustNotHave:
+            if type(MustNotHave) is not list:
+                if MustNotHave in i:
+                    if i.count(MustNotHave) >= MustNotHaveCount:
+                        msg(f"Discarding line '{i}' as it has '{MustNotHave}' {MustNotHaveCount} times",
+                            color=bcolors.OKBLUE)
+                        continue
+            else:
+                doskip = False
+                for t in MustNotHave:
+                    if t in i and i.count(t) >= MustNotHaveCount:
+                        msg(f"Discarding line '{i}' as it has '{t}' {MustNotHaveCount} times",
+                            color=bcolors.OKBLUE)
+                        doskip = True
+                        break
+                if doskip:
+                    continue
         if SubDirs:
             istrip = i.replace(PathToScan, "").strip().strip("/")
             verbose_msg(istrip)
@@ -255,7 +268,9 @@ def copyfile(toget="Full path of the file to get",
         msg("Input: " + toget, color=bcolors.BWARNING)
 
 
-def copied(fname="", extra_msg="", last_time=None, check_root_files=True):
+def copied(fname="", extra_msg="", last_time=None, check_root_files=True,
+           ListOfBad=InputArgument("badfiles.txt",
+                                   "Name of the file where to write the bad files", "-o")):
     """Checks if how many files of a text list were correctly copied from grid to the PC"""
     verbose_msg("Checking how many files were copied from from list", fname)
     fname = fname.strip()
@@ -284,6 +299,10 @@ def copied(fname="", extra_msg="", last_time=None, check_root_files=True):
     msg(extra_msg, "downloaded {}/{}, {:.1f}%".format(n_copied,
                                                       n_to_copy, 100 * float(n_copied) / float(n_to_copy)),
         f" -- copied {n_copied} files more, in total copied {last_time[1] + n_copied} files" if last_time is not None else "", f"{len(not_sane)} are not OK" if len(not_sane) > 0 else "")
+    if ListOfBad is not None and len(not_sane) >= 1:
+        with open(ListOfBad, "w") as f:
+            for i in not_sane:
+                f.write(i + "\n")
 
     return n_to_copy, n_copied
 
