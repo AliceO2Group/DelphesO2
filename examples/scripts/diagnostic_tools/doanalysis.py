@@ -69,6 +69,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions(f"cd {output_path} || exit 1", n=2)
         # Print run dir
         write_instructions(f"pwd", n=2)
+        write_instructions(f"echo Running \"$0\"", n=2)
 
         def get_tagged_output_file(output_file_name):
             return output_file_name.replace(".root", f"_{tag}.root")
@@ -89,11 +90,13 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             if i == o2_analyses[0]:
                 line += f" --aod-file {input_file}"
             if dpl_configuration_file is not None:
-                line += f" --configuration json://{dpl_configuration_file}"
+                line += f" --configuration json://{os.path.normpath(dpl_configuration_file)}"
             if len(o2_analyses) > 1 and i != o2_analyses[-1]:
                 line = f"{line} | \\\n \t"
             else:
                 line = f"{line}"
+            if line.count("configuration") > 1:
+                fatal_msg("Cannot have more than one configuration")
             o2_workflow += line
 
         write_instructions(f"O2Workflow=\"{o2_workflow}\"", n=2)
@@ -106,6 +109,7 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
         write_instructions("  eval \"${O2Workflow}\"")
         write_instructions("fi")
 
+        # Print run dir
         write_instructions("pwd")
 
         for i in ["ERROR", "FATAL", "crash"]:
@@ -117,11 +121,21 @@ def set_o2_analysis(o2_analyses=["o2-analysis-hf-task-d0 --pipeline qa-tracking-
             write_instructions(
                 f"[ -f {i} ] && mv {i} {get_tagged_output_file(i)} 2>&1")
 
+        write_instructions(f"date", n=2)
+        write_instructions(f"echo Completed \"$0\"", n=2)
+
         write_instructions("\nexit 0")
     return tmp_script_name
 
 
-def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=False, time_it=True, do_bash_script=True):
+do_bash_script = False
+bash_parallel_jobs = 1
+
+
+def run_o2_analysis(tmp_script_name,
+                    remove_tmp_script=False,
+                    explore_bad_files=False,
+                    time_it=True):
     global number_of_runs
     verbose_msg("> starting run with", tmp_script_name)
     cmd = f"bash {tmp_script_name}"
@@ -133,10 +147,10 @@ def run_o2_analysis(tmp_script_name, remove_tmp_script=False, explore_bad_files=
                     lastline = int(lastline.strip("#"))
                 else:
                     lastline = 0
+                fout.write(f"echo Running {lastline}\n")
                 fout.write(f"{cmd} &\n")
                 lastline += 1
-                # if lastline % 5 == 0:
-                if lastline % 11 == 0:
+                if lastline % (bash_parallel_jobs+1) == 0:
                     fout.write(f"wait\n")
                 fout.write(f"\n#{lastline}\n")
 
@@ -186,8 +200,7 @@ def main(mode,
          resume_previous_analysis=False,
          check_input_file_integrity=True,
          analysis_timeout=None,
-         linearize_single_core=True,
-         do_bash_script=False):
+         linearize_single_core=True):
     if do_bash_script:
         njobs = 1
         linearize_single_core = True
@@ -325,11 +338,22 @@ def main(mode,
         if do_bash_script:
             with open("parallelbash.sh", "w") as f:
                 f.write(f"#!/bin/bash\n\n")
+                f.write(f"echo \"Start running\"\n\n")
+                f.write(f"date\n\n")
+                f.write("""function trap_ctrlc (){
+                            # perform cleanup here
+                            echo "Ctrl-C caught...performing clean up"
+                            exit 2
+                        }\n\n""")
+                f.write("""trap "trap_ctrlc" 2\n""")
 
         run_in_parallel(processes=njobs, job_runner=run_o2_analysis,
                         job_arguments=run_list, job_message=f"Running analysis, it's {datetime.datetime.now()}",
                         linearize_single_core=linearize_single_core)
         if do_bash_script:
+            with open("parallelbash.sh", "a") as f:
+                f.write(f"wait\n\n")
+                f.write(f"date\n\n")
             msg("Now run bash script `bash parallelbash.sh`")
             return
         if clean_localhost_after_running:
@@ -460,6 +484,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     set_verbose_mode(args)
 
+    # Set bash script mode
+    do_bash_script = args.do_bash_script
+    bash_parallel_jobs = args.njobs
+
     # Load analysis workflows
     workflows = configparser.RawConfigParser()
     msg("Analysis configuration from", args.workflows)
@@ -500,7 +528,6 @@ if __name__ == "__main__":
              clean_localhost_after_running=not args.no_clean,
              resume_previous_analysis=args.resume_previous_analysis,
              check_input_file_integrity=not args.dont_check_input_integrity,
-             analysis_timeout=args.timeout,
-             do_bash_script=args.do_bash_script)
+             analysis_timeout=args.timeout)
 
     print_all_warnings()
